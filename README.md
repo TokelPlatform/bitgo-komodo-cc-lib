@@ -141,7 +141,7 @@ module.exports = {
   }
 };
 ```
-(Both those package.json and webpack.config.js files may be found in webpack-test subdir of bitcoinjs-lib-kmd dir)
+(Both those package.json and webpack.config.js files may be found in webpack-test subdir of bitgo-utxo-komodo-cc-lib dir)
 Inside the webpack dir run: 
 ```
 npm install
@@ -163,7 +163,7 @@ Now go to bitgo-utxo-komodo-cc-lib repo dir.<br>
 Rebuild sources and build the test app for browser:
 ```
 npm run build
-browserify ../bitcoinjs-lib-kmd/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
+browserify ../bitgo-utxo-komodo-cc-lib/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
 ```
 Copy created ccfaucetpocbr.js into your webpack dir.
 Copy the example of an index.html page from the webpack-test dir to your webpack dir.
