@@ -1,148 +1,203 @@
-# BitGo UTXO library (bitgo-utxo-lib)
-[![Build Status](https://travis-ci.org/BitGo/bitgo-utxo-lib.png?branch=master)](https://travis-ci.org/BitGo/bitgo-utxo-lib)
-[![NPM](https://img.shields.io/npm/v/bitgo-utxo-lib.svg)](https://www.npmjs.org/package/bitgo-utxo-lib)
-[![Known Vulnerabilities](https://snyk.io/test/github/BitGo/bitgo-utxo-lib/badge.svg?targetFile=package.json)](https://snyk.io/test/github/BitGo/bitgo-utxo-lib?targetFile=package.json)
+# BitGo-utxo with Komodo CC Support
 
-[![js-standard-style](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
+A fork from BitGo [bitgo-utxo-lib](https://github.com/bitgo/bitgo-utxo-lib)
+A javascript Bitcoin library for node.js and browsers. Written mostly in javascript, with the cryptoconditions library writtem in rust and built as a wasm module.<br>
+Added support for komodo messages including nSPV protocol and cc features along with cryptoconditions lib (as wasm).
 
-Originally a fork of [bitcoinjs-lib](https://github.com/BitGo/bitcoinjs-lib); we evolved this library to support the transaction building process of different UTXO based coins.
+Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-utxo-komodo-cc-lib/blob/master/LICENSE).
 
-## Supported coins
-- Bitcoin
-- Bitcoin Cash
-- Bitcoin Gold
-- Bitcoin SV (Satoshi Vision)
-- Dash
-- Litecoin
-- Zcash (Sapling compatible)
+## Prerequisites
 
-## Features
-- Clean: Pure JavaScript, concise code, easy to read.
-- Tested: Coverage > 90%, third-party integration tests.
-- Compatible: Works on Node.js and all modern browsers.
-- Powerful: Support for advanced features, such as multi-sig, HD Wallets.
-- Secure: Strong random number generation, PGP signed releases, trusted developers.
-- Principled: No support for browsers with RNG (IE < 11)
-- Standardized: Node community coding style, Browserify, Node's stdlib and Buffers.
-- Experiment-friendly: Mainnet and Testnet support.
-- Multicoin support: Configurable behaviour based on [network](https://github.com/BitGo/bitgo-utxo-lib/blob/master/src/networks.js) objects.
-- Backed by [BitGo](https://www.bitgo.com/info/)
+You need installed:
+  - nodejs v.12+<br>
+  - rust and<br>
+  - wasm-pack, both to build wasm cryptoconditions module<br> 
+  
+If you are going to use this lib in browser you also need:
+  - browserify package<br> 
+  - a webserver app (for example, webpack dev server)<br>
+  - a wsproxy app (for example, webcoin-bridge)
+
+## What test app does
+
+Included a ccfaucetpoc.js file that allows to create cc faucet create and get transactions.<br>
+To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
 
 ## Installation
-``` bash
-npm install bitgo-utxo-lib
+
+Clone this git repository go to the new dir and checkout dev-kmd branch.
+
+Install the bitgo-utxo-komodo-cc-lib dependency packages, inside the repo dir run:
+
+```
+npm install
 ```
 
-## Setup
-### Node.js
-``` javascript
-var bitGoUTXO = require('bitgo-utxo-lib')
+Setup network parameters for your komodo chain:<br>
+Open `networks.js` and make a new entry for your chain.<br>
+In fact you need to fix the yourchainname and magic params for your chain:
 ```
-
-### Browser
-If you're familiar with how to use browserify, ignore this and proceed normally.
-These steps are advisory only,  and may not be suitable for your application.
-
-[Browserify](https://github.com/substack/node-browserify) is assumed to be installed for these steps.
-
-For your project, create an `index.js` file
-``` javascript
-let bitGoUTXO = require('bitgo-utxo-lib')
-
-// your code here
-function myFunction () {
-	return bitGoUTXO.ECPair.makeRandom().toWIF()
-}
-
 module.exports = {
-	myFunction
+  dimxy14: {
+    messagePrefix: '\x18DIMXY14 asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public: 0x4ea629ab,   // magic, obtain with getinfo rpc
+      private: 0x00000000,
+    },    
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (Sapling branch id used in kmd)
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
+  },
+};
+```
+
+Rebuild nodejs packages:
+```
+npm run build
+```
+
+In ccfaucetpoc.js change mynetwork var to yourchainname:<br>
+```
+var mynetwork=networks.yourchainname
+```
+
+Set your funding faucet wif and address and a wif and address getting funds in ccfaucetpoc.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
+
+## Build test app to run in nodejs
+
+Build the cryptoconditions wasm module:<br>
+Setup the rust nightly build to build cryptoconditions. It looks like the current latest October 2020 nightly build is broken and omitted some runtime lib.
+I use this 'nightly-2020-09-11' build that worked well for me:
+```
+rustup toolchain install nightly-2020-09-11
+rustup default nightly-2020-09-11
+```
+
+Change to cryptoconditions-js directory and build the cryptoconditions wasm module for nodejs target:
+```
+cd ./node_modules/cryptoconditions-js
+wasm-pack build -t nodejs
+```
+
+Run the testapp in nodejs:
+```
+node ./ccfaucetpoc.js
+```
+
+## How to use the test app in the browser:
+
+To run the test app in the browser you will need a webserver to host an html sample page and the test app ccfaucetpocbr.js.
+Also you need a websocket proxy to convert websockets into nspv p2p protocol.
+
+### Setting up a web server
+
+I use the webpack dev server running in nodejs.<br>
+To setup a webpack sample config make a dir like 'webpack' and create inside it two files with the following content:
+
+package.json:
+```
+{
+  "scripts": {
+    "serve": "webpack-dev-server"
+  },
+  "dependencies": {
+    "cryptoconditions-js": "git+https://github.com/dimxy/cryptoconditions-js.git#master"
+  },
+  "devDependencies": {
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
+  }
 }
 ```
 
-Now, to compile for the browser:
-``` bash
-browserify index.js --standalone foo > app.js
+webpack.config.js:
+```
+const path = require('path');
+module.exports = {
+  entry: "./ccfaucetpocbr.js",
+  output: {
+    path: path.resolve(__dirname, "dist"),
+    filename: "ccfaucetpocbr-bundle.js",
+    library: 'myLibrary'
+  },
+  mode: "development",
+  //to serve from any external address (do not add this devServer config to serve only locally):
+  devServer: {
+    port: 8080,
+    host: '0.0.0.0'
+  }
+};
+```
+(Both those package.json and webpack.config.js files may be found in webpack-test subdir of bitcoinjs-lib-kmd dir)
+Inside the webpack dir run: 
+```
+npm install
+``` 
+(ignore printed errors)
+
+Set again the nightly rust version for this repo:
+```
+rustup default nightly-2020-09-11
 ```
 
-You can now put `<script src="app.js" />` in your web page,  using `foo.myFunction` to create a new Bitcoin private key.
-
-**NOTE**: If you uglify the javascript, you must exclude the following variable names from being mangled: `BigInteger`, `ECPair`, `Point`.
-This is because of the function-name-duck-typing used in [typeforce](https://github.com/dcousens/typeforce).
-
-Example:
-``` bash
-uglifyjs ... --mangle --reserved 'BigInteger,ECPair,Point'
+Change to ./node_modules/cryptoconditions-js subdir and run the following command to build cryptconditions lib wasm for browserify.
+```
+cd ./node_modules/cryptoconditions-js
+wasm-pack build
 ```
 
-**NOTE**: This library tracks Node LTS features,  if you need strict ES5,  use [`--transform babelify`](https://github.com/babel/babelify) in conjunction with your `browserify` step (using an [`es2015`](http://babeljs.io/docs/plugins/preset-es2015/) preset).
-
-**NOTE**: If you expect this library to run on an iOS 10 device, ensure that you are using [buffer@5.0.5](https://github.com/feross/buffer/pull/155) or greater.
-
-## Examples
-The below examples are implemented as integration tests, they should be very easy to understand.
-Otherwise, pull requests are appreciated.
-Some examples interact (via HTTPS) with a 3rd Party Blockchain Provider (3PBP).
-
-### Bitcoin
-
-- [Generate a random address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L12)
-- [Generate an address from a SHA256 hash](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L19)
-- [Import an address via WIF](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L29)
-- [Generate a 2-of-3 P2SH multisig address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L36)
-- [Generate a SegWit address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L50)
-- [Generate a SegWit P2SH address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L60)
-- [Generate a SegWit 3-of-4 multisig address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L71)
-- [Generate a SegWit 2-of-2 P2SH multisig address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L86)
-- [Support the retrieval of transactions for an address (3rd party blockchain)](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L100)
-- [Generate a Testnet address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L121)
-- [Generate a Litecoin address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/addresses.js#L131)
-- [Create a 1-to-1 Transaction](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/transactions.js#L14)
-- [Create a 2-to-2 Transaction](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/transactions.js#L28)
-- [Create (and broadcast via 3PBP) a typical Transaction](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/transactions.js#L46)
-- [Create (and broadcast via 3PBP) a Transaction with an OP\_RETURN output](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/transactions.js#L88)
-- [Create (and broadcast via 3PBP) a Transaction with a 2-of-4 P2SH(multisig) input](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/transactions.js#L115)
-- [Create (and broadcast via 3PBP) a Transaction with a SegWit P2SH(P2WPKH) input](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/transactions.js#L151)
-- [Create (and broadcast via 3PBP) a Transaction with a SegWit 3-of-4 P2SH(P2WSH(multisig)) input](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/transactions.js#L183)
-- [Import a BIP32 testnet xpriv and export to WIF](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/bip32.js#L8)
-- [Export a BIP32 xpriv, then import it](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/bip32.js#L15)
-- [Export a BIP32 xpub](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/bip32.js#L26)
-- [Create a BIP32, bitcoin, account 0, external address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/bip32.js#L35)
-- [Create a BIP44, bitcoin, account 0, external address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/bip32.js#L50)
-- [Create a BIP49, bitcoin testnet, account 0, external address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/bip32.js#L66)
-- [Use BIP39 to generate BIP32 addresses](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/bip32.js#L83)
-- [Create (and broadcast via 3PBP) a Transaction where Alice can redeem the output after the expiry](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/cltv.js#L37)
-- [Create (and broadcast via 3PBP) a Transaction where Alice and Bob can redeem the output at any time](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/cltv.js#L71)
-- [Create (but fail to broadcast via 3PBP) a Transaction where Alice attempts to redeem before the expiry](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/cltv.js#L104)
-- [Recover a private key from duplicate R values](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/crypto.js#L14)
-- [Recover a BIP32 parent private key from the parent public key, and a derived, non-hardened child private key](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/crypto.js#L115)
-- [Generate a single-key stealth address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/stealth.js#L70:)
-- [Generate a single-key stealth address (randomly)](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/stealth.js#L89:)
-- [Recover parent recipient.d, if a derived private key is leaked (and nonce was revealed)](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/stealth.js#L105)
-- [Generate a dual-key stealth address](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/stealth.js#L122)
-- [Generate a dual-key stealth address (randomly)](https://github.com/BitGo/bitgo-utxo-lib/blob/master/test/integration/stealth.js#L145)
-
-If you have a use case that you feel could be listed here, please [ask for it](https://github.com/BitGo/bitgo-utxo-lib/issues/new)!
-
-### Running the test suite
-
-``` bash
-npm test
-npm run-script coverage
+Now go to bitgo-utxo-komodo-cc-lib repo dir.<br>
+Rebuild sources and build the test app for browser:
 ```
-
-## Complementing Libraries
-- [BIP21](https://github.com/bitcoinjs/bip21) - A BIP21 compatible URL encoding utility library
-- [BIP38](https://github.com/bitcoinjs/bip38) - Passphrase-protected private keys
-- [BIP39](https://github.com/bitcoinjs/bip39) - Mnemonic generation for deterministic keys
-- [BIP32-Utils](https://github.com/bitcoinjs/bip32-utils) - A set of utilities for working with BIP32
-- [BIP66](https://github.com/bitcoinjs/bip66) - Strict DER signature decoding
-- [BIP69](https://github.com/bitcoinjs/bip69) - Lexicographical Indexing of Transaction Inputs and Outputs
-- [Base58](https://github.com/cryptocoinjs/bs58) - Base58 encoding/decoding
-- [Base58 Check](https://github.com/bitcoinjs/bs58check) - Base58 check encoding/decoding
-- [Bech32](https://github.com/bitcoinjs/bech32) - A BIP173 compliant Bech32 encoding library
-- [coinselect](https://github.com/bitcoinjs/coinselect) - A fee-optimizing, transaction input selection module for bitcoinjs-lib.
-- [merkle-lib](https://github.com/bitcoinjs/merkle-lib) - A performance conscious library for merkle root and tree calculations.
-- [minimaldata](https://github.com/bitcoinjs/minimaldata) - A module to check bitcoin policy: SCRIPT_VERIFY_MINIMALDATA
+npm run build
+browserify ../bitcoinjs-lib-kmd/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
+```
+Copy created ccfaucetpocbr.js into your webpack dir.
+Copy the example of an index.html page from the webpack-test dir to your webpack dir.
+Inside your webpack dir run the web server with a command:
+```
+npm run serve
+```
+The web server should be available at http://localhost:8080 url (if you installed the webpack on the same PC).
 
 
-## LICENSE [MIT](LICENSE)
+### Use the correct komodod version
+
+The last thing is to make sure you run a komodod version with an extension to nSPV getutxos call (it should additionally return script for each utxo).<br>
+Use this komodod branch for this:
+https://github.com/dimxy/komodo/tree/nspv-utxo-ext
+
+I recommed to run komodod with -debug=net to easily discover wrong magic errors and observe communication dynamic. Basically komodod should print ver/verack and ping/pong exchanges in the debug.log, if connection is okay
+
+
+## What should happen in the test
+
+When you run the chain, webpack and webcoin-bridge, you might go to the test page url in browser (http://localhost:8080).<br>
+It allows first to connect to a peer and then create cc faucet transactions. 
+
+
+## Info about new and updated packages
+
+Some dependent packages were modified to add support for komodo:
+  * bitcoin-protocol
+  * bitcoin-net
+
+Links to these packages in package.json are updated to load them from forked github repositories (see package.json).  
+  
+Also added a new package cryptoconditions-js link that currently is loaded from a github repo.
+
+
+## Original Bitgo-utxo-lib readme
+Read the original readme [here](https://github.com/bitgo/bitgo-utxo-lib).
+
+## LICENSE [MIT](https://github.com/BitGo/bitgo-utxo-lib/LICENSE)
