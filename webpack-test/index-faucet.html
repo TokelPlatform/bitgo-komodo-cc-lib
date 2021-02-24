@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <!-- <script type="module">
+    import { Connect } from "./ccfaucetpocbr.js" 
+  
+    function myConnect() {
+      return Connect();
+    }
+  </script> 
+  <script" src="./index.js"></script>-->
+
+   <h2>CC Faucet PoC</h2>
+
+  <p id="demo">Faucet functions:</p>
+
+  <!--<button type="button" onclick="myConnect().then((result)=>{ document.write('Connected!').catch((err)=>{ document.write('could not connect: ' + err.message); }); })">Connect-to-Peer</button>-->
+  <!--<button type="button" onclick="myFunction()">Connect-to-Peer</button>-->
+  <button type="button" id="btnConnect">Connect Peer</button>
+  <button type="button" id="btnCreate">Create CC Faucet</button>
+  <button type="button" id="btnGet">Get CC Faucet</button>
+
+  <p> </p>
+  <p id="idConnectRes"></p>
+  <p id="idFaucetCreateRes"></p>
+  <p id="idFaucetGetRes"></p>
+
+<!--<script type="module">
+  //import { Connect1 } from "./ccfaucetpoc-bundle.js" 
+   import("./hello-bundle.js")
+      .then(r => {
+        console.log(r);
+        var z = r;
+        console.log(z);
+        console.log(z.Multiple(2,3))
+      })
+  //import * as f from "./ccfaucetpoc-bundle.js" 
+
+  //document.getElementById("myButtonId").onclick = f.Connect; 
+  //Connect1(); 
+  //document.write('hello='+hello)
+  //document.write('multiply='+Multiply(2,2))
+
+</script>-->
+
+<!--<script src="./hello-bundle.js"></script>
+<script>
+  console.log(myLibrary)
+  console.log(myLibrary.Multiply(2,2))
+</script>-->
+<script src="./ccfaucetpocbr-bundle.js"></script>
+<script>
+  //console.log(myLibrary)
+  //console.log(myLibrary.Connect())
+  document.getElementById("btnConnect").onclick = myConnect; 
+  document.getElementById("btnCreate").onclick = myCreateFaucet; 
+  document.getElementById("btnGet").onclick = myGetFaucet; 
+  localStorage.debug = 'bitcoin-net:peer,bitcoin-net:peergroup'
+
+  function myConnect() {
+    myLibrary.Connect()
+      .then(()=>{ 
+        console.log('in browser: connected to peer'); 
+        //console.log('res:', res, 'peer:', peer)
+        document.getElementById("idConnectRes").innerHTML = 'connected';
+      }) 
+      .catch((err, peer) => {
+        console.log('connect error:', err, 'peer:', peer);
+        document.getElementById("idConnectRes").innerHTML = 'connect error: '+err.message;
+      })
+  }
+
+  function myCreateFaucet() {
+    myLibrary.ccfaucet_create()
+      .then((txhex)=>{ 
+        document.getElementById("idFaucetCreateRes").innerHTML = 'TXHEX CREATE: '+txhex;
+      }) 
+      .catch(err=>{
+        console.log('create error=', err)
+        document.getElementById("idFaucetCreateRes").innerHTML = 'create tx error: '+err.message;
+      })
+  }
+
+  function myGetFaucet() {
+    document.getElementById("idFaucetGetRes").innerHTML = 'mining faucet txpow...';
+    myLibrary.ccfaucet_get()
+      .then((txhex)=>{ 
+        document.getElementById("idFaucetGetRes").innerHTML = 'TXHEX GET: '+txhex;
+      }) 
+      .catch(err=>{
+        console.log('get error=', err)
+        document.getElementById("idFaucetGetRes").innerHTML = 'create tx error: '+err.message;
+      })
+  }
+
+</script>
+</body>
+</html>
