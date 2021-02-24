@@ -200,4 +200,4 @@ Also added a new package cryptoconditions-js link that currently is loaded from 
 ## Original Bitgo-utxo-lib readme
 Read the original readme [here](https://github.com/bitgo/bitgo-utxo-lib).
 
-## LICENSE [MIT](https://github.com/BitGo/bitgo-utxo-lib/LICENSE)
+## LICENSE [MIT](https://github.com/dimxy/bitgo-utxo-komodo-cc-lib/blob/master/LICENSE)
