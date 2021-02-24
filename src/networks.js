@@ -194,5 +194,154 @@ module.exports = {
       4: 0xf5b9230b
     },
     coin: coins.ZEC
+  },
+  dimxy14: {
+    messagePrefix: '\x18DIMXY14 asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public: 0x4ea629ab,
+      private: 0x00000000,
+    },    
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id, used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
+  },
+  dimxy15: {
+    messagePrefix: '\x18DIMXY15 asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public: 0xDC2E96D8,
+      private: 0x00000000,
+    },
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
+  },
+  dimxy18: {
+    messagePrefix: '\x18DIMXY18 asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public: 0x69587043,
+      private: 0x00000000,
+    },
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
+  },
+
+  dimxy19: {
+    messagePrefix: '\x18DIMXY19 asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public: 0xb00668b4,
+      private: 0x00000000,
+    },
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
+  },
+
+  rick: {
+    messagePrefix: '\x18rick asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public: 0xfd750df6,
+      private: 0x00000000,
+    },
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id, used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
+  },
+  marmaraxy31: {
+    messagePrefix: '\x18MARMARAXY31 asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public: 0x3869ccd3,
+      private: 0x00000000,
+    },
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id, used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
+  },
+  marmaraxy32: {
+    messagePrefix: '\x18MARMARAXY32 asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public: 0x9A98CAB2,
+      private: 0x00000000,
+    },
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id, used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
   }
 }
