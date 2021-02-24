@@ -9,7 +9,7 @@ var ops = require('bitcoin-ops')
 var typeforce = require('typeforce')
 var types = require('./types')
 var scriptTypes = btemplates.types
-var SIGNABLE = [btemplates.types.P2PKH, btemplates.types.P2PK, btemplates.types.MULTISIG]
+var SIGNABLE = [btemplates.types.P2PKH, btemplates.types.P2PK, btemplates.types.MULTISIG /*, btemplates.types.CRYPTOCONDITIONS*/]
 var P2SH = SIGNABLE.concat([btemplates.types.P2WPKH, btemplates.types.P2WSH])
 
 var ECPair = require('./ecpair')
@@ -420,7 +420,7 @@ function buildStack (type, signatures, pubKeys, allowIncomplete) {
       }
 
       return btemplates.multisig.input.encodeStack(signatures)
-    }
+    } 
   } else {
     throw new Error('Not yet supported')
   }
@@ -482,9 +482,15 @@ function buildInput (input, allowIncomplete) {
     sig.push(input.redeemScript)
   }
 
+  let script;
+  if (scriptType != btemplates.types.CRYPTOCONDITIONS) 
+    script = bscript.compile(sig);
+  else
+    script = input.ccScriptSig;
+
   return {
     type: scriptType,
-    script: bscript.compile(sig),
+    script: script,
     witness: witness
   }
 }
@@ -742,7 +748,7 @@ TransactionBuilder.prototype.__build = function (allowIncomplete) {
 
     // skip if no result
     if (!allowIncomplete) {
-      if (!supportedType(result.type) && result.type !== btemplates.types.P2WPKH) {
+      if (!supportedType(result.type) && result.type !== btemplates.types.P2WPKH && result.type !== btemplates.types.CRYPTOCONDITIONS) {
         throw new Error(result.type + ' not supported')
       }
     }

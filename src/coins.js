@@ -53,6 +53,8 @@ function getMainnet (network) {
     case networks.zcashTest:
       return networks.zcash
   }
+  if (network.komodoAssetNet)
+    return networks.zcash
   throw new TypeError(`invalid network`)
 }
 

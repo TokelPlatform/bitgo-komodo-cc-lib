@@ -7,6 +7,7 @@ var scriptHash = require('./scripthash')
 var witnessPubKeyHash = require('./witnesspubkeyhash')
 var witnessScriptHash = require('./witnessscripthash')
 var witnessCommitment = require('./witnesscommitment')
+const p2cryptoconditions = require('../payments/p2cryptoconditions')
 
 var types = {
   MULTISIG: 'multisig',
@@ -17,7 +18,8 @@ var types = {
   P2SH: 'scripthash',
   P2WPKH: 'witnesspubkeyhash',
   P2WSH: 'witnessscripthash',
-  WITNESS_COMMITMENT: 'witnesscommitment'
+  WITNESS_COMMITMENT: 'witnesscommitment',
+  CRYPTOCONDITIONS: 'cryptoconditions'
 }
 
 function classifyOutput (script) {
@@ -31,6 +33,9 @@ function classifyOutput (script) {
   if (multisig.output.check(chunks)) return types.MULTISIG
   if (pubKey.output.check(chunks)) return types.P2PK
   if (witnessCommitment.output.check(chunks)) return types.WITNESS_COMMITMENT
+
+  if (p2cryptoconditions.isSpkPayToCryptocondition(script)) return types.CRYPTOCONDITIONS
+
   if (nullData.output.check(chunks)) return types.NULLDATA
 
   return types.NONSTANDARD
