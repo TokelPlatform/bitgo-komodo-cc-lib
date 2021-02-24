@@ -1,11 +1,11 @@
 # BitGo-utxo with Komodo Antara (Cryptoconditions) Support
 
-A fork from BitGo [bitgo-utxo-lib](https://github.com/bitgo/bitgo-utxo-lib)
+A fork from BitGo javascript library [bitgo-utxo-lib](https://github.com/bitgo/bitgo-utxo-lib).<br>
 A javascript Bitcoin library for node.js and browsers. Written mostly in javascript, with the cryptoconditions (cc) library written in rust and built as a wasm module.<br>
-Added support for komodo messages including nSPV protocol and cc features along with the cryptoconditions lib (as wasm).
-Komodo Antara (Cryptoconditions, CC) technology allows to create complex multisignature transactions and add custom consensus code to komodo based assets chains.
-This library allows to develop SPV clients using Antara (CC) technology.
-More info: [Antara Development Docs](http://developers.komodoplatform.com/basic-docs/antara/introduction-to-antara.html)
+Added support for komodo messages including nSPV protocol and cc features along with the cryptoconditions lib (as a wasm module).<br>
+Komodo Antara (Cryptoconditions, CC) technology allows to create complex multisignature transactions and add custom consensus code to komodo based assets chains.<br>
+This javascript library allows to develop SPV clients using Antara (CC) technology.<br>
+More info: [Antara Development Docs](http://developers.komodoplatform.com/basic-docs/antara/introduction-to-antara.html)<br>
 
 Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-utxo-komodo-cc-lib/blob/master/LICENSE).
 
