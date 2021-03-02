@@ -7,7 +7,7 @@ Komodo Antara (Cryptoconditions, CC) technology allows to create complex multisi
 This javascript library allows to develop SPV clients using Antara (CC) technology.<br>
 More info: [Antara Development Docs](http://developers.komodoplatform.com/basic-docs/antara/introduction-to-antara.html)<br>
 
-Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-utxo-komodo-cc-lib/blob/master/LICENSE).
+Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-komodo-cc-lib/blob/master/LICENSE).
 
 ## Prerequisites
 
@@ -203,4 +203,4 @@ Also added a new package cryptoconditions-js link that currently is loaded from 
 ## Original Bitgo-utxo-lib readme
 Read the original readme [here](https://github.com/bitgo/bitgo-utxo-lib).
 
-## LICENSE [MIT](https://github.com/dimxy/bitgo-utxo-komodo-cc-lib/blob/master/LICENSE)
+## LICENSE [MIT](https://github.com/dimxy/bitgo-komodo-cc-lib/blob/master/LICENSE)
