@@ -36,9 +36,9 @@ Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
 npm install
 ```
 
+You'll need a komodo test asset chain to run the ccfaucetpoc sample.
 Setup network parameters for your komodo chain:<br>
-Open `networks.js` and make a new entry for your chain.<br>
-In fact you need to fix the yourchainname and magic params for your chain:
+Open `networks.js` and make a new entry for your chain. You need to fix the yourchainname and magic params for your chain, like:
 ```
 module.exports = {
   yourchainname: {
@@ -63,12 +63,7 @@ module.exports = {
 };
 ```
 
-Rebuild nodejs packages:
-```
-npm run build
-```
-
-In ccfaucetpoc.js change mynetwork var to yourchainname:<br>
+In ccfaucetpoc.js source change mynetwork var to some yourchainname:<br>
 ```
 var mynetwork=networks.yourchainname
 ```
