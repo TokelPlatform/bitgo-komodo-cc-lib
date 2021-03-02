@@ -7,7 +7,7 @@ debug.rx = Debug('bitcoin-net:messages:rx')
 debug.tx = Debug('bitcoin-net:messages:tx')
 
 const bufferutils = require("../src/bufferutils");
-const Peer = require('bitcoin-net').Peer
+const Peer = require('./peer')
 const { NSPVREQ, NSPVRESP, nspvReq, nspvResp } = require('./kmdtypes');
 
 Peer.prototype._registerListenersPrev = Peer.prototype._registerListeners;

@@ -5,7 +5,7 @@
 let net
 try { net = require('net') } catch (err) {}
 const old = require('old')
-const PeerGroup = require('bitcoin-net').PeerGroup
+const PeerGroup = require('./peerGroup')
 
 const { nspvResp } = require('./kmdtypes');
 

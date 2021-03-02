@@ -102,8 +102,8 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
       let signedCond = p2cryptoconditions.cryptoconditions.js_sign_secp256k1(inputCond, privateKey, signatureHash);
       let ccScriptSig = p2cryptoconditions.makeCCScriptSig(signedCond);
 
-      let ttt = p2cryptoconditions.makeCCSpk(signedCond);
-      console.log("signed spk=", ttt.toString('hex'));
+      //let ttt = p2cryptoconditions.makeCCSpk(signedCond);
+      //console.log("signed spk=", ttt.toString('hex'));
       
       txbuilder.inputs[index].ccScriptSig = ccScriptSig;
       
