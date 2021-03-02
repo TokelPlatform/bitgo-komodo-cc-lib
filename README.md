@@ -30,7 +30,7 @@ To test this you need a komodod chain with cc modules enabled (Note about the co
 
 Clone this git repository go to the new dir and checkout dev-kmd branch.
 
-Install the bitgo-utxo-komodo-cc-lib dependency packages, inside the repo dir run:
+Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
 
 ```
 npm install
@@ -141,7 +141,7 @@ module.exports = {
   }
 };
 ```
-(Both those package.json and webpack.config.js files may be found in webpack-test subdir of bitgo-utxo-komodo-cc-lib dir)
+(Both those package.json and webpack.config.js files may be found in webpack-test subdir of bitgo-komodo-cc-lib dir)
 Inside the webpack dir run: 
 ```
 npm install
@@ -159,11 +159,11 @@ cd ./node_modules/cryptoconditions-js
 wasm-pack build
 ```
 
-Now go to bitgo-utxo-komodo-cc-lib repo dir.<br>
+Now go to bitgo-komodo-cc-lib repo dir.<br>
 Rebuild sources and build the test app for browser:
 ```
 npm run build
-browserify ../bitgo-utxo-komodo-cc-lib/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
+browserify ../bitgo-komodo-cc-lib/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
 ```
 Copy created ccfaucetpocbr.js into your webpack dir.
 Copy the example of an index.html page from the webpack-test dir to your webpack dir.
