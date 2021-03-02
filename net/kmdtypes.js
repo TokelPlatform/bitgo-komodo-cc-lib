@@ -236,13 +236,13 @@ exports.kmdheader = struct([
 const NSPVREQ = {
   NSPV_UTXOS: 0x02,  // not used, createtxwithnormalinputs rpc is used instead
   NSPV_BROADCAST: 0x0c,
-  NSPV_REMOTERPC: 0x14+1
+  NSPV_REMOTERPC: 0x14 // 0x15 for varbuffer experimental version in faucet-nspv-ext
 };
 
 const NSPVRESP = {
   NSPV_UTXOSRESP: 0x03,
   NSPV_BROADCASTRESP: 0x0d,
-  NSPV_REMOTERPCRESP: 0x15+1
+  NSPV_REMOTERPCRESP: 0x15, // 0x16 is varbuffer, decided not use i on client side
 };
 
 exports.NSPVREQ = NSPVREQ;
@@ -318,7 +318,43 @@ let nspvBroadcastRespType = (function(){
   return { encode, decode, encodingLength }
 })();
 
+// custom parse rempte rpc req/resp as varBuffer is not supported on the server side
+let nspvRemoteRpc = (function(){
+  function encode(value, buffer, offset) {
+    let bufferWriter = new bufferutils.BufferWriter(buffer, offset);
+    bufferWriter.writeUInt8(value.reqCode);
+    bufferWriter.writeUInt32(value.length);
+    bufferWriter.writeSlice(value.jsonSer);
+    encode.bytes = bufferWriter.offset;
+  }
+  function encodingLength(value) {
+    return 1 + 4 + value.jsonSer.length; // sizeof(uint8_t) + sizeof(int32) + jsonSer.length
+  }
+  function decode(buffer, offset, end) {
+    return { };  // not used
+  }
+  return { encode, decode, encodingLength }
+})();
 
+let nspvRemoteRpcResp = (function(){
+  function encode(value, buffer, offset) {
+    // not used, only decode
+  }
+  function encodingLength(value) {
+    return 0; // not used, only decode
+  }
+  function decode(buffer, offset, end) {
+    let slicedBuffer = buffer.slice(offset, end);
+    let bufferReader = new bufferutils.BufferReader(slicedBuffer);
+    let respCode = bufferReader.readUInt8();
+    let method = bufferReader.readSlice(64);
+    let jsonSer = bufferReader.readSlice(slicedBuffer.length - bufferReader.offset);  // read until end
+    return { respCode: respCode, method: method, jsonSer: jsonSer };
+  }
+  return { encode, decode, encodingLength }
+})();
+
+/* if varBuffe is supported on the nspv server side, see the 'faucet-nspv-ext' experimental branch
 let nspvRemoteRpc = struct([
   { name: 'reqCode', type: struct.UInt8 },
   { name: 'jsonSer', type: exports.varBuffer }
@@ -329,6 +365,7 @@ let nspvRemoteRpcResp = struct([
   { name: 'method', type: methodtype  },  
   { name: 'jsonSer', type: exports.varBuffer }
 ]);
+*/
 
 // encode nspv requests
 exports.nspvReq = (function () {
