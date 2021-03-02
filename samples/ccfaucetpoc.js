@@ -1,19 +1,30 @@
 
 'use strict';
 
-const TransactionBuilder = require('./src/transaction_builder');
-const Transaction = require('./src/transaction');
-const ECPair = require('./src/ecpair');
-const p2cryptoconditions = require('./src/payments/p2cryptoconditions');
+const TransactionBuilder = require('../src/transaction_builder');
+const Transaction = require('../src/transaction');
+const ECPair = require('../src/ecpair');
 const OPS = require('bitcoin-ops');
 
-const kmdmessages = require('./net/kmdmessages');
-const ccutils = require('./cc/ccutils');
+const bufferutils = require("../src/bufferutils");
+const script = require("../src/script");
+const kmdmessages = require('../net/kmdmessages');
+const ccutils = require('../cc/ccutils');
+const ecpair = require('../src/ecpair');
+
+// create peer group
+var NspvPeerGroup = require('../net/nspvPeerGroup');
+require('../net/nspvPeer');  // init peer.js too
+
+const networks = require('../src/networks');
+//const mynetwork = networks.rick; 
+const mynetwork = networks.dimxy19;
 
 // you will need to do a call like:
 // p2cryptoconditions.cryptoconditions = await ccimp;
 // to init the cryptoconditions wasm lib 
-// (this is due to wasm loading specifics)
+// (this is due to wasm delayed loading specifics)
+const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
 var ccimp;
 if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
@@ -21,14 +32,9 @@ else
   ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
 
 
-const networks = require('./src/networks');
-//const mynetwork = networks.rick; 
-const mynetwork = networks.dimxy19;
-const bufferutils = require("./src/bufferutils");
-const script = require("./src/script");
+
 const FAUCETSIZE = 10000000;
 
-const ecpair = require('./src/ecpair');
 
 // faucet global privkey/pubkey:
 const faucetGlobalPk = "03682b255c40d0cde8faee381a1a50bbb89980ff24539cb8518e294d3a63cefe12";
@@ -76,9 +82,6 @@ var opts = {
   connectPlainWeb: true  // use plain websockets, no PXP
 }
 
-// create peer group
-var NspvPeerGroup = require('./net/nspvPeerGroup');
-require('./net/nspvPeer');  // init peer.js too
 var peers;
 
 function createTxAndAddFaucetInputs(peers, globalpk, amount)
