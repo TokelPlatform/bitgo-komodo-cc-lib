@@ -1,6 +1,6 @@
 'use strict'
 
-//const debug = require('debug')('bitcoin-net:peergroup')
+//const debug = require('debug')('net:peergroup')
 
 let net
 try { net = require('net') } catch (err) {}
