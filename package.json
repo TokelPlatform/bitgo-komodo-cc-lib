@@ -1,7 +1,7 @@
 {
-  "name": "@bitgo/utxo-lib",
-  "version": "1.9.1",
-  "description": "Client-side Bitcoin JavaScript library",
+  "name": "@komodo/bitgo-komodo-cc-lib",
+  "version": "0.1.0",
+  "description": "Client-side Bitcoin JavaScript library with Komodo cryptocondions support",
   "main": "./src/index.js",
   "engines": {
     "node": ">=4.0.0"
@@ -27,7 +27,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/BitGo/bitgo-utxo-lib.git"
+    "url": "https://github.com/dimxy/bitgo-komodo-cc-lib.git"
   },
   "files": [
     "src"
