@@ -1,10 +1,9 @@
 'use strict'
 
-//const crypto = require('crypto')
 const Debug = require('debug')
-const debug = Debug('bitcoin-net:peer')
-debug.rx = Debug('bitcoin-net:messages:rx')
-debug.tx = Debug('bitcoin-net:messages:tx')
+const debug = Debug('net:peer')
+debug.rx = Debug('net:messages:rx')
+debug.tx = Debug('net:messages:tx')
 
 const bufferutils = require("../src/bufferutils");
 const Peer = require('./peer')

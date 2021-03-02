@@ -1,6 +1,6 @@
 'use strict'
 
-const debug = require('debug')('bitcoin-net:peergroup')
+const debug = require('debug')('net:peergroup')
 const dns = require('dns')
 const EventEmitter = require('events')
 let net
@@ -8,7 +8,7 @@ try { net = require('net') } catch (err) {}
 const wsstream = require('websocket-stream')
 const ws = require('ws')
 const http = require('http')
-const Exchange = require('peer-exchange')
+//const Exchange = require('peer-exchange')
 const getBrowserRTC = require('get-browser-rtc')
 const once = require('once')
 const assign = require('object-assign')
@@ -24,7 +24,8 @@ const ADDRSTATE = {
   INUSE: 1
 };
 
-const DEFAULT_PXP_PORT = 8192 // default port for peer-exchange nodes
+// pxp not supported
+//const DEFAULT_PXP_PORT = 8192 // default port for peer-exchange nodes
 
 class PeerGroup extends EventEmitter {
   constructor (params, opts) {
@@ -66,6 +67,7 @@ class PeerGroup extends EventEmitter {
         this._webAddrs.push({ wsaddr: elem, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 }) 
       })
 
+      /* do not use pxp
       if (!this.fConnectPlainWeb)  {
         try {
           this._exchange = Exchange(params.magic.toString(16),
@@ -80,7 +82,7 @@ class PeerGroup extends EventEmitter {
         if (!process.browser && acceptIncoming) {
           this._acceptWebsocket()
         }
-      }
+      }*/
     }
 
     this.on('block', (block) => {
@@ -163,10 +165,10 @@ class PeerGroup extends EventEmitter {
         getPeerArray.push(this._connectStaticPeer.bind(this))
       }
     }
-    if (this._connectWeb && !this.fConnectPlainWeb && this._exchange.peers.length > 0) {
+    /*if (this._connectWeb && !this.fConnectPlainWeb && this._exchange.peers.length > 0) {
       getPeerArray.push(this._exchange.getNewPeer.bind(this._exchange))
-    }
-    if (this.fConnectPlainWeb && /*this._params.webSeeds.length > 0*/ this._freeWebAddrCount() > 0) {
+    }*/
+    if (this.fConnectPlainWeb && this._freeWebAddrCount() > 0) {
       getPeerArray.push(this._getNewPlainWebPeer.bind(this))
     }
   
@@ -176,10 +178,10 @@ class PeerGroup extends EventEmitter {
     if (getPeerArray.length === 0) { // could not find an addr to connect, let's retry in 8 sec
       this.connecting = false
       if (this.connectTimeout) {
-        console.log(`scheduling reconnecting to peers`)
+        debug(`scheduling reconnecting to peers`)
         setTimeout(() => {
           this.connecting = true
-          console.log(`resuming connecting to peers`)
+          debug(`resuming connecting to peers`)
           setImmediate(this.connect.bind(this))
         }, this.connectTimeout)
       }
@@ -236,8 +238,9 @@ class PeerGroup extends EventEmitter {
     socket.unref()
   }
 
+  // not supported
   // connects to the peer-exchange peers provided by the params
-  _connectWebSeeds () {
+  /*_connectWebSeeds () {
     this._webAddrs.forEach((elem) => {
       let seed = elem.wsaddr
       debug(`connecting to web seed: ${JSON.stringify(seed, null, '  ')}`)
@@ -252,7 +255,7 @@ class PeerGroup extends EventEmitter {
         this.emit('webSeed', peer)
       })
     })
-  }
+  }*/
 
   // connects to a plain websocket 
   _connectPlainWeb (wsaddr, cb) {
@@ -435,6 +438,7 @@ class PeerGroup extends EventEmitter {
     }
   }
 
+  /* pxp not supported
   _acceptWebsocket (port, cb) {
     if (process.browser) return cb(null)
     if (!port) port = DEFAULT_PXP_PORT
@@ -445,7 +449,7 @@ class PeerGroup extends EventEmitter {
     })
     http.listen(port)
     cb(null)
-  }
+  }*/
 
   _onAddr(message) {
     console.log('wsaddr message=', message);
