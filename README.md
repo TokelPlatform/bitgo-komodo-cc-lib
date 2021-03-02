@@ -188,7 +188,6 @@ It allows first to connect to a peer and then create cc faucet transactions.
 
 Some dependent packages were modified to add support for komodo:
   * bitcoin-protocol
-  * bitcoin-net
 
 Links to these packages in package.json are updated to load them from forked github repositories (see package.json).  
   
