@@ -343,5 +343,27 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true
-  }
+  },
+
+  tok6: {
+    messagePrefix: '\x18TOK6 asset chain:\n',
+    bech32: 'R',
+    bip32: {
+      public:   0xf4b89a4f,
+      private: 0x00000000,
+    },
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true
+  },
 }

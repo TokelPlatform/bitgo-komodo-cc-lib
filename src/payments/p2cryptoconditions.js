@@ -4,7 +4,7 @@ const networks_1 = require("../networks");
 const bscript = require("../script");
 //import * as lazy from './lazy';
 const typef = require('typeforce');
-const OPS = bscript.OPS;
+const OPS = require('bitcoin-ops')
 exports.CCOPS = {
     OP_CRYPTOCONDITIONS: 0xCC
 };

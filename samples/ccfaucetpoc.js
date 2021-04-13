@@ -126,8 +126,8 @@ exports.Connect = Connect;
 
 exports.ccfaucet_create = ccfaucet_create;
 async function ccfaucet_create(_wif, _myaddress, _satoshi) {
-  let wif = _wif || faucetcreatewif;
-  let myaddress = _myaddress || faucetcreateaddress;
+  let wif = _wif || myfaucetcreatewif;
+  let myaddress = _myaddress || myfaucetcreateaddress;
   let satoshi  = _satoshi || FAUCETSIZE*20;
   //amount = amount >>> 0; // to int
   let tx = await makeFaucetCreateTx(wif, myaddress, satoshi);
@@ -137,7 +137,7 @@ async function ccfaucet_create(_wif, _myaddress, _satoshi) {
 
 exports.ccfaucet_get = ccfaucet_get;
 async function ccfaucet_get(_myaddress) {
-  let myaddress = _myaddress || faucetgetaddress;
+  let myaddress = _myaddress || myfaucetgetaddress;
   let tx = await makeFaucetGetTx(myaddress);
   //return this.broadcast(tx.toHex());
   return tx.toHex();
@@ -282,10 +282,10 @@ async function makeFaucetGetTx(myaddress)
 
 
 // Example test calls running under nodejs
-const faucetcreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
-const faucetcreateaddress = 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu';
-const faucetgetwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
-const faucetgetaddress = 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
+const myfaucetcreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
+const myfaucetcreateaddress = 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu';
+const myfaucetgetwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
+const myfaucetgetaddress = 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
 
 if (!process.browser) 
 {
@@ -306,7 +306,7 @@ if (!process.browser)
       // console.log('blocks:', blocks);
 
       // test get normal utxos from an address:
-      //let utxos = await ccutils.getNormalUtxos(peers, faucetcreateaddress);
+      //let utxos = await ccutils.getNormalUtxos(peers, myfaucetcreateaddress);
       //console.log('utxos=', utxos);
 
       // it should be at least 1 sec between the same type nspv requests (here it is NSPV_UTXOS)
@@ -320,11 +320,11 @@ if (!process.browser)
       //console.log('cc utxos=', ccutxos); 
 
       // make cc faucet create tx
-      let txhex = await ccfaucet_create(faucetcreatewif, faucetcreateaddress, FAUCETSIZE*20 /*890719925404991*/);
+      let txhex = await ccfaucet_create(myfaucetcreatewif, myfaucetcreateaddress, FAUCETSIZE*20 /*890719925404991*/);
       console.log('txhex=', txhex);
 
       // make cc faucet get tx
-      //let txhex = await ccfaucet_get(faucetgetaddress);
+      //let txhex = await ccfaucet_get(myfaucetgetaddress);
       //console.log('txhex=', txhex);
 
       // make tx with normal inputs for the specified amount

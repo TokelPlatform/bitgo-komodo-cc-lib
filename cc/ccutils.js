@@ -284,8 +284,8 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
   let added = 0;
   for(let i = 0; i < tx.ins.length; i ++) {
     let prevTxHex = prevTxnsHex.find((txHex) => {
-        //let r = Transaction.fromHex(txHex).getHash().equals(tx.ins[i].hash);
-        //console.log('prevtx getHash()=', Transaction.fromHex(txHex).getHash().toString('hex'), 'tx.ins[i].hash=', tx.ins[i].hash.toString('hex'), 'equals=', r);
+        let r = Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
+        console.log('prevtx getHash()=', Transaction.fromHex(txHex, network).getHash().toString('hex'), 'tx.ins[i].hash=', tx.ins[i].hash.toString('hex'), 'equals=', r);
         return Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
     });
     if (prevTxHex !== undefined) {
