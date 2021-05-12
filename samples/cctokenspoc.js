@@ -65,7 +65,7 @@ var webSeeds = [
 ]
 
 var params = {
-  magic: mynetwork.bip32.public,
+  magic: mynetwork.magic,
   defaultPort: defaultPort,
   //dnsSeeds: dnsSeeds,
   webSeeds: webSeeds,

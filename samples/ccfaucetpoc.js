@@ -17,8 +17,8 @@ var NspvPeerGroup = require('../net/nspvPeerGroup');
 require('../net/nspvPeer');  // init peer.js too
 
 const networks = require('../src/networks');
-//const mynetwork = networks.rick; 
-const mynetwork = networks.dimxy19;
+const mynetwork = networks.rick; 
+//const mynetwork = networks.dimxy19;
 
 // you will need to do a call like:
 // p2cryptoconditions.cryptoconditions = await ccimp;
@@ -49,12 +49,12 @@ to connect over p2p:
 var dnsSeeds = [
 ]
 */
-/*
-to connect over p2p
+
+// to connect over p2p
 var staticPeers = [
-  '18.189.25.123:14722'
-  //'rick.kmd.dev:25434'
-] */
+  //'18.189.25.123:14722'
+  'rick.kmd.dev:25434'
+] 
 
 
 // to connect over websockets:
@@ -65,11 +65,11 @@ var webSeeds = [
 ]
 
 var params = {
-  magic: mynetwork.bip32.public,
+  magic: mynetwork.magic,
   defaultPort: defaultPort,
   //dnsSeeds: dnsSeeds,
   webSeeds: webSeeds,
-  //staticPeers: staticPeers,  // dnsSeed works also
+  staticPeers: staticPeers,  // dnsSeed works also
   protocolVersion: 170009,
   messages: kmdmessages.kmdMessages
 }
@@ -79,7 +79,7 @@ var opts = {
   //wrtc: wrtc,          // not supported any more
   numPeers: 8,
   //hardLimit: 2,        // max peers
-  connectPlainWeb: true  // use plain websockets, no PXP
+  connectPlainWeb: false  // use plain websockets, no PXP
 }
 
 var peers;
