@@ -20,6 +20,8 @@ require('../net/nspvPeer');  // init peer.js too
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 const mynetwork = networks.tok6;
+//const mynetwork = networks.dimxy23;
+
 
 // you will need to do a call like:
 // p2cryptoconditions.cryptoconditions = await ccimp;
@@ -335,25 +337,26 @@ async function makeTokensTransferTx(wif, tokenid, destpk, ccamount)
   
   txbuilder.addOutput(destccSpk, ccamount);
   
+
+  // create tokens to my address for cc change and spending probe
+  let mycond = {
+    type:	"threshold-sha-256",
+    threshold:	2,
+    subfulfillments:	[{
+          type:	"eval-sha-256",   
+          code:	ccutils.byte2Base64(EVAL_TOKENS)     
+      }, {            
+          type:	"threshold-sha-256",
+          threshold:	1,
+          subfulfillments:	[{  
+                  type:	"secp256k1-sha-256",
+                  publicKey:	mypk.toString('hex')
+          }]  
+      }]   
+    };
+
   if (ccadded - ccamount > 0)
   {
-    // create tokens cc change to my address
-    let mycond = {
-      type:	"threshold-sha-256",
-      threshold:	2,
-      subfulfillments:	[{
-            type:	"eval-sha-256",   
-            code:	ccutils.byte2Base64(EVAL_TOKENS)     
-        }, {            
-            type:	"threshold-sha-256",
-            threshold:	1,
-            subfulfillments:	[{  
-                    type:	"secp256k1-sha-256",
-                    publicKey:	mypk.toString('hex')
-            }]  
-        }]   
-      };
-
     let myccSpk = p2cryptoconditions.makeCCSpk(mycond, p2cryptoconditions.makeOpDropData(EVAL_TOKENS, 1,1, makeTokensVData(tokenid, [mypk])));
     if (myccSpk == null)  
       throw new Error('could not create tokens cc spk for mypk');
@@ -364,7 +367,7 @@ async function makeTokensTransferTx(wif, tokenid, destpk, ccamount)
   if (txbuilder.tx.version >= 4)
     txbuilder.setExpiryHeight(bearertx1.expiryHeight);
 
-  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: destcond}]);
+  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: mycond}]);
   return txbuilder.build();
 }
 
@@ -372,8 +375,9 @@ async function makeTokensTransferTx(wif, tokenid, destpk, ccamount)
 // Example test calls running under nodejs
 const mytokencreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
 const mytokentransferwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
-const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
-const mytokenid = "e196444133390c07461110f33db189883e8d376f1a841bc04b0ac7ba2dcf7701";
+//const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
+const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc";
+const mytokenid = "795e658249d0c36b74ccbdcc8f9c424bea3c48d1d76056c8994ebe8cf06a8f8c";
 
 if (!process.browser) 
 {
@@ -386,7 +390,7 @@ if (!process.browser)
   
     try {
 
-      // Several tests:
+      // Several tests (uncomment needed):
       
       // test get blocks from peer (TODO: update for kmd block and transactions support) : 
       // var hashes = [  bufferutils.reverseBuffer(Buffer.from("099751509c426f89a47361fcd26a4ef14827353c40f42a1389a237faab6a4c5d", 'hex')) ];
@@ -408,8 +412,8 @@ if (!process.browser)
       //console.log('cc utxos=', ccutxos); 
 
       // make cc token create tx
-      let txhex = await cctokens_create(mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
-      console.log('txhex=', txhex);
+      //let txhex = await cctokens_create(mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
+      //console.log('txhex=', txhex);
 
       // make cc token transfer tx
       //let txhex = await cctokens_transfer(mytokencreatewif, mytokenid, mydestpubkey, 1);
