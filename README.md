@@ -44,10 +44,7 @@ module.exports = {
   yourchainname: {
     messagePrefix: '\xYourChainName asset chain:\n',
     bech32: 'R',
-    bip32: {
-      public: 0x4ea629ab,   // magic, obtain with getinfo rpc
-      private: 0x00000000,
-    },    
+    bip32: getDefaultBip32Mainnet(),   
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
     wif: 0xbc,
@@ -58,7 +55,8 @@ module.exports = {
       4: 0x76b809bb // (Sapling branch id used in kmd)
     },
     coin: coins.ZEC,
-    komodoAssetNet: true
+    komodoAssetNet: true,
+    magic: 0x12345678  // komodo chain magic, obtain with getinfo rpc
   },
 };
 ```
