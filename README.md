@@ -142,7 +142,7 @@ npm install
 
 Set again the nightly rust version for this repo:
 ```
-rustup default nightly-2020-09-11
+rustup default nightly
 ```
 
 Change to ./node_modules/cryptoconditions-js subdir and run the following command to build cryptconditions lib wasm for browserify.
