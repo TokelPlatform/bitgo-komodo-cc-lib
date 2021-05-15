@@ -71,11 +71,10 @@ Set your funding faucet wif and address and a wif and address getting funds in c
 ## Build test app to run in nodejs
 
 Build the cryptoconditions wasm module:<br>
-Setup the rust nightly build to build cryptoconditions. It looks like the current latest October 2020 nightly build is broken and omitted some runtime lib.
-I use this 'nightly-2020-09-11' build that worked well for me:
+Setup the rust nightly build to build cryptoconditions:
 ```
-rustup toolchain install nightly-2020-09-11
-rustup default nightly-2020-09-11
+rustup toolchain install nightly
+rustup default nightly
 ```
 
 Change to cryptoconditions-js directory and build the cryptoconditions wasm module for nodejs target:
@@ -156,7 +155,7 @@ Now go to bitgo-komodo-cc-lib repo dir.<br>
 Rebuild sources and build the test app for browser:
 ```
 npm run build
-browserify ../bitgo-komodo-cc-lib/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
+browserify ./samples/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
 ```
 Copy created ccfaucetpocbr.js into your webpack dir.
 Copy the example of an index.html page from the webpack-test dir to your webpack dir.
