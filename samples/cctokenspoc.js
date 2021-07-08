@@ -19,8 +19,9 @@ require('../net/nspvPeer');  // init peer.js too
 
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
-const mynetwork = networks.tok6;
+//const mynetwork = networks.tok6;
 //const mynetwork = networks.dimxy23;
+const mynetwork = networks.dimxy25;
 
 
 // you will need to do a call like:
@@ -33,7 +34,6 @@ if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
 else
   ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
-
 
 
 // tokens global privkey/pubkey:
@@ -53,16 +53,18 @@ var dnsSeeds = [
 
 //to connect over p2p
 var staticPeers = [
-  '127.0.0.1:14722'
+  //'127.0.0.1:14722'
   //'18.189.25.123:14722'
   //'rick.kmd.dev:25434'
+  '3.136.47.223:14722'
 ] 
 
 
 // to connect over websockets:
 var webSeeds = [
   //'ws://18.189.25.123:8192'
-  'ws://localhost:8192'
+  'wss://localhost:8192'
+  //'ws://3.136.47.223:8192'
   // TODO: add more
 ]
 
@@ -71,17 +73,18 @@ var params = {
   defaultPort: defaultPort,
   //dnsSeeds: dnsSeeds,
   webSeeds: webSeeds,
-  staticPeers: staticPeers,  // dnsSeed works also
+  //staticPeers: staticPeers,  // dnsSeed works also
   protocolVersion: 170009,
   messages: kmdmessages.kmdMessages
 }
 
 var opts = {
-  connectWeb: false,     // use websockets
+  connectWeb: true,     // use websockets
   //wrtc: wrtc,          // not supported any more
   numPeers: 8,
   //hardLimit: 2,        // max peers
-  connectPlainWeb: false  // use plain websockets, no PXP
+  connectPlainWeb: true,  // use plain websockets, no PXP
+  wsOpts: { rejectUnauthorized: false }  // enable self-signed certificates
 }
 
 var peers;
@@ -377,7 +380,7 @@ const mytokencreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
 const mytokentransferwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
 //const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
 const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc";
-const mytokenid = "795e658249d0c36b74ccbdcc8f9c424bea3c48d1d76056c8994ebe8cf06a8f8c";
+const mytokenid = "2bea503a491cae096b0c2af48d504e4fbd7c4747f49eddbb5d2723d6287769f8";
 
 if (!process.browser) 
 {
@@ -416,8 +419,8 @@ if (!process.browser)
       //console.log('txhex=', txhex);
 
       // make cc token transfer tx
-      //let txhex = await cctokens_transfer(mytokencreatewif, mytokenid, mydestpubkey, 1);
-      //console.log('txhex=', txhex);
+      let txhex = await cctokens_transfer(mytokencreatewif, mytokenid, mydestpubkey, 1);
+      console.log('txhex=', txhex);
 
       // make tx with normal inputs for the specified amount
       // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);

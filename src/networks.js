@@ -274,5 +274,25 @@ module.exports = {
     komodoAssetNet: true,
     magic:   0x902f7aae
   },
+
+  dimxy25: {
+    messagePrefix: '\x18DIMXY25 asset chain:\n',
+    bech32: 'R',
+    bip32: getDefaultBip32Mainnet(),
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true,
+    magic: 0x794cdf9b //   0x9bdf4c79
+  },
   
 }

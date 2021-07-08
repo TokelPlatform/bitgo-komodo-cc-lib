@@ -17,8 +17,10 @@ var NspvPeerGroup = require('../net/nspvPeerGroup');
 require('../net/nspvPeer');  // init peer.js too
 
 const networks = require('../src/networks');
-const mynetwork = networks.rick; 
+//const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
+const mynetwork = networks.tok6; 
+
 
 // you will need to do a call like:
 // p2cryptoconditions.cryptoconditions = await ccimp;
@@ -60,7 +62,8 @@ var staticPeers = [
 // to connect over websockets:
 var webSeeds = [
   //'ws://18.189.25.123:8192'
-  'ws://localhost:8192'
+  //'ws://localhost:8192'
+  'ws:3.136.47.223:8192'
   // TODO: add more
 ]
 
@@ -75,11 +78,12 @@ var params = {
 }
 
 var opts = {
-  connectWeb: false,     // use websockets
+  connectWeb: true,     // use websockets
   //wrtc: wrtc,          // not supported any more
   numPeers: 8,
   //hardLimit: 2,        // max peers
-  connectPlainWeb: false  // use plain websockets, no PXP
+  connectPlainWeb: true,  // use plain websockets, no PXP
+  wsOpts: { rejectUnauthorized: false } 
 }
 
 var peers;

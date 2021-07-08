@@ -43,6 +43,8 @@ class PeerGroup extends EventEmitter {
       ? opts.connectTimeout : 8 * 1000
     this.peerOpts = opts.peerOpts != null
       ? opts.peerOpts : {}
+    this.wsOpts = opts.wsOpts != null
+      ? opts.wsOpts : {}
     this.acceptIncoming = opts.acceptIncoming
     let acceptIncoming = this.acceptIncoming
     this.connecting = false
@@ -260,7 +262,7 @@ class PeerGroup extends EventEmitter {
   // connects to a plain websocket 
   _connectPlainWeb (wsaddr, cb) {
     debug(`_connectPlainWeb: ${wsaddr}`)
-    let socket = wsstream(wsaddr)
+    let socket = wsstream(wsaddr, undefined , this.wsOpts)
     let timeout
     if (this.connectTimeout) {
       timeout = setTimeout(() => {
