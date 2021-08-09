@@ -101,7 +101,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
     }
 
     if (result.result !== undefined && result.result.error) {
-      cb(new Error(result.result.error));
+      cb(new Error('nspv remote error' + result.result.error));
       return;
     }
 

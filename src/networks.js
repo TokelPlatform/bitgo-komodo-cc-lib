@@ -215,6 +215,26 @@ module.exports = {
     magic: 0xb00668b4
   },
 
+  dimxy20: {
+    messagePrefix: '\x18DIMXY20 asset chain:\n',
+    bech32: 'R',
+    bip32: getDefaultBip32Mainnet(),
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true,
+    magic: 0x09262b14
+  },
+
   rick: {
     messagePrefix: '\x18rick asset chain:\n',
     bech32: 'R',

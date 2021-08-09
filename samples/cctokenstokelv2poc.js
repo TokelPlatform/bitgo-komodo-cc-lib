@@ -21,7 +21,18 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.tok6;
 //const mynetwork = networks.dimxy23;
-const mynetwork = networks.dimxy25;
+const mynetwork = networks.dimxy20;
+
+// tokel data props ids:
+const TKLPROP_ID = 1;
+const TKLPROP_URL = 2;
+const TKLPROP_ROYALTY = 3;
+const TKLPROP_ARBITRARY = 4;
+
+const TKLNAME_URL = "url";
+const TKLNAME_ID = "id";
+const TKLNAME_ROYALTY = "royalty";
+const TKLNAME_ARBITRARY = "arbitrary";
 
 
 // you will need to do a call like:
@@ -29,6 +40,7 @@ const mynetwork = networks.dimxy25;
 // to init the cryptoconditions wasm lib 
 // (this is due to wasm delayed loading specifics)
 const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
+const { varint } = require('bitcoin-protocol');
 var ccimp;
 if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
@@ -36,11 +48,17 @@ else
   ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
 
 
-// tokens global privkey/pubkey:
-const tokensGlobalPk = "03e6191c70c9c9a28f9fd87089b9488d0e6c02fb629df64979c9cdb6b2b4a68d95";
-const tokensGlobalPrivkey = Buffer.from([ 0x1d, 0x0d, 0x0d, 0xce, 0x2d, 0xd2, 0xe1, 0x9d, 0xf5, 0xb6, 0x26, 0xd5, 0xad, 0xa0, 0xf0, 0x0a, 0xdd, 0x7a, 0x72, 0x7d, 0x17, 0x35, 0xb5, 0xe3, 0x2c, 0x6c, 0xa9, 0xa2, 0x03, 0x16, 0x4b, 0xcf ]);
-const tokensGlobalAddress = "RAMvUfoyURBRxAdVeTMHxn3giJZCFWeha2";
-const EVAL_TOKENS = 0xF2;
+// tokens v2 global privkey/pubkey:
+const tokensv2GlobalPk = "032fd27f72591b02f13a7f9701246eb0296b2be7cfdad32c520e594844ec3d4801";
+const tokensv2GlobalPrivkey = Buffer.from([ 0xb5, 0xba, 0x92, 0x7f, 0x53, 0x45, 0x4f, 0xf8, 0xa4, 0xad, 0x0d, 0x38, 0x30, 0x4f, 0xd0, 0x97, 0xd1, 0xb7, 0x94, 0x1b, 0x1f, 0x52, 0xbd, 0xae, 0xa2, 0xe7, 0x49, 0x06, 0x2e, 0xd2, 0x2d, 0xa5 ]);
+const tokensv2GlobalAddress = "RSc4RycihBEWQP2GDvSYS46MvFJsTKaNVU";
+const EVAL_TOKENSV2 = 0xF5;
+
+const assetsv2GlobalPk =  "0345d2e7ab018619da6ed58ccc0138c5f58a7b754bd8e9a1a9d2b811c5fe72d467";
+const assetsv2GlobalPrivkey = Buffer.from([ 0x46, 0x58, 0x3b, 0x18, 0xee, 0x16, 0x63, 0x51, 0x6f, 0x60, 0x6e, 0x09, 0xdf, 0x9d, 0x27, 0xc8, 0xa7, 0xa2, 0x72, 0xa5, 0xd4, 0x6a, 0x9b, 0xcb, 0xd5, 0x4f, 0x7d, 0x1c, 0xb1, 0x2e, 0x63, 0x21 ]);
+const assetsv2GlobalAddress = "RX99NCswvrLiM6vNE4zmpKKBWMZU9zqwAk";
+const EVAL_ASSETSV2 = 0xF6;
+
 
 // not used for plan websockets, only for PXP which is not supported
 var defaultPort = 14722
@@ -53,17 +71,17 @@ var dnsSeeds = [
 
 //to connect over p2p
 var staticPeers = [
-  //'127.0.0.1:14722'
+  '127.0.0.1:14722'
   //'18.189.25.123:14722'
   //'rick.kmd.dev:25434'
-  '3.136.47.223:14722'
+  //'3.136.47.223:14722'
 ] 
 
 
 // to connect over websockets:
 var webSeeds = [
   //'ws://18.189.25.123:8192'
-  'wss://localhost:8192'
+  //'wss://18.189.25.123:8192'
   //'ws://3.136.47.223:8192'
   // TODO: add more
 ]
@@ -72,18 +90,18 @@ var params = {
   magic: mynetwork.magic,
   defaultPort: defaultPort,
   //dnsSeeds: dnsSeeds,
-  webSeeds: webSeeds,
-  //staticPeers: staticPeers,  // dnsSeed works also
+  //webSeeds: webSeeds,
+  staticPeers: staticPeers,  // dnsSeed works also
   protocolVersion: 170009,
   messages: kmdmessages.kmdMessages
 }
 
 var opts = {
-  connectWeb: true,     // use websockets
+  //connectWeb: true,     // use websockets
   //wrtc: wrtc,          // not supported any more
   numPeers: 8,
   //hardLimit: 2,        // max peers
-  connectPlainWeb: true,  // use plain websockets, no PXP
+  //connectPlainWeb: true,  // use plain websockets, no PXP
   wsOpts: { rejectUnauthorized: false }  // enable self-signed certificates
 }
 
@@ -93,7 +111,7 @@ function AddTokensInputs(peers, tokenid, pk, amount)
 {
   return new Promise((resolve, reject) => {
 
-    peers.nspvRemoteRpc("tokenaddccinputs", pk, [tokenid.toString('hex'), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("tokenv2addccinputs", pk, [tokenid.toString('hex'), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -129,34 +147,34 @@ exports.Connect = Connect;
 // exported top level functions to be called from browser
 // param check and pass further:
 
-exports.cctokens_create = cctokens_create;
-async function cctokens_create(_wif, _name, _desc, _satoshi, _nftdata) {
+exports.cctokens_create_v2_tokel = cctokens_create_v2_tokel;
+async function cctokens_create_v2_tokel(_wif, _name, _desc, _satoshi, _jsondata) {
   let wif = _wif;
   let name = _name;
   let desc = _desc;
   let satoshi  = _satoshi;
   let nftdata;
-  if (_nftdata)
-    nftdata = Buffer.from(_nftdata, 'hex');
-    let tx = await makeTokensCreateTx(wif, name, desc, satoshi, nftdata);
+  if (_jsondata)
+    nftdata = makeTokelData(_jsondata);
+    let tx = await makeTokensV2CreateTokelTx(wif, name, desc, satoshi, nftdata);
 
   return tx.toHex();
 };
 
-exports.cctokens_transfer = cctokens_transfer;
-async function cctokens_transfer(_wif, _tokenid, _destpk, _satoshi) {
+exports.cctokens_transfer_v2 = cctokens_transfer_v2;
+async function cctokens_transfer_v2(_wif, _tokenid, _destpk, _satoshi) {
   let wif = _wif;
   let tokenid = Buffer.from(_tokenid, 'hex');
   let destpk = Buffer.from(_destpk, 'hex');
   let satoshi  = _satoshi;
 
-  let tx = await makeTokensTransferTx(wif, tokenid, destpk, satoshi);
+  let tx = await makeTokensTransferV2Tx(wif, tokenid, destpk, satoshi);
   //return this.broadcast(tx.toHex());
   return tx.toHex();
 };
 
 // encode token OP_RETURN data
-function makeTokensCreateOpreturn(origpk, name, desc, nftdata)
+function makeTokensCreateV2Opreturn(origpk, name, desc, nftdata)
 {
   let version = 1;
 
@@ -167,8 +185,8 @@ function makeTokensCreateOpreturn(origpk, name, desc, nftdata)
     (Buffer.isBuffer(nftdata) && nftdata.length > 0 ? varuint.encodingLength(nftdata.length) + nftdata.length : 0));
   let bufferWriter = new bufferutils.BufferWriter(buffer);
 
-  bufferWriter.writeUInt8(EVAL_TOKENS);
-  bufferWriter.writeUInt8('C'.charCodeAt(0));
+  bufferWriter.writeUInt8(EVAL_TOKENSV2);
+  bufferWriter.writeUInt8('c'.charCodeAt(0));
   bufferWriter.writeUInt8(version);
   bufferWriter.writeVarSlice(origpk);
   bufferWriter.writeVarSlice(Buffer.from(name));
@@ -179,19 +197,91 @@ function makeTokensCreateOpreturn(origpk, name, desc, nftdata)
   return script.compile([OPS.OP_RETURN, buffer]);
 }
 
-// encode token vdata to be added in OP_DROP
-function makeTokensVData(tokenid, destpks)
+// convert tokel data json to buffer
+function makeTokelData(jsondata)
 {
-  let buffer = Buffer.allocUnsafe(1+1+1 + tokenid.length + (destpks.length > 0 ? 1 + destpks.length * (varuint.encodingLength(destpks[0].length) + destpks[0].length) : 0));
+  let chunks = [];
+  let royalty;
+  let id;
+  let url;
+  let arbitrary;
+
+  if(jsondata[TKLNAME_ROYALTY]) {
+    if (!Number.isInteger(jsondata[TKLNAME_ROYALTY]))
+      throw new Error("invalid royalty: not an int")
+    if (jsondata[TKLNAME_ROYALTY] < 0 || jsondata[TKLNAME_ROYALTY] > 999)
+      throw new Error("invalid royalty value")
+    royalty = jsondata[TKLNAME_ROYALTY];
+  }
+  if(jsondata[TKLNAME_ID]) {
+    if (!Number.isInteger(jsondata[TKLNAME_ID]))
+      throw new Error("invalid id: not an int")
+    id = jsondata[TKLNAME_ID];
+  }
+  if(jsondata[TKLNAME_URL]) {
+    if (! jsondata[TKLNAME_URL] instanceof String)
+      throw new Error("invalid url: not a string")
+    url = Buffer.from(jsondata[TKLNAME_URL]);
+  }
+  if(jsondata[TKLNAME_ARBITRARY]) {
+    let re = /[0-9A-Fa-f]{6}/g;
+    if (!jsondata[TKLNAME_ARBITRARY] instanceof String || !re.test(jsondata[TKLNAME_ARBITRARY]))
+      throw new Error("invalid arbitrary: not a hex string")
+    arbitrary = Buffer.from(jsondata[TKLNAME_ARBITRARY], 'hex');
+  }
+  let buflen = 2;
+  if (url)
+    buflen += 1+varuint.encodingLength(url.length)+url.length;  // pro-pid-len+url.length
+  if (id)
+    buflen += 1+varuint.encodingLength(id);
+  if (royalty)
+    buflen += 1+varuint.encodingLength(royalty);
+  if (arbitrary)
+    buflen += 1+varuint.encodingLength(arbitrary.length)+arbitrary.length;
+
+  if (buflen == 2)  // no data
+    return [];
+
+  let buffer = Buffer.allocUnsafe(buflen);
+  let bufferWriter = new bufferutils.BufferWriter(buffer);
+
+  bufferWriter.writeUInt8(0xf7); // tokel evalcode
+  bufferWriter.writeUInt8(1);  // version
+  if (id) {
+    bufferWriter.writeUInt8(TKLPROP_ID);
+    bufferWriter.writeVarInt(id);
+  }
+  if (url) {
+    bufferWriter.writeUInt8(TKLPROP_URL);
+    bufferWriter.writeVarSlice(url);
+  }
+  if (royalty) {
+    bufferWriter.writeUInt8(TKLPROP_ROYALTY);
+    bufferWriter.writeVarInt(royalty);
+  }
+  if (arbitrary) {
+    bufferWriter.writeUInt8(TKLPROP_ARBITRARY);
+    bufferWriter.writeVarSlice(arbitrary);
+  }
+  return buffer;
+}
+
+// encode token vdata to be added in OP_DROP
+function makeTokensV2VData(tokenid, destpks)
+{
+  let destpks_len = 0;
+  if (destpks)
+    destpks_len = varuint.encodingLength(destpks.length) + destpks.length * (varuint.encodingLength(destpks[0].length) + destpks[0].length);
+  let buffer = Buffer.allocUnsafe(1+1+1 + tokenid.length + destpks_len);
   let bufferWriter = new bufferutils.BufferWriter(buffer);
   let version = 1;
-  let funcid = 'T';
+  let funcid = 't';
 
-  bufferWriter.writeUInt8(EVAL_TOKENS);
+  bufferWriter.writeUInt8(EVAL_TOKENSV2);
   bufferWriter.writeUInt8(funcid.charCodeAt(0));
   bufferWriter.writeUInt8(version);
   bufferWriter.writeSlice(tokenid);  // no need to reverse as it is byte array not uint256
-  if (destpks.length > 0) {
+  if (destpks && destpks.length > 0) {
     bufferWriter.writeUInt8(destpks.length);
     for (let i = 0; i < destpks.length; i ++) 
       bufferWriter.writeVarSlice(destpks[i]);
@@ -201,7 +291,7 @@ function makeTokensVData(tokenid, destpks)
 
 // tx creation code
 
-async function makeTokensCreateTx(wif, name, desc, amount, nftdata)
+async function makeTokensV2CreateTokelTx(wif, name, desc, amount, nftdata)
 {
   // init lib cryptoconditions
   p2cryptoconditions.cryptoconditions = await ccimp;
@@ -230,11 +320,12 @@ async function makeTokensCreateTx(wif, name, desc, amount, nftdata)
   // create tokens cc to my address
   let subfulfillments = [];
   let threshold = 2;
-  subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(EVAL_TOKENS) });  
+  subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(EVAL_TOKENSV2) });  
+  /* no nft evalcode anymore:
   if (Buffer.isBuffer(nftdata) && nftdata.length > 0 && nftdata[0]) {
     subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(nftdata[0]) });  // add nft data evalcode to cond
     threshold ++;
-  }
+  }*/
   subfulfillments.push({            
     type:	"threshold-sha-256",
     threshold:	1,
@@ -246,7 +337,7 @@ async function makeTokensCreateTx(wif, name, desc, amount, nftdata)
     threshold:	threshold,
     subfulfillments:	subfulfillments
   };
-  let myccSpk = p2cryptoconditions.makeCCSpk(mycond);
+  let myccSpk = p2cryptoconditions.makeCCSpkV2(mycond);
   if (myccSpk == null)  {
     throw new Error('could not create tokens cc spk');
   }
@@ -257,17 +348,17 @@ async function makeTokensCreateTx(wif, name, desc, amount, nftdata)
     threshold:	2,
     subfulfillments:	[{
         type:	"eval-sha-256",   
-        code:	ccutils.byte2Base64(EVAL_TOKENS)     
+        code:	ccutils.byte2Base64(EVAL_TOKENSV2)     
       }, {            
         type:	"threshold-sha-256",
         threshold:	1,
         subfulfillments:	[{  
                 type:	"secp256k1-sha-256",
-                publicKey:	tokensGlobalPk
+                publicKey:	tokensv2GlobalPk
         }]  
       }]   
     };
-  let markerccSpk = p2cryptoconditions.makeCCSpk(markercond);
+  let markerccSpk = p2cryptoconditions.makeCCSpkV2(markercond);
   if (markerccSpk == null)  {
     throw new Error('could not create tokens marker cc spk');
   }
@@ -275,7 +366,7 @@ async function makeTokensCreateTx(wif, name, desc, amount, nftdata)
   txbuilder.addOutput(markerccSpk, markerfee);
   txbuilder.addOutput(myccSpk, amount);
   txbuilder.addOutput(mynormaladdress, added - amount - txfee - markerfee);  // change
-  txbuilder.addOutput(makeTokensCreateOpreturn(mypk, name, desc, nftdata), 0); // make opreturn
+  txbuilder.addOutput(makeTokensCreateV2Opreturn(mypk, name, desc, nftdata), 0); // make opreturn
 
   if (txbuilder.tx.version >= 4)
     txbuilder.setExpiryHeight(tx.expiryHeight);
@@ -284,7 +375,7 @@ async function makeTokensCreateTx(wif, name, desc, amount, nftdata)
   return txbuilder.build();
 }
 
-async function makeTokensTransferTx(wif, tokenid, destpk, ccamount) 
+async function makeTokensTransferV2Tx(wif, tokenid, destpk, ccamount) 
 {
   // init lib cryptoconditions
   p2cryptoconditions.cryptoconditions = await ccimp;
@@ -317,11 +408,12 @@ async function makeTokensTransferTx(wif, tokenid, destpk, ccamount)
   // create tokens cc to dest address
   let subfulfillments = [];
   let threshold = 2;
-  subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(EVAL_TOKENS) });  
+  subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(EVAL_TOKENSV2) });  
+  /* we do not add nft evalcode anymore
   if (ccutxos.evalcodeNFT)  {
     subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(ccutxos.evalcodeNFT) });  // add nft data evalcode to cond
     threshold ++;
-  }
+  }*/
   subfulfillments.push({            
     type:	"threshold-sha-256",
     threshold:	1,
@@ -334,20 +426,19 @@ async function makeTokensTransferTx(wif, tokenid, destpk, ccamount)
     subfulfillments:	subfulfillments   
   };
 
-  let destccSpk = p2cryptoconditions.makeCCSpk(destcond, p2cryptoconditions.makeOpDropData(EVAL_TOKENS, 1,1, [], makeTokensVData(tokenid, [destpk])));
+  let destccSpk = p2cryptoconditions.makeCCSpkV2(destcond, p2cryptoconditions.makeOpDropData(EVAL_TOKENSV2, 1,1, [destpk], makeTokensV2VData(tokenid)));
   if (destccSpk == null)  
     throw new Error('could not create tokens cc spk for destination');
   
   txbuilder.addOutput(destccSpk, ccamount);
   
-
   // create tokens to my address for cc change and spending probe
   let mycond = {
     type:	"threshold-sha-256",
     threshold:	2,
     subfulfillments:	[{
           type:	"eval-sha-256",   
-          code:	ccutils.byte2Base64(EVAL_TOKENS)     
+          code:	ccutils.byte2Base64(EVAL_TOKENSV2)     
       }, {            
           type:	"threshold-sha-256",
           threshold:	1,
@@ -360,13 +451,18 @@ async function makeTokensTransferTx(wif, tokenid, destpk, ccamount)
 
   if (ccadded - ccamount > 0)
   {
-    let myccSpk = p2cryptoconditions.makeCCSpk(mycond, p2cryptoconditions.makeOpDropData(EVAL_TOKENS, 1,1, [], makeTokensVData(tokenid, [mypk])));
+    let myccSpk = p2cryptoconditions.makeCCSpkV2(mycond, p2cryptoconditions.makeOpDropData(EVAL_TOKENSV2, 1,1, [], makeTokensV2VData(tokenid, [mypk])));
     if (myccSpk == null)  
       throw new Error('could not create tokens cc spk for mypk');
 
     txbuilder.addOutput(myccSpk, ccadded-ccamount);
   }
   
+  if (added - txfee > ccutils.MYDUST)
+  {
+    txbuilder.addOutput(mynormaladdress, added-txfee);  // normal change
+  }
+
   if (txbuilder.tx.version >= 4)
     txbuilder.setExpiryHeight(bearertx1.expiryHeight);
 
@@ -380,7 +476,7 @@ const mytokencreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
 const mytokentransferwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
 //const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
 const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc";
-const mytokenid = "2bea503a491cae096b0c2af48d504e4fbd7c4747f49eddbb5d2723d6287769f8";
+const mytokenid = "38b58149410b5d53f03b06e38452e7b0e232e561a65b89a4517c7dc518e7e739";
 
 if (!process.browser) 
 {
@@ -415,11 +511,12 @@ if (!process.browser)
       //console.log('cc utxos=', ccutxos); 
 
       // make cc token create tx
-      //let txhex = await cctokens_create(mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
+      //let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1, "id":414565, "url":"https://site.org", "arbitrary":"0202ABCDEF"}'));
+      //let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
       //console.log('txhex=', txhex);
 
       // make cc token transfer tx
-      let txhex = await cctokens_transfer(mytokencreatewif, mytokenid, mydestpubkey, 1);
+      let txhex = await cctokens_transfer_v2(mytokencreatewif, mytokenid, mydestpubkey, 1);
       console.log('txhex=', txhex);
 
       // make tx with normal inputs for the specified amount

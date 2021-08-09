@@ -32,6 +32,8 @@ exports.getRawTransaction = getRawTransaction;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 
+exports.MYDUST = 100;
+
 /**
  * sign c cc transaction, checks inputs and calls either standard signing function or cc signing function
  * @param {*} keyPairIn ecc key pair
@@ -72,6 +74,7 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
       //txbuilder.finalizeInput(index);
     }
     else {
+      // sign cc vin:
       // find a cond, it might also provide with a private key, if not use keyPairIn private key:
       let privateKey;
       let inputCond;
@@ -175,13 +178,26 @@ function getPsbtPrevOut(psbt, index)
 
 function findCCProbeForSpk(ccProbes, spk)
 {
+  let isMixed = false;
   let condbin = p2cryptoconditions.parseSpkCryptocondition(spk);
+  if (condbin.length > 0 && condbin[0] == 'M'.charCodeAt(0)) {
+    condbin = condbin.slice(1, condbin.length);
+    isMixed = true;
+  }
+
   return ccProbes.find(probe => {
     if (probe.cond === undefined)   
       throw new Error("FinalizeCCtx can't sign tx: invalid probe array");
-    let condbinp = p2cryptoconditions.ccConditionBinary(probe.cond);
-    console.log('prev condbin=', condbin.toString('hex'), 'probe condbin=', condbinp.toString('hex'));
-    return condbin.equals(p2cryptoconditions.ccConditionBinary(probe.cond));
+    if (!isMixed) {
+      let condbinp = p2cryptoconditions.ccConditionBinary(probe.cond);
+      console.log('prev condbin=', condbin.toString('hex'), 'probe condbin=', condbinp.toString('hex'));
+      return condbin.equals(condbinp);
+    }
+    else {
+      let condbinv2p = p2cryptoconditions.ccConditionBinaryV2(probe.cond);
+      console.log('prev condbin=', condbin.toString('hex'), 'probe condbinv2=', condbinv2p.toString('hex'));
+      return condbin.equals(condbinv2p);
+    }
   });
 }
 
