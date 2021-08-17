@@ -58,6 +58,7 @@
     "pushdata-bitcoin": "^1.0.1",
     "randombytes": "^2.0.1",
     "safe-buffer": "^5.2.1",
+    "secp256k1": "^3.5.2",
     "setimmediate": "^1.0.4",
     "through2": "^2.0.1",
     "typeforce": "^1.11.3",

@@ -21,29 +21,28 @@ const coins = {
   BTG: 'btg',
   LTC: 'ltc',
   ZEC: 'zec',
-  DASH: 'dash'
-}
+  DASH: 'dash',
+};
 
-function getDefaultBip32Mainnet () {
+function getDefaultBip32Mainnet() {
   return {
     // base58 'xpub'
     public: 0x0488b21e,
     // base58 'xprv'
-    private: 0x0488ade4
-  }
+    private: 0x0488ade4,
+  };
 }
 
-function getDefaultBip32Testnet () {
+function getDefaultBip32Testnet() {
   return {
     // base58 'tpub'
     public: 0x043587cf,
     // base58 'tprv'
-    private: 0x04358394
-  }
+    private: 0x04358394,
+  };
 }
 
 module.exports = {
-
   // https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp
   // https://github.com/bitcoin/bitcoin/blob/master/src/chainparams.cpp
   bitcoin: {
@@ -53,7 +52,7 @@ module.exports = {
     pubKeyHash: 0x00,
     scriptHash: 0x05,
     wif: 0x80,
-    coin: coins.BTC
+    coin: coins.BTC,
   },
   testnet: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
@@ -62,7 +61,7 @@ module.exports = {
     pubKeyHash: 0x6f,
     scriptHash: 0xc4,
     wif: 0xef,
-    coin: coins.BTC
+    coin: coins.BTC,
   },
 
   // https://github.com/Bitcoin-ABC/bitcoin-abc/blob/master/src/validation.cpp
@@ -74,7 +73,7 @@ module.exports = {
     scriptHash: 0x05,
     wif: 0x80,
     coin: coins.BCH,
-    forkId: 0x00
+    forkId: 0x00,
   },
   bitcoincashTestnet: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
@@ -82,7 +81,7 @@ module.exports = {
     pubKeyHash: 0x6f,
     scriptHash: 0xc4,
     wif: 0xef,
-    coin: coins.BCH
+    coin: coins.BCH,
   },
 
   // https://github.com/BTCGPU/BTCGPU/blob/master/src/validation.cpp
@@ -95,7 +94,7 @@ module.exports = {
     scriptHash: 0x17,
     wif: 0x80,
     coin: coins.BTG,
-    forkId: 0x4F /* 79 */
+    forkId: 0x4f /* 79 */,
   },
   // bitcoingoldTest: TODO
 
@@ -108,7 +107,7 @@ module.exports = {
     scriptHash: 0x05,
     wif: 0x80,
     coin: coins.BSV,
-    forkId: 0x00
+    forkId: 0x00,
   },
   bitcoinsvTestnet: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
@@ -116,7 +115,7 @@ module.exports = {
     pubKeyHash: 0x6f,
     scriptHash: 0xc4,
     wif: 0xef,
-    coin: coins.BSV
+    coin: coins.BSV,
   },
 
   // https://github.com/dashpay/dash/blob/master/src/validation.cpp
@@ -127,7 +126,7 @@ module.exports = {
     pubKeyHash: 0x4c,
     scriptHash: 0x10,
     wif: 0xcc,
-    coin: coins.DASH
+    coin: coins.DASH,
   },
   dashTest: {
     messagePrefix: '\x19DarkCoin Signed Message:\n',
@@ -135,7 +134,7 @@ module.exports = {
     pubKeyHash: 0x8c,
     scriptHash: 0x13,
     wif: 0xef,
-    coin: coins.DASH
+    coin: coins.DASH,
   },
 
   // https://github.com/litecoin-project/litecoin/blob/master/src/validation.cpp
@@ -147,7 +146,7 @@ module.exports = {
     pubKeyHash: 0x30,
     scriptHash: 0x32,
     wif: 0xb0,
-    coin: coins.LTC
+    coin: coins.LTC,
   },
   litecoinTest: {
     messagePrefix: '\x19Litecoin Signed Message:\n',
@@ -156,7 +155,7 @@ module.exports = {
     pubKeyHash: 0x6f,
     scriptHash: 0x3a,
     wif: 0xef,
-    coin: coins.LTC
+    coin: coins.LTC,
   },
 
   // https://github.com/zcash/zcash/blob/master/src/validation.cpp
@@ -175,9 +174,9 @@ module.exports = {
       3: 0x5ba81b19,
       // 4: 0x76b809bb (old Sapling branch id). Blossom branch id becomes effective after block 653600
       // 4: 0x2bb40e60
-      4: 0xf5b9230b
+      4: 0xf5b9230b,
     },
-    coin: coins.ZEC
+    coin: coins.ZEC,
   },
   zcashTest: {
     messagePrefix: '\x18ZCash Signed Message:\n',
@@ -191,9 +190,9 @@ module.exports = {
       3: 0x5ba81b19,
       // 4: 0x76b809bb (old Sapling branch id)
       // 4: 0x2bb40e60
-      4: 0xf5b9230b
+      4: 0xf5b9230b,
     },
-    coin: coins.ZEC
+    coin: coins.ZEC,
   },
   dimxy19: {
     messagePrefix: '\x18DIMXY19 asset chain:\n',
@@ -206,13 +205,13 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic: 0xb00668b4
+    magic: 0xb00668b4,
   },
 
   dimxy20: {
@@ -226,13 +225,13 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic: 0x09262b14
+    magic: 0x09262b14,
   },
 
   rick: {
@@ -246,13 +245,13 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id, used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id, used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic: 0xfd750df6
+    magic: 0xfd750df6,
   },
 
   tok6: {
@@ -266,13 +265,13 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:   0xf4b89a4f
+    magic: 0xf4b89a4f,
   },
 
   dimxy23: {
@@ -286,13 +285,13 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:   0x902f7aae
+    magic: 0x902f7aae,
   },
 
   dimxy24: {
@@ -306,13 +305,13 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:   0x0e4bef0d
+    magic: 0x0e4bef0d,
   },
 
   dimxy25: {
@@ -326,15 +325,15 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic: 0x794cdf9b //   0x9bdf4c79
+    magic: 0x794cdf9b, //   0x9bdf4c79
   },
-  
+
   tkltest: {
     messagePrefix: '\x18TKLTEST asset chain:\n',
     bech32: 'R',
@@ -346,15 +345,15 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:  0xf6475548 
+    magic: 0xf6475548,
   },
-  
+
   tokel: {
     messagePrefix: '\x18TOKEL chain:\n',
     bech32: 'R',
@@ -366,12 +365,12 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:  0x86c2fdd0 
+    magic: 0x86c2fdd0,
   },
-}
+};
