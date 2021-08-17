@@ -21,7 +21,9 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.tok6;
 //const mynetwork = networks.dimxy23;
-const mynetwork = networks.dimxy20;
+//const mynetwork = networks.dimxy20;
+const mynetwork = networks.tkltest;
+
 
 // tokel data props ids:
 const TKLPROP_ID = 1;
@@ -71,7 +73,9 @@ var dnsSeeds = [
 
 //to connect over p2p
 var staticPeers = [
-  '127.0.0.1:14722'
+  //'127.0.0.1:14722'
+  //'167.99.114.240:22024'
+  '3.19.194.93:22024'
   //'18.189.25.123:14722'
   //'rick.kmd.dev:25434'
   //'3.136.47.223:14722'
@@ -512,12 +516,12 @@ if (!process.browser)
 
       // make cc token create tx
       //let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1, "id":414565, "url":"https://site.org", "arbitrary":"0202ABCDEF"}'));
-      //let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
-      //console.log('txhex=', txhex);
+      let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
+      console.log('txhex=', txhex);
 
       // make cc token transfer tx
-      let txhex = await cctokens_transfer_v2(mytokencreatewif, mytokenid, mydestpubkey, 1);
-      console.log('txhex=', txhex);
+      //let txhex = await cctokens_transfer_v2(mytokencreatewif, mytokenid, mydestpubkey, 1);
+      //console.log('txhex=', txhex);
 
       // make tx with normal inputs for the specified amount
       // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);
