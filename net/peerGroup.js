@@ -1,6 +1,9 @@
 'use strict'
 
-const debug = require('debug')('net:peergroup')
+const Debug = require('debug')
+const debug = Debug('net:peergroup')
+var errorlog = Debug('net:peergroup:error');
+
 const dns = require('dns')
 const EventEmitter = require('events')
 let net
@@ -109,7 +112,7 @@ class PeerGroup extends EventEmitter {
   _onConnection (err, socket) {
     if (err) {
       if (socket) socket.destroy()
-      debug(`discovery connection error: ` + errToString(err))
+      errorlog(`discovery connection error: ` + errToString(err))
       this.emit('connectError', err, null)  // emit user's event
       // do this in connectPlainWeb:
       //if (isWebSocket(socket) && this.fConnectPlainWeb)
@@ -125,7 +128,7 @@ class PeerGroup extends EventEmitter {
     let opts = assign({ socket }, this.peerOpts)
     let peer = new Peer(this._params, opts)
     let onPeerError = (err) => {
-      console.log('onPeerError called')
+      console.log('onPeerError called', err)
       err = err || Error('Connection error')
       debug(`peer connection error: ` + errToString(err))
       peer.removeListener('disconnect', onPeerError)
@@ -164,7 +167,7 @@ class PeerGroup extends EventEmitter {
         getPeerArray.push(this._connectDNSPeer.bind(this))
       }
       if (this._params.staticPeers && this._params.staticPeers.length > 0) {
-        getPeerArray.push(this._connectStaticPeer.bind(this))
+        getPeerArray.push(this._connectStaticPeer.bind(this, cb))
       }
     }
     /*if (this._connectWeb && !this.fConnectPlainWeb && this._exchange.peers.length > 0) {
@@ -224,7 +227,7 @@ class PeerGroup extends EventEmitter {
     if (this.connectTimeout) {
       timeout = setTimeout(() => {
         socket.destroy()
-        cb(Error('Connection timed out'))
+        cb(Error(`Connection timed out tcp://${host}:${port}`))
       }, this.connectTimeout)
     }
     socket.once('error', (err) => {
@@ -267,7 +270,7 @@ class PeerGroup extends EventEmitter {
     if (this.connectTimeout) {
       timeout = setTimeout(() => {
         socket.destroy()
-        cb(Error('Connection timed out, peer ' + wsaddr))
+        cb(Error(`Connection timed out, peer ${wsaddr}`))
         this._updateWebAddrState(wsaddr, undefined, ADDRSTATE.FREE, true)   // clear inuse state if connect timeout
       }, this.connectTimeout)
     }

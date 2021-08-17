@@ -4,6 +4,7 @@ const Debug = require('debug')
 const debug = Debug('net:peer')
 debug.rx = Debug('net:messages:rx')
 debug.tx = Debug('net:messages:tx')
+const errorlog = Debug('net:peer:error');
 
 const bufferutils = require("../src/bufferutils");
 const Peer = require('./peer')
@@ -46,7 +47,7 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, opts, cb) {
 
   if (!opts.timeout) return
   timeout = setTimeout(() => {
-    debug(`getnSPV NSPV_UTXOSRESP timed out: ${opts.timeout} ms`)
+    errorlog(`getnSPV NSPV_UTXOSRESP timed out: ${opts.timeout} ms`)
     var error = new Error('Request timed out')
     error.timeout = true
     cb(error)
@@ -130,7 +131,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
 
   if (!opts.timeout) return
   timeout = setTimeout(() => {
-    debug(`getnSPV NSPV_REMOTERPC ${rpcMethod} timed out: ${opts.timeout} ms`)
+    errorlog(`getnSPV NSPV_REMOTERPC ${rpcMethod} timed out: ${opts.timeout} ms`)
     var error = new Error('Request timed out')
     error.timeout = true
     cb(error)
@@ -179,7 +180,7 @@ Peer.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
 
   if (!opts.timeout) return
   timeout = setTimeout(() => {
-    debug(`getnSPV NSPV_BROADCAST timed out: ${opts.timeout} ms`)
+    errorlog(`getnSPV NSPV_BROADCAST timed out: ${opts.timeout} ms`)
     var error = new Error('Request timed out')
     error.timeout = true
     cb(error)

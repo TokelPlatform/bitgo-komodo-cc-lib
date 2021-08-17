@@ -3,6 +3,7 @@
 const crypto = require('crypto')
 const Debug = require('debug')
 const debug = Debug('net:peer')
+var errorlog = Debug('net:peer:error');
 debug.rx = Debug('net:messages:rx')
 debug.tx = Debug('net:messages:tx')
 const proto = require('bitcoin-protocol')
@@ -294,7 +295,7 @@ class Peer extends EventEmitter {
 
     if (!opts.timeout) return
     timeout = setTimeout(() => {
-      debug(`getBlocks timed out: ${opts.timeout} ms, remaining: ${remaining}/${hashes.length}`)
+      errorlog(`getBlocks timed out: ${opts.timeout} ms, remaining: ${remaining}/${hashes.length}`)
       events.removeAll()
       var error = new Error('Request timed out')
       error.timeout = true
@@ -353,7 +354,7 @@ class Peer extends EventEmitter {
 
       if (!opts.timeout) return
       timeout = setTimeout(() => {
-        debug(`getTransactions timed out: ${opts.timeout} ms, remaining: ${remaining}/${txids.length}`)
+        errorlog(`getTransactions timed out: ${opts.timeout} ms, remaining: ${remaining}/${txids.length}`)
         events.removeAll()
         var err = new Error('Request timed out')
         err.timeout = true
@@ -395,7 +396,7 @@ class Peer extends EventEmitter {
     })
     if (!opts.timeout) return
     timeout = setTimeout(() => {
-      debug(`getHeaders timed out: ${opts.timeout} ms`)
+      errorlog(`getHeaders timed out: ${opts.timeout} ms`)
       this.removeListener('headers', onHeaders)
       var error = new Error('Request timed out')
       error.timeout = true
