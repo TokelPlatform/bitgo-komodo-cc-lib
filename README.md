@@ -23,7 +23,10 @@ If you are going to use this lib in browser you also need:
 
 ## What test app does
 
-Included a ccfaucetpoc.js file that allows to create cc faucet create and get transactions.<br>
+In the samples folder are included a several examples of CC usage.
+1. ccfaucetpoc.js file that allows to create cc faucet create and get transactions.<br>
+2. cctokenstokelv2poc.js example of how to run tokensv2 cc functions
+
 To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
 
 ## Installation
@@ -36,37 +39,21 @@ Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
 npm install
 ```
 
-You'll need a komodo test asset chain to run the ccfaucetpoc sample.
-Setup network parameters for your komodo chain:<br>
-Open `networks.js` and make a new entry for your chain. You need to fix the yourchainname and magic params for your chain, like:
-```
-module.exports = {
-  yourchainname: {
-    messagePrefix: '\xYourChainName asset chain:\n',
-    bech32: 'R',
-    bip32: getDefaultBip32Mainnet(),   
-    pubKeyHash: 0x3c,
-    scriptHash: 0x55,
-    wif: 0xbc,
-    consensusBranchId: {
-      1: 0x00,
-      2: 0x00,
-      3: 0x5ba81b19,
-      4: 0x76b809bb // (Sapling branch id used in kmd)
-    },
-    coin: coins.ZEC,
-    komodoAssetNet: true,
-    magic: 0x12345678  // komodo chain magic, obtain with getinfo rpc
-  },
-};
-```
+You'll need a komodo asset chain to bitgo lib against. Pick a file from samples folder to work with.
 
-In ccfaucetpoc.js source change mynetwork var to some yourchainname:<br>
-```
-var mynetwork=networks.yourchainname
-```
+1. Setup network parameters for your komodo chain:<br>
 
-Set your funding faucet wif and address and a wif and address getting funds in ccfaucetpoc.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
+    Open `config` folder and rename `index.sample.js` to `index.js` and chage `yourchainname` and `magic` params for your chain.
+
+2. In the sample of your choice change mynetwork var to some yourchainname:<br>
+
+    ```
+    const mynetwork = networks.yourchainname
+    ```
+
+3. ccfaucetpoc.js -Set your funding faucet wif and address and a wif and address getting funds in ccfaucetpoc.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
+
+    cctokenstokelv2poc.js  - set values between comments in the sample file
 
 ## Build test app to run in nodejs
 
