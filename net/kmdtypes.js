@@ -6,6 +6,9 @@ const ip = require('ip')
 
 const bufferutils = require("../src/bufferutils");
 
+var typeforce = require('typeforce');
+//var typeforceNT = require('typeforce/nothrow');
+
 exports.buffer8 = struct.Buffer(8)
 exports.buffer32 = struct.Buffer(32)
 exports.varBuffer = struct.VarBuffer(varint)
@@ -234,13 +237,16 @@ exports.kmdheader = struct([
 ])
 
 const NSPVREQ = {
+  NSPV_INFO: 0x00,
   NSPV_UTXOS: 0x02,  // not used, createtxwithnormalinputs rpc is used instead
+  NSPV_TXPROOF: 0x08,
   NSPV_BROADCAST: 0x0c,
   NSPV_REMOTERPC: 0x14 // 0x15 for varbuffer experimental version in faucet-nspv-ext
 };
 
 const NSPVRESP = {
   NSPV_UTXOSRESP: 0x03,
+  NSPV_TXPROOFRESP: 0x09,
   NSPV_BROADCASTRESP: 0x0d,
   NSPV_REMOTERPCRESP: 0x15, // 0x16 is varbuffer, decided not use i on client side
 };
@@ -269,7 +275,7 @@ let utxoresp = struct([
       { name: 'extradata', type: struct.UInt64LE },
       { name: 'vout', type: struct.UInt32LE },
       { name: 'height', type: struct.UInt32LE },
-      { name: 'script', type: exports.varBuffer }
+      //{ name: 'script', type: exports.varBuffer }
     ]))
   },
   { name: 'total', type: struct.UInt64LE },
@@ -367,6 +373,52 @@ let nspvRemoteRpcResp = struct([
 ]);
 */
 
+// custom parse rempte rpc req/resp as varBuffer is not supported on the server side
+let nspvTxproof = (function(){
+  function encode(value, buffer, offset) {
+    typeforce({ reqCode: 'Number', height: 'Number', vout: 'Number', txid: types.Buffer256bit, }, value)
+
+    let bufferWriter = new bufferutils.BufferWriter(buffer, offset);
+    bufferWriter.writeUInt8(value.reqCode);
+    bufferWriter.writeUInt32(value.height);
+    bufferWriter.writeUInt32(value.vout);
+    bufferWriter.writeSlice(value.txid);
+    encode.bytes = bufferWriter.offset;
+  }
+  function encodingLength(value) {
+    return 1 + 4 + 4 + 32;
+  }
+  function decode(buffer, offset, end) {
+    return { };  // not used
+  }
+  return { encode, decode, encodingLength }
+})();
+
+let nspvTxproofResp = (function(){
+  function encode(value, buffer, offset) {
+    // not used, only decode
+  }
+  function encodingLength(value) {
+    return 0; // not used, only decode
+  }
+  function decode(buffer, offset, end) {
+    let slicedBuffer = buffer.slice(offset, end);
+    let bufferReader = new bufferutils.BufferReader(slicedBuffer);
+    let respCode = bufferReader.readUInt8();
+    let txid = bufferReader.readSlice(32);
+    let unspentValue = bufferReader.readUInt64();
+    let height = bufferReader.readUInt32();
+    let vout = bufferReader.readUInt32();
+    let txlen = bufferReader.readUInt32();
+    let txbuf = bufferReader.readSlice(txlen);
+    let txprooflen = bufferReader.readUInt32();
+    let txproofbuf = bufferReader.readSlice(txprooflen);
+
+    return { respCode: respCode, txid: txid, unspentValue: unspentValue, height: height, vout: vout, tx: txbuf, txproof: txproofbuf };
+  }
+  return { encode, decode, encodingLength }
+})();
+
 // encode nspv requests
 exports.nspvReq = (function () {
   function encode (value, buffer = Buffer.alloc(encodingLength(value)), offset = 0) {
@@ -390,6 +442,9 @@ exports.nspvReq = (function () {
         break;
       case NSPVREQ.NSPV_BROADCAST:
         type = nspvBroadcastType;
+        break;
+      case NSPVREQ.NSPV_TXPROOF:
+        type = nspvTxproof;
         break;
       case NSPVREQ.NSPV_REMOTERPC:
         type = nspvRemoteRpc;
@@ -443,6 +498,9 @@ exports.nspvResp = (function () {
         break;
       case NSPVRESP.NSPV_BROADCASTRESP:
         type = nspvBroadcastRespType;
+        break;
+      case NSPVRESP.NSPV_TXPROOFRESP:
+        type = nspvTxproofResp;
         break;
       case NSPVRESP.NSPV_REMOTERPCRESP:
         type = nspvRemoteRpcResp;
