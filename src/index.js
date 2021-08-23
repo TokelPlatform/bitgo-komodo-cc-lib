@@ -21,5 +21,7 @@ module.exports = {
   crypto: require('./crypto'),
   networks: require('./networks'),
   opcodes: require('bitcoin-ops'),
-  script: script
+  script: script,
+  komodo: require('../cc/general'),
+  tokensv2: require('../cc/cctokenstokelv2')
 }
