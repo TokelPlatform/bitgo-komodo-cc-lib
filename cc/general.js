@@ -30,5 +30,5 @@ const keyToWif = (key, network) => {
 
 const getSeedPhrase = () => bip39.generateMnemonic()
 
-exports.keyToWif = keyToWif
-exports.getSeedPhrase = getSeedPhrase
+module.exports.keyToWif = keyToWif
+module.exports.getSeedPhrase = getSeedPhrase

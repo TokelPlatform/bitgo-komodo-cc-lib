@@ -30,7 +30,10 @@
     "url": "https://github.com/dimxy/bitgo-komodo-cc-lib.git"
   },
   "files": [
-    "src"
+    "src",
+    "cc",
+    "net",
+    "config"
   ],
   "dependencies": {
     "bech32": "0.0.3",

@@ -22,6 +22,10 @@ module.exports = {
   networks: require('./networks'),
   opcodes: require('bitcoin-ops'),
   script: script,
-  komodo: require('../cc/general'),
-  tokensv2: require('../cc/cctokenstokelv2')
+  ccutils: require('../cc/ccutils'),
+  kmdMessages: require('../net/kmdmessages'),
+  NspvPeerGroup: require('../net/nspvPeerGroup'),
+  peer: require('../net/peer'),
+  config: require('../config'),
+  general: require('../cc/general')
 }

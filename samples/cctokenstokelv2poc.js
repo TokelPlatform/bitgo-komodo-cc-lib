@@ -14,7 +14,7 @@ const tokensv2 = require('../cc/cctokenstokelv2');
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
-require('../net/nspvPeer');  // init peer.js too
+// require('../net/nspvPeer');  // init peer.js too
 
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
