@@ -373,11 +373,9 @@ let nspvRemoteRpcResp = struct([
 ]);
 */
 
-// custom parse rempte rpc req/resp as varBuffer is not supported on the server side
+// custom parse for txproof rpc req/resp as varBuffer is not supported on the server side
 let nspvTxproof = (function(){
   function encode(value, buffer, offset) {
-    typeforce({ reqCode: 'Number', height: 'Number', vout: 'Number', txid: types.Buffer256bit, }, value)
-
     let bufferWriter = new bufferutils.BufferWriter(buffer, offset);
     bufferWriter.writeUInt8(value.reqCode);
     bufferWriter.writeUInt32(value.height);
@@ -414,7 +412,7 @@ let nspvTxproofResp = (function(){
     let txprooflen = bufferReader.readUInt32();
     let txproofbuf = bufferReader.readSlice(txprooflen);
 
-    return { respCode: respCode, txid: txid, unspentValue: unspentValue, height: height, vout: vout, tx: txbuf, txproof: txproofbuf };
+    return { respCode: respCode, txid: txid, unspentValue: unspentValue, height: height, vout: vout, txbin: txbuf, txproof: txproofbuf };
   }
   return { encode, decode, encodingLength }
 })();

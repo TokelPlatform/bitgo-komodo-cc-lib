@@ -93,7 +93,7 @@ function AddTokensInputs(peers, tokenid, pk, amount)
 {
   return new Promise((resolve, reject) => {
 
-    peers.nspvRemoteRpc("tokenaddccinputs", pk, [tokenid.toString('hex'), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("tokenaddccinputs", pk, [ccutils.txidToHex(tokenid), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -144,9 +144,9 @@ async function cctokens_create(_wif, _name, _desc, _satoshi, _nftdata) {
 };
 
 exports.cctokens_transfer = cctokens_transfer;
-async function cctokens_transfer(_wif, _tokenid, _destpk, _satoshi) {
+async function cctokens_transfer(_wif, _tokenidhex, _destpk, _satoshi) {
   let wif = _wif;
-  let tokenid = Buffer.from(_tokenid, 'hex');
+  let tokenid = ccutils.txidFromHex(_tokenidhex);
   let destpk = Buffer.from(_destpk, 'hex');
   let satoshi  = _satoshi;
 
@@ -190,7 +190,7 @@ function makeTokensVData(tokenid, destpks)
   bufferWriter.writeUInt8(EVAL_TOKENS);
   bufferWriter.writeUInt8(funcid.charCodeAt(0));
   bufferWriter.writeUInt8(version);
-  bufferWriter.writeSlice(tokenid);  // no need to reverse as it is byte array not uint256
+  bufferWriter.writeSlice(ccutils.txidReverse(tokenid));  // cc modules often store creationid in opreturn reversed, for readability
   if (destpks.length > 0) {
     bufferWriter.writeUInt8(destpks.length);
     for (let i = 0; i < destpks.length; i ++) 

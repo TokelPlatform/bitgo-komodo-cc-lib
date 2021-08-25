@@ -34,4 +34,8 @@ PeerGroup.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
   this._request('nspvBroadcast', txidhex, txhex, opts, cb)
 }
 
+PeerGroup.prototype.nspvTxproof = function(txidhex, vout, height, opts, cb) {
+  this._request('nspvTxproof', txidhex, vout, height, opts, cb)
+}
+
 module.exports = old(NspvPeerGroup)

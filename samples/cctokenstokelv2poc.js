@@ -1,6 +1,7 @@
 
 'use strict';
 
+const assert = require('assert');
 const TransactionBuilder = require('../src/transaction_builder');
 const Transaction = require('../src/transaction');
 const ECPair = require('../src/ecpair');
@@ -22,7 +23,8 @@ const networks = require('../src/networks');
 //const mynetwork = networks.tok6;
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy20;
-const mynetwork = networks.tkltest;
+const mynetwork = networks.dimxy24;
+//const mynetwork = networks.tkltest;
 
 
 // tokel data props ids:
@@ -42,7 +44,8 @@ const TKLNAME_ARBITRARY = "arbitrary";
 // to init the cryptoconditions wasm lib 
 // (this is due to wasm delayed loading specifics)
 const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
-const { varint } = require('bitcoin-protocol');
+//const { varint } = require('bitcoin-protocol');
+//const { assert } = require('sinon');
 var ccimp;
 if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
@@ -75,7 +78,9 @@ var dnsSeeds = [
 var staticPeers = [
   //'127.0.0.1:14722'
   //'167.99.114.240:22024'
-  '3.19.194.93:22024'
+  //'3.19.194.93:22024',
+  //'127.0.0.1:27513',
+  '18.190.86.67:14722'
   //'18.189.25.123:14722'
   //'rick.kmd.dev:25434'
   //'3.136.47.223:14722'
@@ -111,11 +116,33 @@ var opts = {
 
 var peers;
 
-function AddTokensInputs(peers, tokenid, pk, amount)
+function NspvAddTokensInputs(peers, tokenid, pk, amount)
 {
+  assert(peers);
+  assert(ccutils.IsValidPubKey(pk));
+  assert(ccutils.IsValidTxid(tokenid));
+
   return new Promise((resolve, reject) => {
 
-    peers.nspvRemoteRpc("tokenv2addccinputs", pk, [tokenid.toString('hex'), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("tokenv2addccinputs", pk, [ccutils.txidToHex(tokenid), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
+function NspvTokenV2InfoTokel(peers, pk, tokenid)
+{
+  assert(peers);
+  assert(ccutils.IsValidPubKey(pk));
+  assert(ccutils.IsValidTxid(tokenid));
+
+  return new Promise((resolve, reject) => {
+
+    peers.nspvRemoteRpc("tokenv2infotokel", pk, [ccutils.txidToHex(tokenid)], {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -166,15 +193,23 @@ async function cctokens_create_v2_tokel(_wif, _name, _desc, _satoshi, _jsondata)
 };
 
 exports.cctokens_transfer_v2 = cctokens_transfer_v2;
-async function cctokens_transfer_v2(_wif, _tokenid, _destpk, _satoshi) {
+async function cctokens_transfer_v2(_wif, _tokenidhex, _destpk, _satoshi) {
   let wif = _wif;
-  let tokenid = Buffer.from(_tokenid, 'hex');
+  let tokenid = ccutils.txidFromHex(_tokenidhex);
   let destpk = Buffer.from(_destpk, 'hex');
   let satoshi  = _satoshi;
 
   let tx = await makeTokensTransferV2Tx(wif, tokenid, destpk, satoshi);
-  //return this.broadcast(tx.toHex());
   return tx.toHex();
+};
+
+exports.TokenInfoV2Tokel = TokenInfoV2Tokel;
+async function TokenInfoV2Tokel(wif, tokenidhex) {
+  let mypair = ecpair.fromWIF(wif, mynetwork);
+  let mypk = mypair.getPublicKeyBuffer();
+  let tokenid = ccutils.txidFromHex(tokenidhex);
+  let info = await NspvTokenV2InfoTokel(peers, mypk, tokenid);
+  return info;
 };
 
 // encode token OP_RETURN data
@@ -284,7 +319,7 @@ function makeTokensV2VData(tokenid, destpks)
   bufferWriter.writeUInt8(EVAL_TOKENSV2);
   bufferWriter.writeUInt8(funcid.charCodeAt(0));
   bufferWriter.writeUInt8(version);
-  bufferWriter.writeSlice(tokenid);  // no need to reverse as it is byte array not uint256
+  bufferWriter.writeSlice(ccutils.txidReverse(tokenid));  // tokenid is stored in opreturn reversed, for readability (historically) 
   if (destpks && destpks.length > 0) {
     bufferWriter.writeUInt8(destpks.length);
     for (let i = 0; i < destpks.length; i ++) 
@@ -403,7 +438,7 @@ async function makeTokensTransferV2Tx(wif, tokenid, destpk, ccamount)
   if (added < txfee)
     throw new Error("insufficient normal inputs (" + added + ")");
 
-  let ccutxos = await AddTokensInputs(peers, tokenid, mypk, ccamount);
+  let ccutxos = await NspvAddTokensInputs(peers, tokenid, mypk, ccamount);
   let bearertx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
   let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, bearertx2, ccutxos.previousTxns, mynetwork);
   if (ccadded < ccamount)
@@ -480,7 +515,8 @@ const mytokencreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
 const mytokentransferwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
 //const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
 const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc";
-const mytokenid = "38b58149410b5d53f03b06e38452e7b0e232e561a65b89a4517c7dc518e7e739";
+//const mytokenid = "38b58149410b5d53f03b06e38452e7b0e232e561a65b89a4517c7dc518e7e739";
+const mytokenid = "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a";
 
 if (!process.browser) 
 {
@@ -516,16 +552,23 @@ if (!process.browser)
 
       // make cc token create tx
       //let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1, "id":414565, "url":"https://site.org", "arbitrary":"0202ABCDEF"}'));
-      let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
-      console.log('txhex=', txhex);
+      //let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
+      //console.log('txhex=', txhex);
 
       // make cc token transfer tx
       //let txhex = await cctokens_transfer_v2(mytokencreatewif, mytokenid, mydestpubkey, 1);
       //console.log('txhex=', txhex);
 
+      let info = await TokenInfoV2Tokel(mytokencreatewif, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a");
+      console.log('txhex=', info);
+
       // make tx with normal inputs for the specified amount
       // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);
       //console.log('txwnormals=', txwnormals);
+
+      // try nspv getrawtransaction - not supported yet
+      //let txhex = await ccutils.getRawTransaction(peers, ecpair.fromWIF(mytokencreatewif, mynetwork).getPublicKeyBuffer(), ccutils.txidFromHex(mytokenid));
+      //console.log('txhex=', txhex);
     }
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);

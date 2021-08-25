@@ -9,6 +9,7 @@ const errorlog = Debug('net:peer:error');
 const bufferutils = require("../src/bufferutils");
 const Peer = require('./peer')
 const { NSPVREQ, NSPVRESP, nspvReq, nspvResp } = require('./kmdtypes');
+const { txidFromHex, txidToHex } = require('../cc/ccutils');
 
 Peer.prototype._registerListenersPrev = Peer.prototype._registerListeners;
 Peer.prototype._registerListeners = function() {
@@ -102,7 +103,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
     }
 
     if (result.result !== undefined && result.result.error) {
-      cb(new Error('nspv remote error' + result.result.error));
+      cb(new Error(`nspv remote error: ${result.result.error}`));
       return;
     }
 
@@ -163,16 +164,13 @@ Peer.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
       cb(new Error("could not parse nspv broadcast response"));
       return;
     }
-    let reversed = Buffer.allocUnsafe(resp.txid.length);
-    resp.txid.copy(reversed);
-    bufferutils.reverseBuffer(reversed);
-    cb(null, { retcode: resp.retcode, txid: reversed.toString('hex') }); 
+    cb(null, { retcode: resp.retcode, txid: txidToHex(resp.txid) }); 
   }
   this.once(`nSPV:${NSPVRESP.NSPV_BROADCASTRESP}`, onNspvResp)
 
   let nspvBroadcastReq = {
     reqCode: NSPVREQ.NSPV_BROADCAST,
-    txid: Buffer.from(txidhex, 'hex'),
+    txid: txidFromHex(txidhex),
     txdata: Buffer.from(txhex, 'hex')  
   }
   let buf = nspvReq.encode(nspvBroadcastReq)
@@ -186,5 +184,58 @@ Peer.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
     cb(error)
   }, opts.timeout)
 }
+
+// nspv broadcast
+Peer.prototype.nspvTxproof = function(txidhex, vout, height, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+  if (!opts.timeout) opts.timeout = this._getTimeout()
+
+  if (typeof txidhex !== 'string' || txidhex.length != 64) {
+    cb(new Error('txid hex should be a string of 64'));
+    return;
+  }
+
+  if (typeof vout !== 'number') {
+    cb(new Error('vout not a number'));
+    return;
+  }
+
+  if (typeof height !== 'number') {
+    cb(new Error('vout not a number'));
+    return;
+  }
+
+  var timeout
+  var onNspvResp = (resp) => {
+    if (timeout) clearTimeout(timeout)
+    if (!resp || !resp.respCode || typeof resp.txid === undefined || typeof resp.unspentValue === undefined || typeof resp.vout === undefined || typeof resp.height === undefined || typeof resp.tx === undefined || typeof resp.txproof === undefined) { // check all props?
+      cb(new Error("could not parse nspv txproof response"));
+      return;
+    }
+    cb(null, { retcode: resp.retcode, txid: txidToHex(resp.txid), unspentValue:  resp.unspentValue, height: resp.height, vout: resp.vout, txbin: resp.txbin, txproof: resp.txproof }); 
+  }
+  this.once(`nSPV:${NSPVRESP.NSPV_TXPROOFRESP}`, onNspvResp)
+
+  let nspvTxproofReq = {
+    reqCode: NSPVREQ.NSPV_TXPROOF,
+    txid: txidFromHex(txidhex),
+    vout: vout,
+    height: height,
+  }
+  let buf = nspvReq.encode(nspvTxproofReq)
+  this.send('getnSPV', buf)
+
+  if (!opts.timeout) return
+  timeout = setTimeout(() => {
+    errorlog(`getnSPV NSPV_TXPROOF timed out: ${opts.timeout} ms`)
+    var error = new Error('Request timed out')
+    error.timeout = true
+    cb(error)
+  }, opts.timeout)
+}
+
 
 

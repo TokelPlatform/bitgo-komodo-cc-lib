@@ -336,10 +336,7 @@ function getRawTransaction(peers, mypk, txid)
   return new Promise((resolve, reject) => {
     let txidhex;
     if (Buffer.isBuffer(txid)) {
-      let reversed = Buffer.allocUnsafe(txid.length);
-      txid.copy(reversed);
-      bufferutils.reverseBuffer(reversed);
-      txidhex = reversed.toString('hex');
+      txidhex = txidToHex(txid);
     }
     else
       txidhex = txid;
@@ -473,6 +470,23 @@ function txidFromHex(hex)
     return reversed;
   }
   return Buffer.from([]); //Buffer.allocUnsafe(32).fill('\0');
+}
+
+exports.txidReverse = txidReverse;
+/**
+ * reverse txid, this is used by cc modules to write txid in opreturn (for readability)
+ * @param {string} txid 
+ * @returns {Buffer} reversed txid as Buffer or empty Buffer
+ */
+function txidReverse(txid)
+{
+  if (txid.length > 0)  {
+    let reversed = Buffer.allocUnsafe(txid.length);
+    txid.copy(reversed);
+    bufferutils.reverseBuffer(reversed);
+    return reversed;
+  }
+  return Buffer.from([]);
 }
 
 exports.toSatoshi = function (val) {
