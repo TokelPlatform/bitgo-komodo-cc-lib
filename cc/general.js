@@ -2,7 +2,7 @@
 const sha = require('sha.js');
 const bs58check = require('bs58check');
 const bigi = require('bigi');
-var bip39 = require('bip39')
+var bip39 = require('bip39');
 
 /**
  * Receives any string(WIF/seed phrase) and returns WIF.
@@ -28,7 +28,7 @@ const keyToWif = (key, network) => {
   }
 };
 
-const getSeedPhrase = () => bip39.generateMnemonic()
+const getSeedPhrase = (strength) => bip39.generateMnemonic(strength);
 
-module.exports.keyToWif = keyToWif
-module.exports.getSeedPhrase = getSeedPhrase
+module.exports.keyToWif = keyToWif;
+module.exports.getSeedPhrase = getSeedPhrase;
