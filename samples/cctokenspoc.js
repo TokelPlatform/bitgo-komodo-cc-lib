@@ -129,8 +129,8 @@ exports.Connect = Connect;
 // exported top level functions to be called from browser
 // param check and pass further:
 
-exports.cctokens_create = cctokens_create;
-async function cctokens_create(_wif, _name, _desc, _satoshi, _nftdata) {
+exports.Tokensv2Create = Tokensv2Create;
+async function Tokensv2Create(_wif, _name, _desc, _satoshi, _nftdata) {
   let wif = _wif;
   let name = _name;
   let desc = _desc;
@@ -143,15 +143,14 @@ async function cctokens_create(_wif, _name, _desc, _satoshi, _nftdata) {
   return tx.toHex();
 };
 
-exports.cctokens_transfer = cctokens_transfer;
-async function cctokens_transfer(_wif, _tokenidhex, _destpk, _satoshi) {
+exports.Tokensv2Transfer = Tokensv2Transfer;
+async function Tokensv2Transfer(_wif, _tokenidhex, _destpk, _satoshi) {
   let wif = _wif;
   let tokenid = ccutils.txidFromHex(_tokenidhex);
   let destpk = Buffer.from(_destpk, 'hex');
   let satoshi  = _satoshi;
 
   let tx = await makeTokensTransferTx(wif, tokenid, destpk, satoshi);
-  //return this.broadcast(tx.toHex());
   return tx.toHex();
 };
 
@@ -415,11 +414,11 @@ if (!process.browser)
       //console.log('cc utxos=', ccutxos); 
 
       // make cc token create tx
-      //let txhex = await cctokens_create(mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
+      //let txhex = await Tokensv2Create(mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
       //console.log('txhex=', txhex);
 
       // make cc token transfer tx
-      let txhex = await cctokens_transfer(mytokencreatewif, mytokenid, mydestpubkey, 1);
+      let txhex = await Tokensv2Transfer(mytokencreatewif, mytokenid, mydestpubkey, 1);
       console.log('txhex=', txhex);
 
       // make tx with normal inputs for the specified amount

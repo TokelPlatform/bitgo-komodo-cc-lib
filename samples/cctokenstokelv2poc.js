@@ -178,8 +178,8 @@ exports.Connect = Connect;
 // exported top level functions to be called from browser
 // param check and pass further:
 
-exports.cctokens_create_v2_tokel = cctokens_create_v2_tokel;
-async function cctokens_create_v2_tokel(_wif, _name, _desc, _satoshi, _jsondata) {
+exports.Tokensv2CreateTokel = Tokensv2CreateTokel;
+async function Tokensv2CreateTokel(_wif, _name, _desc, _satoshi, _jsondata) {
   let wif = _wif;
   let name = _name;
   let desc = _desc;
@@ -192,8 +192,8 @@ async function cctokens_create_v2_tokel(_wif, _name, _desc, _satoshi, _jsondata)
   return tx.toHex();
 };
 
-exports.cctokens_transfer_v2 = cctokens_transfer_v2;
-async function cctokens_transfer_v2(_wif, _tokenidhex, _destpk, _satoshi) {
+exports.Tokensv2TransferTokel = Tokensv2TransferTokel;
+async function Tokensv2TransferTokel(_wif, _tokenidhex, _destpk, _satoshi) {
   let wif = _wif;
   let tokenid = ccutils.txidFromHex(_tokenidhex);
   let destpk = Buffer.from(_destpk, 'hex');
@@ -551,12 +551,12 @@ if (!process.browser)
       //console.log('cc utxos=', ccutxos); 
 
       // make cc token create tx
-      //let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1, "id":414565, "url":"https://site.org", "arbitrary":"0202ABCDEF"}'));
-      //let txhex = await cctokens_create_v2_tokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
+      //let txhex = await Tokensv2CreateTokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1, "id":414565, "url":"https://site.org", "arbitrary":"0202ABCDEF"}'));
+      //let txhex = await Tokensv2CreateTokel(mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
       //console.log('txhex=', txhex);
 
       // make cc token transfer tx
-      //let txhex = await cctokens_transfer_v2(mytokencreatewif, mytokenid, mydestpubkey, 1);
+      //let txhex = await Tokensv2TransferTokel(mytokencreatewif, mytokenid, mydestpubkey, 1);
       //console.log('txhex=', txhex);
 
       let info = await TokenInfoV2Tokel(mytokencreatewif, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a");
