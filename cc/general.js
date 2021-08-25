@@ -2,7 +2,8 @@
 const sha = require('sha.js');
 const bs58check = require('bs58check');
 const bigi = require('bigi');
-var bip39 = require('bip39');
+const bip39 = require('bip39');
+const ecpair = require('../src/ecpair');
 
 /**
  * Receives any string(WIF/seed phrase) and returns WIF.

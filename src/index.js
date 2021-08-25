@@ -1,8 +1,8 @@
-var script = require('./script')
+var script = require('./script');
 
-var templates = require('./templates')
+var templates = require('./templates');
 for (var key in templates) {
-  script[key] = templates[key]
+  script[key] = templates[key];
 }
 
 module.exports = {
@@ -26,6 +26,5 @@ module.exports = {
   kmdMessages: require('../net/kmdmessages'),
   NspvPeerGroup: require('../net/nspvPeerGroup'),
   peer: require('../net/peer'),
-  config: require('../config'),
-  general: require('../cc/general')
-}
+  general: require('../cc/general'),
+};
