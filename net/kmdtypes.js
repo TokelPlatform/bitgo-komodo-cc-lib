@@ -241,6 +241,7 @@ const NSPVREQ = {
   NSPV_UTXOS: 0x02,  // not used, createtxwithnormalinputs rpc is used instead
   NSPV_TXPROOF: 0x08,
   NSPV_BROADCAST: 0x0c,
+  NSPV_TXIDS: 0x0e,
   NSPV_REMOTERPC: 0x14 // 0x15 for varbuffer experimental version in faucet-nspv-ext
 };
 
@@ -248,6 +249,7 @@ const NSPVRESP = {
   NSPV_UTXOSRESP: 0x03,
   NSPV_TXPROOFRESP: 0x09,
   NSPV_BROADCASTRESP: 0x0d,
+  NSPV_TXIDSRESP: 0x0f,
   NSPV_REMOTERPCRESP: 0x15, // 0x16 is varbuffer, decided not use i on client side
 };
 
@@ -257,15 +259,15 @@ exports.NSPVRESP = NSPVRESP;
 let bufferaddr = struct.Buffer(64);
 let methodtype = struct.Buffer(64);
 
-let utxoreq = struct([
+let utxosreq = struct([
   { name: 'reqCode', type: struct.UInt8 },
-  { name: 'coinaddr', type: struct.VarString(varint, 'ascii')  },  // TODO or simply UInt8 as komodod currently checks only 1 byte len
+  { name: 'coinaddr', type: struct.VarString(struct.UInt8, 'ascii')  },  // simply UInt8 as komodod currently checks only 1 byte len
   { name: 'CCflag', type: struct.UInt8 },
   { name: 'skipcoint', type: struct.UInt32LE },
   { name: 'filter', type: struct.UInt32LE }
 ]);
 
-let utxoresp = struct([
+let utxosresp = struct([
   { name: 'respCode', type: struct.UInt8 },
   {
     name: 'utxos',
@@ -284,8 +286,7 @@ let utxoresp = struct([
   { name: 'filter', type: struct.UInt32LE },
   { name: 'CCflag', type: struct.UInt16LE },
   { name: 'skipcount', type: struct.UInt32LE },
-  { name: 'bufCoinaddr', type: bufferaddr }
-
+  { name: 'coinaddr', type: bufferaddr }
 ]);
 
 // custom parsers for broadcast as this type is impossible to be mapped to standard bitcoin types like varbuffer
@@ -360,18 +361,31 @@ let nspvRemoteRpcResp = (function(){
   return { encode, decode, encodingLength }
 })();
 
-/* if varBuffe is supported on the nspv server side, see the 'faucet-nspv-ext' experimental branch
-let nspvRemoteRpc = struct([
+let txidsreq = struct([
   { name: 'reqCode', type: struct.UInt8 },
-  { name: 'jsonSer', type: exports.varBuffer }
+  { name: 'coinaddr', type: struct.VarString(struct.UInt8, 'ascii')  },  // simply UInt8 as komodod currently checks only 1 byte len
+  { name: 'CCflag', type: struct.UInt8 },
+  { name: 'skipcoint', type: struct.UInt32LE },
+  { name: 'filter', type: struct.UInt32LE }
 ]);
 
-let nspvRemoteRpcResp = struct([
+let txidsresp = struct([
   { name: 'respCode', type: struct.UInt8 },
-  { name: 'method', type: methodtype  },  
-  { name: 'jsonSer', type: exports.varBuffer }
+  {
+    name: 'txids',
+    type: struct.VarArray(struct.UInt16LE, struct([
+      { name: 'txid', type: exports.buffer32 },
+      { name: 'satoshis', type: struct.UInt64LE },
+      { name: 'vout', type: struct.UInt32LE },
+      { name: 'height', type: struct.UInt32LE },
+    ]))
+  },
+  { name: 'nodeheight', type: struct.UInt32LE },
+  { name: 'filter', type: struct.UInt32LE },
+  { name: 'CCflag', type: struct.UInt16LE },
+  { name: 'skipcount', type: struct.UInt32LE },
+  { name: 'coinaddr', type: bufferaddr }
 ]);
-*/
 
 // custom parse for txproof rpc req/resp as varBuffer is not supported on the server side
 let nspvTxproof = (function(){
@@ -436,13 +450,16 @@ exports.nspvReq = (function () {
     switch(code)
     {
       case NSPVREQ.NSPV_UTXOS:
-        type = utxoreq;
+        type = utxosreq;
         break;
       case NSPVREQ.NSPV_BROADCAST:
         type = nspvBroadcastType;
         break;
       case NSPVREQ.NSPV_TXPROOF:
         type = nspvTxproof;
+        break;
+      case NSPVREQ.NSPV_TXIDS:
+        type = txidsreq;
         break;
       case NSPVREQ.NSPV_REMOTERPC:
         type = nspvRemoteRpc;
@@ -492,13 +509,16 @@ exports.nspvResp = (function () {
     switch(code)
     {
       case NSPVRESP.NSPV_UTXOSRESP:
-        type = utxoresp;
+        type = utxosresp;
         break;
       case NSPVRESP.NSPV_BROADCASTRESP:
         type = nspvBroadcastRespType;
         break;
       case NSPVRESP.NSPV_TXPROOFRESP:
         type = nspvTxproofResp;
+        break;
+      case NSPVRESP.NSPV_TXIDSRESP:
+        type = txidsresp;
         break;
       case NSPVRESP.NSPV_REMOTERPCRESP:
         type = nspvRemoteRpcResp;

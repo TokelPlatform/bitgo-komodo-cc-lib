@@ -21,7 +21,7 @@ Peer.prototype._registerListeners = function() {
 }
 
 // nspv get utxos
-Peer.prototype.nspvGetUtxos = function(address, isCC, opts, cb) {
+Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, cb) {
   if (typeof opts === 'function') {
     cb = opts
     opts = {}
@@ -40,8 +40,8 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, opts, cb) {
     reqCode: NSPVREQ.NSPV_UTXOS,
     coinaddr: address,
     CCflag: isCC ? 1 : 0,
-    skipcount: 0,
-    filter: 0
+    skipcount: skipCount,
+    filter: filter
   }
   let buf = nspvReq.encode(nspvReqUtxos)
   this.send('getnSPV', buf)
@@ -49,6 +49,41 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, opts, cb) {
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     errorlog(`getnSPV NSPV_UTXOSRESP timed out: ${opts.timeout} ms`)
+    var error = new Error('Request timed out')
+    error.timeout = true
+    cb(error)
+  }, opts.timeout)
+}
+
+// nspv get txids
+Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+  if (opts.timeout == null) opts.timeout = this._getTimeout()
+
+  var timeout
+  var onNspvResp = (resp) => {
+    if (timeout) clearTimeout(timeout)
+    cb(null, resp)
+    //this._nextHeadersRequest()  // TODO: do we also need call to next?
+  }
+  this.once(`nSPV:${NSPVRESP.NSPV_TXIDSRESP}`, onNspvResp)
+
+  let nspvReqTxids = {
+    reqCode: NSPVREQ.NSPV_TXIDS,
+    coinaddr: address,
+    CCflag: isCC ? 1 : 0,
+    skipcount: skipCount,
+    filter: filter
+  }
+  let buf = nspvReq.encode(nspvReqTxids)
+  this.send('getnSPV', buf)
+
+  if (!opts.timeout) return
+  timeout = setTimeout(() => {
+    errorlog(`getnSPV NSPV_TXIDSRESP timed out: ${opts.timeout} ms`)
     var error = new Error('Request timed out')
     error.timeout = true
     cb(error)

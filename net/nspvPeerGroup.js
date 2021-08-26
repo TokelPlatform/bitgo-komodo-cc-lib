@@ -22,8 +22,12 @@ class NspvPeerGroup extends PeerGroup {
   }
 }
 
-PeerGroup.prototype.nspvGetUtxos = function(address, isCC, opts, cb) {
-  this._request('nspvGetUtxos', address, isCC, opts, cb)
+PeerGroup.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, cb) {
+  this._request('nspvGetUtxos', address, isCC, skipCount, filter, opts, cb)
+}
+
+PeerGroup.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, cb) {
+  this._request('nspvGetTxids', address, isCC, skipCount, filter, opts, cb)
 }
 
 PeerGroup.prototype.nspvRemoteRpc = function(rpcMethod, mypk, params, opts, cb) {

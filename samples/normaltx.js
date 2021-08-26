@@ -173,8 +173,12 @@ if (!process.browser)
       // tests:
       
       // make a normal tx
-      let txhex = await create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 5000);  // amount in satoshi
-      console.log('txhex=', txhex);
+      //let txhex = await create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 5000);  // amount in satoshi
+      //console.log('txhex=', txhex);
+
+      let txids = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
+      console.log('txids=', txids);
+
     }
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);

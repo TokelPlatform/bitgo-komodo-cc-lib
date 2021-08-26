@@ -24,6 +24,8 @@ exports.finalizeCCtx = finalizeCCtx;
 exports.createTxAndAddNormalInputs = createTxAndAddNormalInputs;
 exports.getNormalUtxos = getNormalUtxos;
 exports.getCCUtxos = getCCUtxos;
+exports.getUtxos = getUtxos;
+exports.getTxids = getTxids;
 exports.hex2Base64 = hex2Base64;
 exports.byte2Base64 = byte2Base64;
 exports.addInputsFromPreviousTxns = addInputsFromPreviousTxns;
@@ -201,7 +203,36 @@ function findCCProbeForSpk(ccProbes, spk)
   });
 }
 
-function getUtxos(peers, address, isCC)
+/**
+ * returns utxos for an address
+ * @param {*} peers PeerGroup object with NspvPeers ext
+ * @param {*} address address to get utxos from
+ * @param {*} isCC if 1 get cc or if 0 get normal utxos
+ * @param {*} skipCount number of utxo to skip 
+ * @param {*} filter unused must be 0
+ */
+function getUtxos(peers, address, isCC, skipCount, filter)
+{
+  return new Promise((resolve, reject) => {
+    peers.nspvGetUtxos(address, isCC, skipCount, filter, {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err)
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
+/**
+ * returns txids for an address
+ * @param {*} peers PeerGroup object with NspvPeers ext
+ * @param {*} address address to get utxos from
+ * @param {*} isCC if 1 get cc or if 0 get normal utxos
+ * @param {*} skipCount number of utxo to skip 
+ * @param {*} filter unused must be 0
+ */
+function getTxids(peers, address, isCC)
 {
   return new Promise((resolve, reject) => {
     peers.nspvGetUtxos(address, isCC, {}, (err, res, peer) => {
@@ -255,7 +286,7 @@ function getNormalUtxos(peers, address)
   typeforce('PeerGroup', peers);
   typeforce('String', address);
 
-  return getUtxos(peers, address, false);
+  return getUtxos(peers, address, 0);
 }
 /**
  * 
@@ -267,7 +298,7 @@ function getCCUtxos(peers, address)
   typeforce('PeerGroup', peers);
   typeforce('String', address);
 
-  return getUtxos(peers, address, true);
+  return getUtxos(peers, address, 1);
 }
 /**
  * 
