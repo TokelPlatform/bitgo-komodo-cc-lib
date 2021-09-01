@@ -17,7 +17,8 @@ const networks = require('../src/networks');
 //const mynetwork = networks.tok6; 
 //const mynetwork = networks.tkltest; 
 //const mynetwork = networks.dimxy23;
-const mynetwork = networks.dimxy24;
+//const mynetwork = networks.dimxy24;
+const mynetwork = networks.tokel; 
 
 
 
@@ -45,9 +46,11 @@ var dnsSeeds = [
 // to connect over p2p
 var staticPeers = [
   //'18.189.25.123:14722'
-  '18.190.86.67:14722'
+  // '18.190.86.67:14722'
   //'rick.kmd.dev:25434'
-  // '127.0.0.1:22024' // tkltest
+  //'127.0.0.1:22024' // tkltest
+  '127.0.0.1:29404' //  tokel
+
   //'127.0.0.1:14722'  // dimxy chain def port
 
 ] 
@@ -176,7 +179,8 @@ if (!process.browser)
       //let txhex = await create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 5000);  // amount in satoshi
       //console.log('txhex=', txhex);
 
-      let txids = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
+      //let txids = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
+      let txids = await ccutils.getTxids(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
       console.log('txids=', txids);
 
     }

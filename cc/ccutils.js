@@ -226,16 +226,16 @@ function getUtxos(peers, address, isCC, skipCount, filter)
 
 /**
  * returns txids for an address
- * @param {*} peers PeerGroup object with NspvPeers ext
- * @param {*} address address to get utxos from
- * @param {*} isCC if 1 get cc or if 0 get normal utxos
- * @param {*} skipCount number of utxo to skip 
+ * @param {*} peers PeerGroup object with NspvPeers additions
+ * @param {*} address address to get txids from
+ * @param {*} isCC get txids with normal (isCC is 0) or cc (isCC is 1) utxos on this address
+ * @param {*} skipCount number of txids to skip 
  * @param {*} filter unused must be 0
  */
-function getTxids(peers, address, isCC)
+function getTxids(peers, address, isCC, skipCount, filter)
 {
   return new Promise((resolve, reject) => {
-    peers.nspvGetUtxos(address, isCC, {}, (err, res, peer) => {
+    peers.nspvGetTxids(address, isCC, skipCount, filter, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err)
         resolve(res);
