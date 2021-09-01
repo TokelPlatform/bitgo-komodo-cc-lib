@@ -21,9 +21,9 @@ require('../net/nspvPeer');  // init peer.js too
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.tok6;
-//const mynetwork = networks.dimxy23;
+const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy20;
-const mynetwork = networks.dimxy24;
+//const mynetwork = networks.dimxy24;
 //const mynetwork = networks.tkltest;
 
 
@@ -76,11 +76,11 @@ var dnsSeeds = [
 
 //to connect over p2p
 var staticPeers = [
-  //'127.0.0.1:14722'
+  '127.0.0.1:14722'
   //'167.99.114.240:22024'
   //'3.19.194.93:22024',
   //'127.0.0.1:27513',
-  '18.190.86.67:14722'
+  //'18.190.86.67:14722'
   //'18.189.25.123:14722'
   //'rick.kmd.dev:25434'
   //'3.136.47.223:14722'
@@ -573,7 +573,7 @@ if (!process.browser)
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
     }
+    peers.close();
+    console.log('test finished');
   });
-  peers.close();
-  console.log('test finished');
 }

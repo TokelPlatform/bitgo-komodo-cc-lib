@@ -428,7 +428,7 @@ if (!process.browser)
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
     }
+    peers.close();
+    console.log('test finished');
   });
-  peers.close();
-  console.log('test finished');
 }
