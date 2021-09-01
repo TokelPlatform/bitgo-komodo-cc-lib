@@ -19,7 +19,9 @@ require('../net/nspvPeer');  // init peer.js too
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
-const mynetwork = networks.tok6; 
+//const mynetwork = networks.tok6; 
+const mynetwork = networks.tkltest; 
+
 
 
 // you will need to do a call like:
@@ -55,7 +57,8 @@ var dnsSeeds = [
 // to connect over p2p
 var staticPeers = [
   //'18.189.25.123:14722'
-  'rick.kmd.dev:25434'
+  //'rick.kmd.dev:25434'
+  '127.0.0.1:22024'
 ] 
 
 
@@ -71,18 +74,18 @@ var params = {
   magic: mynetwork.magic,
   defaultPort: defaultPort,
   //dnsSeeds: dnsSeeds,
-  webSeeds: webSeeds,
+  //webSeeds: webSeeds,
   staticPeers: staticPeers,  // dnsSeed works also
   protocolVersion: 170009,
   messages: kmdmessages.kmdMessages
 }
 
 var opts = {
-  connectWeb: true,     // use websockets
+  //connectWeb: true,     // use websockets
   //wrtc: wrtc,          // not supported any more
   numPeers: 8,
   //hardLimit: 2,        // max peers
-  connectPlainWeb: true,  // use plain websockets, no PXP
+  //connectPlainWeb: true,  // use plain websockets, no PXP
   wsOpts: { rejectUnauthorized: false } 
 }
 
@@ -321,11 +324,12 @@ if (!process.browser)
 
       // get cc utxos:
       //let ccutxos = await ccutils.getCCUtxos(peers, faucetGlobalAddress);
-      //console.log('cc utxos=', ccutxos); 
+      let ccutxos = await ccutils.getCCUtxos(peers, 'RSc4RycihBEWQP2GDvSYS46MvFJsTKaNVU');
+      console.log('cc utxos=', ccutxos); 
 
       // make cc faucet create tx
-      let txhex = await ccfaucet_create(myfaucetcreatewif, myfaucetcreateaddress, FAUCETSIZE*20 /*890719925404991*/);
-      console.log('txhex=', txhex);
+      //let txhex = await ccfaucet_create(myfaucetcreatewif, myfaucetcreateaddress, FAUCETSIZE*20 /*890719925404991*/);
+      //console.log('txhex=', txhex);
 
       // make cc faucet get tx
       //let txhex = await ccfaucet_get(myfaucetgetaddress);
@@ -339,4 +343,6 @@ if (!process.browser)
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
     }
   });
+  peers.close();
+  console.log('test finished');
 }

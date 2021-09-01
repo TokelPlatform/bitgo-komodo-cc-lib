@@ -556,11 +556,11 @@ if (!process.browser)
       //console.log('txhex=', txhex);
 
       // make cc token transfer tx
-      //let txhex = await Tokensv2TransferTokel(mytokencreatewif, mytokenid, mydestpubkey, 1);
-      //console.log('txhex=', txhex);
+      let txhex = await Tokensv2TransferTokel(mytokencreatewif, mytokenid, mydestpubkey, 1);
+      console.log('txhex=', txhex);
 
-      let info = await TokenInfoV2Tokel(mytokencreatewif, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a");
-      console.log('txhex=', info);
+      //let info = await TokenInfoV2Tokel(mytokencreatewif, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a");
+      //console.log('info=', info);
 
       // make tx with normal inputs for the specified amount
       // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);
@@ -573,6 +573,7 @@ if (!process.browser)
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
     }
-    peers.close();
   });
+  peers.close();
+  console.log('test finished');
 }
