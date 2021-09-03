@@ -1,0 +1,125 @@
+Arguments: 
+  /Users/dariah/.nvm/versions/node/v15.0.1/bin/node /usr/local/Cellar/yarn/1.22.10/libexec/bin/yarn.js
+
+PATH: 
+  /Users/dariah/.nvm/versions/node/v15.0.1/bin:/opt/local/bin:/opt/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/TeX/texbin:/opt/X11/bin:/Users/dariah/.cargo/bin
+
+Yarn version: 
+  1.22.10
+
+Node version: 
+  15.0.1
+
+Platform: 
+  darwin x64
+
+Trace: 
+  Error: https://registry.yarnpkg.com/cryptoconditions-js: Not found
+      at Request.params.callback [as _callback] (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:66988:18)
+      at Request.self.callback (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:140749:22)
+      at Request.emit (node:events:327:20)
+      at Request.<anonymous> (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:141721:10)
+      at Request.emit (node:events:327:20)
+      at IncomingMessage.<anonymous> (/usr/local/Cellar/yarn/1.22.10/libexec/lib/cli.js:141643:12)
+      at Object.onceWrapper (node:events:433:28)
+      at IncomingMessage.emit (node:events:339:22)
+      at endReadableNT (node:internal/streams/readable:1289:12)
+      at processTicksAndRejections (node:internal/process/task_queues:80:21)
+
+npm manifest: 
+  {
+    "name": "@tokel/bitgo-komodo-cc-lib",
+    "version": "0.1.16",
+    "description": "Client-side Bitcoin JavaScript library with Komodo cryptocondions support",
+    "main": "./src/index.js",
+    "engines": {
+      "node": ">=4.0.0"
+    },
+    "keywords": [
+      "bitgo",
+      "utxo",
+      "bitcoinjs",
+      "bitcoin",
+      "zcash",
+      "dash",
+      "browserify",
+      "javascript"
+    ],
+    "scripts": {
+      "coverage-report": "nyc report --reporter=lcov",
+      "coverage-html": "nyc report --reporter=html",
+      "coverage": "BITGO_UTXO_LIB_TEST_EXPECTED_COUNT=3442 nyc --check-coverage --branches 90 --functions 90 mocha --recursive",
+      "integration": "mocha test/integration/",
+      "standard": "standard",
+      "test": "npm run standard && npm run coverage",
+      "unit": "mocha"
+    },
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dimxy/bitgo-komodo-cc-lib.git"
+    },
+    "files": [
+      "src",
+      "cc",
+      "net",
+      "config"
+    ],
+    "dependencies": {
+      "bech32": "0.0.3",
+      "bigi": "1.4.2",
+      "bip39": "^2.3.0",
+      "bip66": "^1.1.0",
+      "bitcoin-ops": "^1.3.0",
+      "bitcoin-protocol": "^4.1.3",
+      "bitcoin-util": "^2.0.0",
+      "bitcoind-rpc": "^0.8.1",
+      "blake2b": "git+https://github.com/BitGo/blake2b.git#6268e6dd678661e0acc4359e9171b97eb1ebf8ac",
+      "bs58check": "2.1.2",
+      "bufferutil": "^4.0.3",
+      "create-hash": "^1.1.0",
+      "create-hmac": "^1.1.3",
+      "cryptoconditions-js": "@tokel/cryptoconditions",
+      "debug": "~3.1.0",
+      "ecurve": "^1.0.0",
+      "envify": "^4.1.0",
+      "event-cleanup": "^1.0.3",
+      "get-browser-rtc": "^1.0.2",
+      "merkle-lib": "^2.0.10",
+      "object-assign": "^4.1.0",
+      "old": "^0.1.3",
+      "once": "^1.3.3",
+      "pushdata-bitcoin": "^1.0.1",
+      "randombytes": "^2.0.1",
+      "safe-buffer": "^5.2.1",
+      "setimmediate": "^1.0.4",
+      "sha.js": "2.4.11",
+      "through2": "^2.0.1",
+      "typeforce": "^1.11.3",
+      "utf-8-validate": "^5.0.5",
+      "varuint-bitcoin": "^1.0.4",
+      "webassembly": "0.9.0",
+      "websocket-stream": "^3.3.0",
+      "wif": "^2.0.1"
+    },
+    "devDependencies": {
+      "bip65": "^1.0.1",
+      "bs58": "^4.0.0",
+      "dhttp": "^2.4.2",
+      "minimaldata": "^1.0.2",
+      "mocha": "^6.2.3",
+      "nyc": "^14.1.1",
+      "proxyquire": "^1.4.0",
+      "sinon": "^1.12.2",
+      "standard": "^9.0.2"
+    },
+    "license": "MIT",
+    "optionalDependencies": {
+      "secp256k1": "^3.5.2"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

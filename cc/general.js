@@ -7,6 +7,13 @@ const ecpair = require('../src/ecpair');
 const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
 const TransactionBuilder = require('../src/transaction_builder');
 const Transaction = require('../src/transaction');
+const ccutils = require('./ccutils')
+let ccimp;
+if (process.browser)
+  ccimp = import('@tokel/cryptoconditions');
+else
+  ccimp = require('@tokel/cryptoconditions');
+
 
 /**
  * Receives any string(WIF/seed phrase) and returns WIF.
@@ -34,23 +41,25 @@ const keyToWif = (key, network) => {
 
 const getSeedPhrase = (strength) => bip39.generateMnemonic(strength);
 
-async function create_normaltx(_wif, _destaddress, _satoshi) {
+async function create_normaltx(_wif, _destaddress, _satoshi, _network, _peers) {
   let wif = _wif;
   let destaddress = _destaddress;
   let satoshi = _satoshi;
-  let tx = await makeNormalTx(wif, destaddress, satoshi);
+  let network = _network;
+  let peers = _peers
+  let tx = await makeNormalTx(wif, destaddress, satoshi, network, peers);
 
   return tx.toHex();
 }
 
-async function makeNormalTx(wif, destaddress, amount) {
+async function makeNormalTx(wif, destaddress, amount, network, peers) {
   // init lib cryptoconditions
   p2cryptoconditions.cryptoconditions = await ccimp; // note we need cryptoconditions here bcz it is used in FinalizCCtx o check if a vin is normal or cc
 
-  const txbuilder = new TransactionBuilder(mynetwork);
+  const txbuilder = new TransactionBuilder(network);
   const txfee = 10000;
 
-  let mypair = ecpair.fromWIF(wif, mynetwork);
+  let mypair = ecpair.fromWIF(wif, network);
   let txwutxos = await ccutils.createTxAndAddNormalInputs(
     peers,
     mypair.getPublicKeyBuffer(),
@@ -59,7 +68,7 @@ async function makeNormalTx(wif, destaddress, amount) {
 
   let tx = Transaction.fromBuffer(
     Buffer.from(txwutxos.txhex, 'hex'),
-    mynetwork
+    network
   );
 
   // zcash stuff:
@@ -71,7 +80,7 @@ async function makeNormalTx(wif, destaddress, amount) {
     txbuilder,
     tx,
     txwutxos.previousTxns,
-    mynetwork
+    network
   );
   if (added < amount + txfee)
     throw new Error('insufficient normal inputs (' + added + ')');

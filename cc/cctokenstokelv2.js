@@ -34,9 +34,9 @@ const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
 const { varint } = require('bitcoin-protocol');
 var ccimp;
 if (process.browser)
-  ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
+  ccimp = import('@tokel/cryptoconditions');
 else
-  ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
+  ccimp = require('@tokel/cryptoconditions');
 
 
 // tokens v2 global privkey/pubkey:
