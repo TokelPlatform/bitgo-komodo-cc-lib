@@ -594,8 +594,7 @@ class PeerGroup extends EventEmitter {
 
     message.forEach((elem)=> {
       // TODO: check nspv service bit
-      ///////todo enable 
-      /// this._addTcpAddr(elem.address, elem.port)
+      this._addTcpAddr(elem.address, elem.port)
     })
   }
 
