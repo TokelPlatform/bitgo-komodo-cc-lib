@@ -73,23 +73,19 @@ class PeerGroup extends EventEmitter {
       // after 3h retry count is cleared and the address is again available
       // when addresses are selected it first checked that lastConnectTime != 0 but it is least recently connected
       this._webAddrs = [];
-      // add web seeds from params:
-      if (this._params.webSeeds)  {
-        this._params.webSeeds.concat(envWebSeeds).forEach( (elem)=>{ 
-          this._webAddrs.push({ addr: elem, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 }) 
-        })
-      }
-      // add web seeds from network config:
-      if (this._params.network && this._params.network.webSeeds)  {
-        this._params.network.webSeeds.forEach( (elem)=>{ 
-          this._webAddrs.push({ addr: elem, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 }) 
-        })
-      }
-      if (envWebSeeds)  {
-        envWebSeeds.forEach( (elem)=>{ 
-          this._webAddrs.push({ addr: elem, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 }) 
-        })
-      }
+      
+      let webSeeds = [];
+      if (this._params.webSeeds)  
+        webSeeds = webSeeds.concat(this._params.webSeeds) // add web seeds from params
+      if (envWebSeeds)
+        webSeeds = webSeeds.concat(envWebSeeds) // add web seeds from env
+      if (this._params.network && this._params.network.webSeeds) // add web seeds from network config
+        webSeeds = webSeeds.concat(this._params.network.webSeeds)
+
+      webSeeds.forEach( (elem)=>{ 
+        this._webAddrs.push({ addr: elem, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 }) 
+      })
+
 
       /* do not use pxp:
       if (this._connectPxpWeb)  {
@@ -118,18 +114,16 @@ class PeerGroup extends EventEmitter {
         this._dnsSeeds = this._dnsSeeds.concat(this._params.network.dnsSeeds)  // add seeds from network config
 
       this._tcpAddrs = [];
-      // add params static peers:        
-      if (this._params.staticPeers) {
-        this._params.staticPeers.forEach( (elem)=>{ 
-          this._tcpAddrs.push({ addr: elem, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 }) 
-        })
-      }
-      // add static peers from network config:
-      if (this._params.network && this._params.network.staticPeers) {
-        this._params.network.staticPeers.forEach( (elem)=>{ 
-          this._tcpAddrs.push({ addr: elem, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 }) 
-        })
-      }
+      let staticPeers = [];
+              
+      if (this._params.staticPeers) 
+        staticPeers = staticPeers.concat(this._params.staticPeers) // add static peers from params
+      if (this._params.network && this._params.network.staticPeers)
+        staticPeers = staticPeers.concat(this._params.network.staticPeers) // add static peers from network config
+
+      staticPeers.forEach( (elem)=>{ 
+        this._tcpAddrs.push({ addr: elem, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 }) 
+      })
     }
 
     this.on('block', (block) => {
