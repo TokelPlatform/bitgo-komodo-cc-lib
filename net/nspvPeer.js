@@ -32,7 +32,6 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, c
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     cb(null, resp)
-    //this._nextHeadersRequest()  // TODO: do we also need call to next?
   }
   this.once(`nSPV:${NSPVRESP.NSPV_UTXOSRESP}`, onNspvResp)
 
@@ -67,7 +66,6 @@ Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, c
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     cb(null, resp)
-    //this._nextHeadersRequest()  // TODO: do we also need call to next?
   }
   this.once(`nSPV:${NSPVRESP.NSPV_TXIDSRESP}`, onNspvResp)
 

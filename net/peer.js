@@ -2,10 +2,10 @@
 
 const crypto = require('crypto')
 const Debug = require('debug')
-const debug = Debug('net:peer')
-var errorlog = Debug('net:peer:error');
-debug.rx = Debug('net:messages:rx')
-debug.tx = Debug('net:messages:tx')
+const logdebug = Debug('net:peer')
+var logerror = Debug('net:peer:error');
+logdebug.rx = Debug('net:messages:rx')
+logdebug.tx = Debug('net:messages:tx')
 const proto = require('bitcoin-protocol')
 const INV = proto.constants.inventory
 const u = require('bitcoin-util')
@@ -104,16 +104,16 @@ class Peer extends EventEmitter {
     socket.on('error', this._error.bind(this))
 
     var protocolOpts = {
-      magic: this.params.magic,
+      magic: this.params.network.magic,
       messages: this.params.messages
     }
 
     var decoder = proto.createDecodeStream(protocolOpts)
     decoder.on('error', this._error.bind(this))
-    this._decoder = debugStream(debug.rx)
+    this._decoder = debugStream(logdebug.rx)
     socket.pipe(decoder).pipe(this._decoder)
 
-    this._encoder = debugStream(debug.tx)
+    this._encoder = debugStream(logdebug.tx)
     let encoder = proto.createEncodeStream(protocolOpts)
     this._encoder.pipe(encoder).pipe(socket)
 
@@ -128,6 +128,8 @@ class Peer extends EventEmitter {
         this._handshakeTimeout = null
       })
     }
+
+    logdebug(`connecting from localaddr: ${socket.localAddress}:${socket.localPort}`)
 
     // set up ping interval and initial pings
     this.once('ready', () => {
@@ -172,11 +174,13 @@ class Peer extends EventEmitter {
   _registerListeners () {
     this._decoder.on('error', this._error.bind(this))
     this._decoder.on('data', (message) => {
-      this.emit('message', message)
-      this.emit(message.command, message.payload)
+      this.emit('message', message)                     // forward received messages to PeerGroup.OnMessage()
+      this.emit(message.command, message.payload)       // forward messages to Peer processors
     })
 
     this._encoder.on('error', this._error.bind(this))
+
+    // specific message processors:
 
     this.on('version', this._onVersion)
     this.on('verack', () => {
@@ -257,7 +261,12 @@ class Peer extends EventEmitter {
   }
 
   getAddr () {
-    debug(`getwsaddr requested`)
+    logdebug(`getaddr requested`)
+    this.send('getaddr', {})
+  }
+
+  getWsAddr () {
+    logdebug(`getwsaddr requested`)
     this.send('getwsaddr', {})
   }
 
@@ -295,7 +304,7 @@ class Peer extends EventEmitter {
 
     if (!opts.timeout) return
     timeout = setTimeout(() => {
-      errorlog(`getBlocks timed out: ${opts.timeout} ms, remaining: ${remaining}/${hashes.length}`)
+      logerror(`getBlocks timed out: ${opts.timeout} ms, remaining: ${remaining}/${hashes.length}`)
       events.removeAll()
       var error = new Error('Request timed out')
       error.timeout = true
@@ -354,7 +363,7 @@ class Peer extends EventEmitter {
 
       if (!opts.timeout) return
       timeout = setTimeout(() => {
-        errorlog(`getTransactions timed out: ${opts.timeout} ms, remaining: ${remaining}/${txids.length}`)
+        logerror(`getTransactions timed out: ${opts.timeout} ms, remaining: ${remaining}/${txids.length}`)
         events.removeAll()
         var err = new Error('Request timed out')
         err.timeout = true
@@ -366,7 +375,7 @@ class Peer extends EventEmitter {
   getHeaders (locator, opts, cb) {
     if (this.gettingHeaders) {
       this.getHeadersQueue.push({ locator, opts, cb })
-      debug(`queued "getHeaders" request: queue size=${this.getHeadersQueue.length}`)
+      logdebug(`queued "getHeaders" request: queue size=${this.getHeadersQueue.length}`)
       return
     }
     this.gettingHeaders = true
@@ -396,7 +405,7 @@ class Peer extends EventEmitter {
     })
     if (!opts.timeout) return
     timeout = setTimeout(() => {
-      errorlog(`getHeaders timed out: ${opts.timeout} ms`)
+      logerror(`getHeaders timed out: ${opts.timeout} ms`)
       this.removeListener('headers', onHeaders)
       var error = new Error('Request timed out')
       error.timeout = true

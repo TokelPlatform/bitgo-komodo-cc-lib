@@ -8,26 +8,13 @@ const OPS = require('bitcoin-ops');
 
 const bufferutils = require("../src/bufferutils");
 const script = require("../src/script");
-const kmdmessages = require('../net/kmdmessages');
 const ccutils = require('../cc/ccutils');
 const ecpair = require('../src/ecpair');
 
-// create peer group
-var NspvPeerGroup = require('../net/nspvPeerGroup');
-require('../net/nspvPeer');  // init peer.js too
-
-const networks = require('../src/networks');
-//const mynetwork = networks.rick; 
-//const mynetwork = networks.dimxy19;
-//const mynetwork = networks.tok6; 
-const mynetwork = networks.tkltest; 
-
-
-
-// you will need to do a call like:
+// to init the cryptoconditions wasm lib you will need to do a call like:
 // p2cryptoconditions.cryptoconditions = await ccimp;
-// to init the cryptoconditions wasm lib 
 // (this is due to wasm delayed loading specifics)
+
 const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
 var ccimp;
 if (process.browser)
@@ -36,60 +23,13 @@ else
   ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
 
 
-
 const FAUCETSIZE = 10000000;
-
 
 // faucet global privkey/pubkey:
 const faucetGlobalPk = "03682b255c40d0cde8faee381a1a50bbb89980ff24539cb8518e294d3a63cefe12";
 const faucetGlobalPrivkey = Buffer.from([ 0xd4, 0x4f, 0xf2, 0x31, 0x71, 0x7d, 0x28, 0x02, 0x4b, 0xc7, 0xdd, 0x71, 0xa0, 0x39, 0xc4, 0xbe, 0x1a, 0xfe, 0xeb, 0xc2, 0x46, 0xda, 0x76, 0xf8, 0x07, 0x53, 0x3d, 0x96, 0xb4, 0xca, 0xa0, 0xe9 ]);
 const faucetGlobalAddress = "R9zHrofhRbub7ER77B7NrVch3A63R39GuC";
-
-// not used for plan websockets, only for PXP which is not supported
-var defaultPort = 14722
-
-/*
-to connect over p2p:
-var dnsSeeds = [
-]
-*/
-
-// to connect over p2p
-var staticPeers = [
-  //'18.189.25.123:14722'
-  //'rick.kmd.dev:25434'
-  '127.0.0.1:22024'
-] 
-
-
-// to connect over websockets:
-var webSeeds = [
-  //'ws://18.189.25.123:8192'
-  //'ws://localhost:8192'
-  'ws:3.136.47.223:8192'
-  // TODO: add more
-]
-
-var params = {
-  magic: mynetwork.magic,
-  defaultPort: defaultPort,
-  //dnsSeeds: dnsSeeds,
-  //webSeeds: webSeeds,
-  staticPeers: staticPeers,  // dnsSeed works also
-  protocolVersion: 170009,
-  messages: kmdmessages.kmdMessages
-}
-
-var opts = {
-  //connectWeb: true,     // use websockets
-  //wrtc: wrtc,          // not supported any more
-  numPeers: 8,
-  //hardLimit: 2,        // max peers
-  //connectPlainWeb: true,  // use plain websockets, no PXP
-  wsOpts: { rejectUnauthorized: false } 
-}
-
-var peers;
+const EVAL_FAUCET = 0xE4
 
 function createTxAndAddFaucetInputs(peers, globalpk, amount)
 {
@@ -105,54 +45,40 @@ function createTxAndAddFaucetInputs(peers, globalpk, amount)
   });
 }
 
-// connect to peers, for calling from browser
-function Connect()
-{
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    //console.log('in event: connected to peer', peer.socket.remoteAddress)
-  });
-
-  return new Promise((resolve, reject) => {
-
-    peers.on('connectError', (err, peer)=>{ reject(err, peer) });
-    peers.on('peerError', (err)=>reject(err));
-    peers.on('error', (err)=>reject(err));
-
-    peers.connect(() => {
-      console.log('in promise: connected to peer!!!');
-      resolve();
-    });
-  });
-}
-
-exports.Connect = Connect;
 
 // exported top level functions to be called from browser
 // param check and pass further:
 
-exports.ccfaucet_create = ccfaucet_create;
-async function ccfaucet_create(_wif, _myaddress, _satoshi) {
-  let wif = _wif || myfaucetcreatewif;
-  let myaddress = _myaddress || myfaucetcreateaddress;
-  let satoshi  = _satoshi || FAUCETSIZE*20;
+/**
+ * create a tx to add satoshi to the faucet fund
+ * @param {*} peers initialised NspdPeerGroup object
+ * @param {*} mynetwork a chain from networks.js config 
+ * @param {*} wif wif to sign the tx and get the change
+ * @param {*} satoshi amount to add to the fund
+ * @returns promise to create tx
+ */
+async function FaucetFund(peers, mynetwork, wif, satoshi) {
   //amount = amount >>> 0; // to int
-  let tx = await makeFaucetCreateTx(wif, myaddress, satoshi);
+  let txpromise = makeFaucetCreateTx(peers, mynetwork, wif, satoshi);
 
-  return tx.toHex();
+  return txpromise;
 };
 
-exports.ccfaucet_get = ccfaucet_get;
-async function ccfaucet_get(_myaddress) {
-  let myaddress = _myaddress || myfaucetgetaddress;
-  let tx = await makeFaucetGetTx(myaddress);
-  //return this.broadcast(tx.toHex());
-  return tx.toHex();
+/**
+ * create a txpow to get FAUCETSIZE from the faucet fund to myaddress
+ * @param {*} peers initialised NspdPeerGroup object
+ * @param {*} mynetwork a chain from networks.js config
+ * @param {*} myaddress where to send satoshis from the faucet fund  
+ * @returns promise to create tx
+ */
+async function FaucetGet(peers, mynetwork, myaddress) {
+  let txpromise = makeFaucetGetTx(peers, mynetwork, myaddress);
+  return txpromise;
 };
 
 // tx creation code
 
-async function makeFaucetCreateTx(wif, myaddress, amount) 
+async function makeFaucetCreateTx(peers, mynetwork, wif, amount) 
 {
   // init lib cryptoconditions
   p2cryptoconditions.cryptoconditions = await ccimp;
@@ -161,7 +87,10 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
   const txfee = 10000;
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.getPublicKeyBuffer(), amount + txfee);
+  let mypk = mypair.getPublicKeyBuffer();
+  let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
+
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, amount + txfee);
 
   let tx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
@@ -181,7 +110,7 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
     threshold:	2,
     subfulfillments:	[{
           type:	"eval-sha-256",   
-          code:	ccutils.hex2Base64('e4')     
+          code:	ccutils.byte2Base64(EVAL_FAUCET)     
       }, {            
           type:	"threshold-sha-256",
           threshold:	1,
@@ -197,7 +126,7 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
   }
 
   txbuilder.addOutput(ccSpk, amount);
-  txbuilder.addOutput(myaddress, added - amount - txfee);  // change
+  txbuilder.addOutput(mynormaladdress, added - amount - txfee);  // change
 
   if (txbuilder.tx.version >= 4)
     txbuilder.setExpiryHeight(tx.expiryHeight);
@@ -206,7 +135,7 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
   return txbuilder.build();
 }
 
-async function makeFaucetGetTx(myaddress) 
+async function makeFaucetGetTx(peers, mynetwork, myaddress) 
 {
   // init lib cryptoconditions
   p2cryptoconditions.cryptoconditions = await ccimp;
@@ -223,7 +152,7 @@ async function makeFaucetGetTx(myaddress)
     threshold:	2,
     subfulfillments:	[{
         type:	"eval-sha-256",   
-        code:	 ccutils.hex2Base64('e4')     
+        code:	 ccutils.byte2Base64(EVAL_FAUCET)     
     }, {            
         type:	"threshold-sha-256",
         threshold:	1,
@@ -287,62 +216,9 @@ async function makeFaucetGetTx(myaddress)
   return txbuilder.build();
 }
 
-
-// Example test calls running under nodejs
-const myfaucetcreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
-const myfaucetcreateaddress = 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu';
-const myfaucetgetwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
-const myfaucetgetaddress = 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
-
-if (!process.browser) 
-{
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    // console.log('in event: connected to peer', peer.socket.remoteAddress)
-  });
-  // create connections to peers
-  peers.connect(async () => {
-  
-    try {
-
-      // Several tests:
-      
-      // test get blocks from peer (TODO: update for kmd block and transactions support) : 
-      // var hashes = [  bufferutils.reverseBuffer(Buffer.from("099751509c426f89a47361fcd26a4ef14827353c40f42a1389a237faab6a4c5d", 'hex')) ];
-      // let blocks = peers.getBlocks(hashes, {});
-      // console.log('blocks:', blocks);
-
-      // test get normal utxos from an address:
-      //let utxos = await ccutils.getNormalUtxos(peers, myfaucetcreateaddress);
-      //console.log('utxos=', utxos);
-
-      // it should be at least 1 sec between the same type nspv requests (here it is NSPV_UTXOS)
-      //var t0 = new Date().getSeconds();
-      //do {
-      //  var t1 = new Date().getSeconds();
-      //} while(t1 == t0);
-
-      // get cc utxos:
-      //let ccutxos = await ccutils.getCCUtxos(peers, faucetGlobalAddress);
-      let ccutxos = await ccutils.getCCUtxos(peers, 'RSc4RycihBEWQP2GDvSYS46MvFJsTKaNVU');
-      console.log('cc utxos=', ccutxos); 
-
-      // make cc faucet create tx
-      //let txhex = await ccfaucet_create(myfaucetcreatewif, myfaucetcreateaddress, FAUCETSIZE*20 /*890719925404991*/);
-      //console.log('txhex=', txhex);
-
-      // make cc faucet get tx
-      //let txhex = await ccfaucet_get(myfaucetgetaddress);
-      //console.log('txhex=', txhex);
-
-      // make tx with normal inputs for the specified amount
-      // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);
-      //console.log('txwnormals=', txwnormals);
-    }
-    catch(err) {
-      console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
-    }
-    peers.close();
-    console.log('test finished');
-  });
+module.exports = {
+    FaucetFund,
+    FaucetGet,
+    FAUCETSIZE, 
+    faucetGlobalPk, faucetGlobalPrivkey, faucetGlobalAddress, EVAL_FAUCET
 }

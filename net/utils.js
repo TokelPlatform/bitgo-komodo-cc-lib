@@ -18,8 +18,8 @@ function assertParams (params) {
   // TODO: check more things
   // TODO: give more specific errors
   if (!params ||
-    params.magic == null ||
-    !params.defaultPort) {
+    params.network == null
+    /*|| !params.defaultPort*/) {
     throw new Error('Invalid network parameters')
   }
 }

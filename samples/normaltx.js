@@ -15,10 +15,10 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
-//const mynetwork = networks.tkltest; 
+const mynetwork = networks.tkltest; 
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy24;
-const mynetwork = networks.tokel; 
+//const mynetwork = networks.tokel; 
 
 
 
@@ -48,8 +48,8 @@ var staticPeers = [
   //'18.189.25.123:14722'
   // '18.190.86.67:14722'
   //'rick.kmd.dev:25434'
-  //'127.0.0.1:22024' // tkltest
-  '127.0.0.1:29404' //  tokel
+  '127.0.0.1:22024' // tkltest
+  //'127.0.0.1:29404' //  tokel
 
   //'127.0.0.1:14722'  // dimxy chain def port
 
@@ -65,8 +65,8 @@ var webSeeds = [
 ]
 
 var params = {
-  magic: mynetwork.magic,
-  defaultPort: defaultPort,
+  network: mynetwork,
+  //defaultPort: defaultPort,
   //dnsSeeds: dnsSeeds,
   //webSeeds: webSeeds,
   staticPeers: staticPeers,  // dnsSeed works also
@@ -177,11 +177,13 @@ if (!process.browser)
       
       // make a normal tx
       //let txhex = await create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 5000);  // amount in satoshi
+      //let txhex = await create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 5000);
       //console.log('txhex=', txhex);
 
       //let result = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
       //let result = await ccutils.getTxids(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
-      let result = await ccutils.getUtxos(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
+      //let result = await ccutils.getUtxos(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
+      let result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
       console.log('result=', result);
 
     }

@@ -312,7 +312,19 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:   0x0e4bef0d
+    magic:   0x0e4bef0d,
+    //to connect over p2p:
+    dnsSeeds: [],
+    staticPeers: [ 
+      'localhost:14722' 
+    ], 
+    // to connect over websockets:
+    webSeeds: [ 
+      //'ws://18.189.25.123:8192'
+      'wss://localhost:8192'
+      //'ws://3.136.47.223:8192'
+      // TODO: add more
+    ]     
   },
 
   dimxy25: {
@@ -332,7 +344,14 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic: 0x794cdf9b //   0x9bdf4c79
+    magic: 0x794cdf9b,
+    //to connect over p2p:
+    dnsSeeds: [],
+    staticPeers: [ '3.136.47.223:14722' ], 
+    // to connect over websockets:
+    webSeeds: [ 
+      //'wss://localhost:8192'
+    ]     
   },
   
   tkltest: {
@@ -352,7 +371,14 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:  0xf6475548 
+    magic:  0xf6475548,
+    // to connect over p2p:
+    dnsSeeds: [],
+    staticPeers: [ '167.99.114.240:22024' ], 
+    // to connect over websockets:
+    webSeeds: [ 
+      //'ws://18.189.25.123:8192'
+    ]      
   },
   
   tokel: {
@@ -372,6 +398,19 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:  0x86c2fdd0 
+    magic:  0x86c2fdd0,
+  
+    //to connect over p2p:
+    dnsSeeds: [],
+    staticPeers: [ 
+      // '3.136.47.223:29404', 
+      '135.125.204.169:29404', '192.99.71.125:29404' 
+    ], 
+
+    // to connect over websockets:
+    webSeeds: [ 
+      // 'wss://localhost:8192'
+      // TODO: add more
+    ]     
   },
 }
