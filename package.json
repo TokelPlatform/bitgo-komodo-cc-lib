@@ -41,6 +41,7 @@
     "bigi": "1.4.2",
     "bip39": "^2.3.0",
     "bip66": "^1.1.0",
+    "bitcoin-merkle-proof": "^0.1.0",
     "bitcoin-ops": "^1.3.0",
     "bitcoin-protocol": "^4.1.3",
     "bitcoin-util": "^2.0.0",
@@ -86,6 +87,5 @@
   },
   "license": "MIT",
   "optionalDependencies": {
-    "secp256k1": "^3.5.2"
   }
 }

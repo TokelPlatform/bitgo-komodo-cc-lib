@@ -8,10 +8,7 @@ const OPS = require('bitcoin-ops')
 exports.CCOPS = {
     OP_CRYPTOCONDITIONS: 0xCC
 };
-//import('cryptoconditions-js/pkg/cryptoconditions.js').then((cc)=> cryptoconditions = cc );   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
-//else
-//ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
-//var ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js'); 
+
 // input: {signature}
 // output: {pubKey} OP_CHECKSIG
 function p2cryptoconditions(a, opts) {
@@ -57,7 +54,6 @@ function parseSpkCryptocondition(spk) {
 }
 exports.parseSpkCryptocondition = parseSpkCryptocondition;
 function getSpkCryptocondition(spk) {
-    //let cryptoconditions = ccimp;
     if (exports.cryptoconditions === undefined)
         throw new Error("cryptoconditions lib not available");
     let condbin = parseSpkCryptocondition(spk);
@@ -85,7 +81,6 @@ function isSpkPayToCryptocondition(spk) {
 exports.isSpkPayToCryptocondition = isSpkPayToCryptocondition;
 
 function ccConditionBinary(cond) {
-    //let cryptoconditions = ccimp;
     if (exports.cryptoconditions === undefined)
         throw new Error("cryptoconditions lib not available");
     let ccbin = exports.cryptoconditions.js_cc_condition_binary(cond);
@@ -121,7 +116,6 @@ function makeCCSpk(cond, opDropData) {
 exports.makeCCSpk = makeCCSpk;
 
 function ccConditionBinaryV2(cond) {
-    //let cryptoconditions = ccimp;
     if (exports.cryptoconditions === undefined)
         throw new Error("cryptoconditions lib not available");
     let anon = exports.cryptoconditions.js_cc_threshold_to_anon(cond);
