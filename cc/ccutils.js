@@ -280,11 +280,15 @@ function createTxAndAddNormalInputs(peers, mypk, amount)
  * 
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} address to add normal from
+ * @param {*} skipCount skips the specified number of transactions starting from the oldest; always returns the latest transaction
+ * @param {*} filter
  */
-function getNormalUtxos(peers, address)
+function getNormalUtxos(peers, address, skipCount, filter)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
+  typeforce('String', skipCount);
+  typeforce('String', filter);
 
   return getUtxos(peers, address, 0);
 }
@@ -292,13 +296,18 @@ function getNormalUtxos(peers, address)
  * 
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} address to add cc inputs from
+ * @param {*} skipCount skips the specified number of transactions starting from the oldest; always returns the latest transaction
+ * @param {*} filter
  */
-function getCCUtxos(peers, address)
+
+function getCCUtxos(peers, address, skipCount, filter)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
+  typeforce('String', skipCount);
+  typeforce('String', filter);
 
-  return getUtxos(peers, address, 1);
+  return getUtxos(peers, address, 1, skipCount, filter);
 }
 /**
  * 
