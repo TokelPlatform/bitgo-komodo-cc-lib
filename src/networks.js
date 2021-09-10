@@ -315,7 +315,8 @@ module.exports = {
     //to connect over p2p:
     dnsSeeds: [],
     staticPeers: [ 
-      'localhost:14722' 
+      //'localhost:14722' 
+      '18.190.86.67:14722'
     ], 
     // to connect over websockets:
     webSeeds: [ 
@@ -373,7 +374,10 @@ module.exports = {
     magic:  0xf6475548,
     // to connect over p2p:
     dnsSeeds: [],
-    staticPeers: [ '167.99.114.240:22024' ], 
+    staticPeers: [ 
+      '167.99.114.240:22024',
+      //'18.190.86.67:22024' 
+    ], 
     // to connect over websockets:
     webSeeds: [ 
       //'ws://18.189.25.123:8192'
@@ -403,7 +407,8 @@ module.exports = {
     dnsSeeds: [],
     staticPeers: [ 
       // '3.136.47.223:29404', 
-      '135.125.204.169:29404', '192.99.71.125:29404' 
+      //'135.125.204.169:29404', '192.99.71.125:29404' 
+      '18.190.86.67:29404'
     ], 
 
     // to connect over websockets:
