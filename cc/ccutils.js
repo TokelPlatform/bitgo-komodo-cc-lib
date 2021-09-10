@@ -287,8 +287,8 @@ function getNormalUtxos(peers, address, skipCount, maxrecords)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
-  typeforce('String', skipCount);
-  typeforce('String', filter);
+  typeforce('Number', skipCount);
+  typeforce('Number', maxrecords);
 
   return getUtxos(peers, address, 0, skipCount, maxrecords);
 }
@@ -304,8 +304,8 @@ function getCCUtxos(peers, address, skipCount, maxrecords)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
-  typeforce('String', skipCount);
-  typeforce('String', filter);
+  typeforce('Number', skipCount);
+  typeforce('Number', maxrecords);
 
   return getUtxos(peers, address, 1, skipCount, maxrecords);
 }
