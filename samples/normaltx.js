@@ -48,7 +48,7 @@ var staticPeers = [
   //'18.189.25.123:14722'
   // '18.190.86.67:14722'
   //'rick.kmd.dev:25434'
-  '127.0.0.1:22024' // tkltest
+  //'127.0.0.1:22024' // tkltest
   //'127.0.0.1:29404' //  tokel
 
   //'127.0.0.1:14722'  // dimxy chain def port
@@ -180,10 +180,16 @@ if (!process.browser)
       //let txhex = await create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 5000);
       //console.log('txhex=', txhex);
 
+      let result
       //let result = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
       //let result = await ccutils.getTxids(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
       //let result = await ccutils.getUtxos(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
-      let result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
+      //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
+      /////result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfA", 0, 0, 0); // bad addr (zfQ->zfA)
+      //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
+      //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
+      result = await ccutils.getCCUtxos(peers, "RXnxmVxXXvxF8Fo9kstYeJFRbWvhsJV2u8", 0, 0);
+
       console.log('result=', result);
 
     }

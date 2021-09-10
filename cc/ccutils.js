@@ -204,17 +204,17 @@ function findCCProbeForSpk(ccProbes, spk)
 }
 
 /**
- * returns utxos for an address
+ * returns utxos (unspent outputs) for an address
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} address address to get utxos from
  * @param {*} isCC if 1 get cc or if 0 get normal utxos
  * @param {*} skipCount number of utxo to skip 
- * @param {*} filter unused must be 0
+ * @param {*} maxrecords max number of returned utxos, if 0 will return max records set by the server
  */
-function getUtxos(peers, address, isCC, skipCount, filter)
+function getUtxos(peers, address, isCC, skipCount, maxrecords)
 {
   return new Promise((resolve, reject) => {
-    peers.nspvGetUtxos(address, isCC, skipCount, filter, {}, (err, res, peer) => {
+    peers.nspvGetUtxos(address, isCC, skipCount, maxrecords, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err)
         resolve(res);
@@ -225,17 +225,17 @@ function getUtxos(peers, address, isCC, skipCount, filter)
 }
 
 /**
- * returns txids for an address
+ * returns txos (tx outputs bith spent and unspent) for an address
  * @param {*} peers PeerGroup object with NspvPeers additions
  * @param {*} address address to get txids from
  * @param {*} isCC get txids with normal (isCC is 0) or cc (isCC is 1) utxos on this address
- * @param {*} skipCount number of txids to skip 
- * @param {*} filter unused must be 0
+ * @param {*} skipCount number of txos to skip 
+ * @param {*} maxrecords max number of returned txos, if 0 will return max records set by the server
  */
-function getTxids(peers, address, isCC, skipCount, filter)
+function getTxids(peers, address, isCC, skipCount, maxrecords)
 {
   return new Promise((resolve, reject) => {
-    peers.nspvGetTxids(address, isCC, skipCount, filter, {}, (err, res, peer) => {
+    peers.nspvGetTxids(address, isCC, skipCount, maxrecords, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err)
         resolve(res);
@@ -246,7 +246,7 @@ function getTxids(peers, address, isCC, skipCount, filter)
 }
 
 /**
- * 
+ * create a tx and adds normal inputs for equal or more than the amount param 
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} mypk pk to add normal inputs from
  * @param {*} amount that will be added (not less than)
@@ -277,28 +277,33 @@ function createTxAndAddNormalInputs(peers, mypk, amount)
 }
 
 /**
- * 
+ * get normal (non-CC) utxos from an address
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} address to add normal from
+ * @param {*} skipCount number of utxos to skip 
+ * @param {*} maxrecords max number of returned utxos, if 0 will return max records set by the server
  */
-function getNormalUtxos(peers, address)
+function getNormalUtxos(peers, address, skipCount, maxrecords)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
 
-  return getUtxos(peers, address, 0);
+  return getUtxos(peers, address, 0, skipCount, maxrecords);
 }
 /**
- * 
+ * get CC utxos
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} address to add cc inputs from
+ * @param {*} skipCount number of utxos to skip 
+ * @param {*} maxrecords max number of returned utxos, if 0 will return max records set by the server
+
  */
-function getCCUtxos(peers, address)
+function getCCUtxos(peers, address, skipCount, maxrecords)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
 
-  return getUtxos(peers, address, 1);
+  return getUtxos(peers, address, 1, skipCount, maxrecords);
 }
 /**
  * 
