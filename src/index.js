@@ -27,5 +27,6 @@ module.exports = {
   NspvPeerGroup: require('../net/nspvPeerGroup'),
   peer: require('../net/peer'),
   general: require('../cc/general'),
-  cctokens: require('../cc/cctokenstokelv2'),
+  cctokensv2: require('../cc/cctokensv2'),
+  cctokensTokelv2: require('../cc/cctokenstokelv2'),
 };
