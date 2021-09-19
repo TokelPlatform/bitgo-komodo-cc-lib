@@ -326,7 +326,7 @@ let nspvBroadcastRespType = (function(){
 })();
 
 // custom parse rempte rpc req/resp as varBuffer is not supported on the server side
-let nspvRemoteRpc = (function(){
+let nspvRemoteRpcReq = (function(){
   function encode(value, buffer, offset) {
     let bufferWriter = new bufferutils.BufferWriter(buffer, offset);
     bufferWriter.writeUInt8(value.reqCode);
@@ -462,7 +462,7 @@ exports.nspvReq = (function () {
         type = txidsreq;
         break;
       case NSPVREQ.NSPV_REMOTERPC:
-        type = nspvRemoteRpc;
+        type = nspvRemoteRpcReq;
         break;
       default:
         return;

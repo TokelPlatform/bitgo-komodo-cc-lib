@@ -12,6 +12,10 @@ const ccutils = require('./ccutils');
 const ecpair = require('../src/ecpair');
 const varuint = require('varuint-bitcoin');
 
+//const types = require('../src/types');
+var typeforce = require('typeforce');
+//var typeforceNT = require('typeforce/nothrow');
+
 // create peer group
 var NspvPeerGroup = require('../net/nspvPeerGroup');
 require('../net/nspvPeer');  // init peer.js too
@@ -487,9 +491,40 @@ async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, cc
   return txbuilder.build();
 }
 
+/**
+ * Get many transactions (in hex)
+ * @param {*} peers PeerGroup obj
+ * @param {*} mypk my pubkey
+ * @param {*} pubkey to get ccaddresses for. If not set mypk is used
+ * ...
+ * @returns a promise to get the txns in hex
+ */
+function TokenV2Address(peers, mypk, pubkey)
+{
+  typeforce('PeerGroup', peers);
+  typeforce('Buffer', mypk);
+
+  let pubkeyhex;
+  if (pubkey) {
+    if (Buffer.isBuffer(pubkey))
+      pubkeyhex = pubkey.toString('hex');
+    else
+      pubkeyhex = pubkey;
+  }
+
+  return new Promise((resolve, reject) => {
+    peers.nspvRemoteRpc("tokenv2address", mypk, pubkeyhex, {}, (err, res, peer) => {
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
 module.exports = {
   Connect, 
-  TokenInfoV2Tokel, Tokensv2Create, Tokensv2CreateTokel, Tokensv2Transfer,
+  TokenInfoV2Tokel, Tokensv2Create, Tokensv2CreateTokel, Tokensv2Transfer, TokenV2Address,
   tokensv2GlobalPk, tokensv2GlobalPrivkey, tokensv2GlobalAddress, EVAL_TOKENSV2,
   assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
 }

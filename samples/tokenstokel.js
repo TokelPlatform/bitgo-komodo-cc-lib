@@ -6,8 +6,8 @@ const cctokens = require('../cc/cctokensv2');
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
-const PeerGroup = require('../net/peerGroup');
-
+//const PeerGroup = require('../net/peerGroup');
+const peerutils = require('../net/utils');
 require('../net/nspvPeer');  // init peer.js too
 
 const networks = require('../src/networks');
@@ -83,7 +83,7 @@ if (!process.browser)
 {
   peers = new NspvPeerGroup(params, opts);
   peers.on('peer', (peer) => {    
-    console.log('added new peer', PeerGroup.getPeerUrl(peer))
+    console.log('added new peer', peerutils.getPeerUrl(peer))
   });
   // create connections to peers
   peers.connect(async () => {

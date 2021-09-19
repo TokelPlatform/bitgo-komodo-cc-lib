@@ -9,8 +9,7 @@ const EventEmitter = require('events')
 let net
 try { net = require('net') } catch (err) {}
 const wsstream = require('websocket-stream')
-const ws = require('ws')
-const http = require('http')
+//const http = require('http')
 //const Exchange = require('peer-exchange')
 const getBrowserRTC = require('get-browser-rtc')
 const once = require('once')
@@ -18,7 +17,7 @@ const assign = require('object-assign')
 const old = require('old')
 const Peer = require('./peer.js')
 const utils = require('./utils.js')
-const { time } = require('console')
+//const { time } = require('console')
 require('setimmediate')
 
 const ADDRSTATE = {
@@ -695,35 +694,6 @@ class PeerGroup extends EventEmitter {
   }
 }
 
-module.exports = old(PeerGroup)
-
-function isWebSocketPeer(peer)
-{
-  return peer.socket !== undefined && peer.socket.socket instanceof ws;
-}
-exports.isWebSocketPeer = isWebSocketPeer
-
-function getPeerUrl(peer)
-{
-  let remotep = '';
-  if (isWebSocketPeer(peer))
-    return peer.socket.socket.url;
-  else if (peer.socket) {
-    if (peer.socket.remoteAddress)
-        remotep += peer.socket.remoteAddress
-    if (peer.socket.remotePort)
-        remotep += ':' + peer.socket.remotePort
-  }
-  return remotep
-}
-module.exports.getPeerUrl = getPeerUrl
-
-
-function isWebSocket(socket)
-{
-  return socket !== undefined && socket.socket instanceof ws;
-}
-
 function errToString(err)
 {
   if (typeof(err) === 'object') {
@@ -733,3 +703,5 @@ function errToString(err)
   }
   return err.toString();
 }
+
+module.exports = old(PeerGroup)

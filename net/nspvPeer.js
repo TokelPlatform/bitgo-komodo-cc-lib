@@ -106,7 +106,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   if (Array.isArray(_params))  
     params = JSON.stringify(_params);
   else
-    params = '["' + _params.toString() + '"]';
+    params =  _params !== undefined ? '["' + _params.toString() + '"]'  : '[]';
   let jsonRequest = `{
     "method": "${rpcMethod}",
     "mypk": "${mypk}",

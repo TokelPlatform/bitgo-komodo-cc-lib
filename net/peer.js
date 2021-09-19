@@ -91,6 +91,7 @@ class Peer extends EventEmitter {
     // TODO?: maybe this should error if we try to write after close?
     if (!this.socket.writable) return
     this._encoder.write({ command, payload })
+    logdebug("sent request cmd=", command, " to url=", utils.getSocketUrl(this.socket))
   }
 
   connect (socket) {
