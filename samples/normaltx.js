@@ -5,6 +5,7 @@ const TransactionBuilder = require('../src/transaction_builder');
 const Transaction = require('../src/transaction');
 const kmdmessages = require('../net/kmdmessages');
 const ccutils = require('../cc/ccutils');
+const cctokens = require('../cc/cctokensv2');
 const ecpair = require('../src/ecpair');
 
 // create peer group
@@ -19,8 +20,6 @@ const mynetwork = networks.tkltest;
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy24;
 //const mynetwork = networks.tokel; 
-
-
 
 // not used for plan websockets, only for PXP which is not supported
 var defaultPort = 1111
@@ -174,6 +173,8 @@ if (!process.browser)
   
     try {
 
+      let mypair = ecpair.fromWIF(mywif, mynetwork);
+      let mypk = mypair.getPublicKeyBuffer();
       // tests:
       
       // make a normal tx
@@ -189,9 +190,15 @@ if (!process.browser)
       /////result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfA", 0, 0, 0); // bad addr (zfQ->zfA)
       //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
       //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
-      result = await ccutils.getCCUtxos(peers, "RXnxmVxXXvxF8Fo9kstYeJFRbWvhsJV2u8", 0, 0);
+      //result = await ccutils.getCCUtxos(peers, "RXnxmVxXXvxF8Fo9kstYeJFRbWvhsJV2u8", 0, 0);
 
+      // gettransactionsmany:
+      result = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad36577930b6", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad365779AAAA");
       console.log('result=', result);
+
+      // tokev2address:
+      let info = await cctokens.TokenV2Address(peers, mypk, mypk);
+      console.log('tokev2address=', info);
 
     }
     catch(err) {

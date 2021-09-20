@@ -2,7 +2,8 @@
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
-const PeerGroup = require('../net/nspvPeerGroup');
+//const PeerGroup = require('../net/nspvPeerGroup');
+const utils = require('../net/utils');
 require('../net/nspvPeer');  // init peer.js too
 
 const Debug = require('debug')
@@ -14,7 +15,7 @@ function nspvBrowserConnect(params, opts) {
 
   // not sure we need this event here (this was in the original sample):
   peers.on('peer', peer => {
-    logdebug('added new peer', PeerGroup.getPeerUrl(peer))
+    logdebug('added new peer', utils.getPeerUrl(peer))
   });
 
   return new Promise((resolve, reject) => {

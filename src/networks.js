@@ -377,6 +377,7 @@ module.exports = {
     staticPeers: [ 
       '167.99.114.240:22024',
       //'18.190.86.67:22024' 
+      //'localhost:22024'
     ], 
     // to connect over websockets:
     webSeeds: [ 
@@ -407,8 +408,9 @@ module.exports = {
     dnsSeeds: [],
     staticPeers: [ 
       // '3.136.47.223:29404', 
-      //'135.125.204.169:29404', '192.99.71.125:29404' 
-      '18.190.86.67:29404'
+      '135.125.204.169:29404', '192.99.71.125:29404' 
+      //'18.190.86.67:29404'
+      //'localhost:29404'
     ], 
 
     // to connect over websockets:

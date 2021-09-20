@@ -31,6 +31,7 @@ exports.byte2Base64 = byte2Base64;
 exports.addInputsFromPreviousTxns = addInputsFromPreviousTxns;
 exports.pubkey2NormalAddressKmd = pubkey2NormalAddressKmd;
 exports.getRawTransaction = getRawTransaction;
+exports.getTransactionsMany = getTransactionsMany;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 
@@ -250,6 +251,7 @@ function getTxids(peers, address, isCC, skipCount, maxrecords)
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} mypk pk to add normal inputs from
  * @param {*} amount that will be added (not less than)
+ * @returns tx with added inputs along with the added transactions in hex
  */
 function createTxAndAddNormalInputs(peers, mypk, amount)
 {
@@ -281,7 +283,8 @@ function createTxAndAddNormalInputs(peers, mypk, amount)
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} address to add normal from
  * @param {*} skipCount number of utxos to skip 
- * @param {*} maxrecords max number of returned utxos, if 0 will return max records set by the server
+ * @param {*} maxrecords max number of returned utxos, if 0 max records limit set by the server will be used
+ * @returns utxo list
  */
 function getNormalUtxos(peers, address, skipCount, maxrecords)
 {
@@ -298,7 +301,7 @@ function getNormalUtxos(peers, address, skipCount, maxrecords)
  * @param {*} address to add cc inputs from
  * @param {*} skipCount number of utxos to skip 
  * @param {*} maxrecords max number of returned utxos, if 0 will return max records set by the server
-
+ * @returns utxo list
  */
 function getCCUtxos(peers, address, skipCount, maxrecords)
 {
@@ -310,7 +313,7 @@ function getCCUtxos(peers, address, skipCount, maxrecords)
   return getUtxos(peers, address, 1, skipCount, maxrecords);
 }
 /**
- * 
+ * converts number encoded in hex into base64
  * @param {*} hexString to convert to base64
  * @returns base64 string
  */
@@ -325,10 +328,11 @@ function byte2Base64(uint8Eval)
 }
 
 /**
- * adds inputs into psbt from tx with inputs and array of previous txns in hex 
+ * adds inputs into TransactionBuilder object from tx with inputs and array of previous txns in hex 
  * @param {*} txbuilder TransactionBuilder object
  * @param {*} tx tx where inputs reside
  * @param {*} prevTxnsHex array of input txns in hex
+ * @returns added amount
  */
 function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
 {
@@ -341,7 +345,7 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
   for(let i = 0; i < tx.ins.length; i ++) {
     let prevTxHex = prevTxnsHex.find((txHex) => {
         let r = Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
-        console.log('prevtx getHash()=', Transaction.fromHex(txHex, network).getHash().toString('hex'), 'tx.ins[i].hash=', tx.ins[i].hash.toString('hex'), 'equals=', r);
+        // console.log('prevtx getHash()=', Transaction.fromHex(txHex, network).getHash().toString('hex'), 'tx.ins[i].hash=', tx.ins[i].hash.toString('hex'), 'equals=', r);
         return Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
     });
     if (prevTxHex !== undefined) {
@@ -354,7 +358,7 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
 }
 
 /**
- * make komodo normal address from a pubkey
+ * makes komodo normal address from a pubkey
  * @param {*} pk pubkey to get komodod address from
  * @returns komodo normal address
  */
@@ -363,9 +367,11 @@ function pubkey2NormalAddressKmd(pk) {
 }
 
 /**
- * Get transaction (in hex)
+ * Get transaction both in hex and decoded 
  * @param {*} peers PeerGroup obj
+ * @param {*} mypk my pubkey
  * @param {*} txid 
+ * @returns a promise object with to get the tx
  */
 function getRawTransaction(peers, mypk, txid)
 {
@@ -389,6 +395,41 @@ function getRawTransaction(peers, mypk, txid)
     });
   });
 }
+
+/**
+ * Get many transactions (in hex)
+ * @param {*} peers PeerGroup obj
+ * @param {*} mypk my pubkey
+ * @param {*} ...args
+ * ...
+ * @returns a promise to get the txns in hex
+ */
+function getTransactionsMany(peers, mypk, ...args)
+{
+  typeforce('PeerGroup', peers);
+  typeforce('Buffer', mypk);
+
+  let txids = [];
+  for(let i = 0; i < args.length; i ++) {
+    if (Buffer.isBuffer(args[i])) {
+      txidhex = txidToHex(args[i]);
+    }
+    else
+      txidhex = args[i];
+    txids.push(txidhex);
+  }
+
+  return new Promise((resolve, reject) => {
+    peers.nspvRemoteRpc("gettransactionsmany", mypk, txids, {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
 
 /**
  * helper to test if object is empty

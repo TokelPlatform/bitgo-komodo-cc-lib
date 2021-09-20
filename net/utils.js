@@ -1,6 +1,8 @@
 const url = require('url')
+const ws = require('ws')
 const encodeHeader = require('bitcoin-protocol').types.header.encode
 const encodeTx = require('bitcoin-protocol').types.transaction.encode
+
 // TODO: create-hash package
 const { createHash } = require('crypto')
 
@@ -38,11 +40,56 @@ function getTxHash (tx) {
   return sha256(sha256(txBytes))
 }
 
+function isWebSocketPeer(peer)
+{
+  return peer.socket !== undefined && peer.socket.socket instanceof ws;
+}
+exports.isWebSocketPeer = isWebSocketPeer
+
+function getPeerUrl(peer)
+{
+  let remotep = '';
+  if (isWebSocketPeer(peer))
+    return peer.socket.socket.url;
+  else if (peer.socket) {
+    if (peer.socket.remoteAddress)
+        remotep += peer.socket.remoteAddress
+    if (peer.socket.remotePort)
+        remotep += ':' + peer.socket.remotePort
+  }
+  return remotep
+}
+
+function getSocketUrl(socket)
+{
+  let remotep = '';
+  if (socket !== undefined) {
+    if (isWebSocket(socket))
+      return socket.socket.url;
+    else {
+      if (socket.remoteAddress)
+          remotep += socket.remoteAddress
+      if (socket.remotePort)
+          remotep += ':' + socket.remotePort
+    }
+  }
+  return remotep
+}
+
+function isWebSocket(socket)
+{
+  return socket !== undefined && socket.socket instanceof ws;
+}
+
 module.exports = {
   getRandom,
   parseAddress,
   assertParams,
   getBlockHash,
   getTxHash,
-  sha256
+  sha256,
+  isWebSocketPeer,
+  isWebSocket,
+  getPeerUrl,
+  getSocketUrl
 }
