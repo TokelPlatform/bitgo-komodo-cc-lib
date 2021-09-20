@@ -1,37 +1,35 @@
 # BitGo-utxo with Komodo Antara (Cryptoconditions) Support
 
-A fork from BitGo javascript library [bitgo-utxo-lib](https://github.com/bitgo/bitgo-utxo-lib).<br>
-A javascript Bitcoin library for node.js and browsers. Written mostly in javascript, with the cryptoconditions (cc) library written in rust and built as a wasm module.<br>
-Added support for komodo messages including nSPV protocol and cc features along with the cryptoconditions lib (as a wasm module).<br>
-Komodo Antara (Cryptoconditions, CC) technology allows to create complex multisignature transactions and add custom consensus code to komodo based assets chains.<br>
-This javascript library allows to develop SPV clients using Antara (CC) technology.<br>
+A javascript Bitcoin library for node.js and browsers. Written in javascript with the cryptoconditions (cc) library written in rust and built as a wasm module.
+
+This javascript library allows to develop nSPV clients using Antara (CC) technology.<br>
 More info: [Antara Development Docs](http://developers.komodoplatform.com/basic-docs/antara/introduction-to-antara.html)<br>
 
 Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-komodo-cc-lib/blob/master/LICENSE).
 
 ## Prerequisites
 
-You need installed:
+1. You need installed:
   - nodejs v.12+<br>
-  - rust and<br>
-  - wasm-pack, both to build wasm cryptoconditions module<br> 
   
-If you are going to use this lib in browser you also need:
+2. If you are going to use this lib in browser you also need:
   - browserify package<br> 
   - a webserver app (for example, webpack dev server)<br>
   - a wsproxy app (for example, webcoin-bridge)
 
-## What test app does
-
-In the samples folder are included a several examples of CC usage.
-1. ccfaucetpoc.js file that allows to create cc faucet create and get transactions.<br>
-2. cctokenstokelv2poc.js example of how to run tokensv2 cc functions
-
-To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
+3. You'll need a komodo asset chain to run bitgo lib against.
 
 ## Installation
 
-Clone this git repository go to the new dir and checkout dev-kmd branch.
+### Using npm
+
+```
+npm i @tokel/bitgo-komodo-cc-lib
+```
+
+### Manual installation
+
+Clone this git repository go to the new dir and checkout `development` branch.
 
 Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
 
@@ -39,23 +37,30 @@ Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
 npm install
 ```
 
-You'll need a komodo asset chain to bitgo lib against. Pick a file from samples folder to work with.
 
-1. Setup network parameters for your komodo chain:<br>
+## API 
 
-    Open `config` folder and rename `index.sample.js` to `index.js` and chage `yourchainname` and `magic` params for your chain.
+## General
 
-2. In the sample of your choice change mynetwork var to some yourchainname:<br>
+`general.keyToWif(String)` - Receives any string(WIF/seed phrase) and returns WIF.
 
-    ```
-    const mynetwork = networks.yourchainname
-    ```
+`general.getSeedPhrase(Number)` - Generates a bip39 mnemonic seed phrase, specify strength 128 or 256 as a parameter.
 
-3. ccfaucetpoc.js -Set your funding faucet wif and address and a wif and address getting funds in ccfaucetpoc.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
+`general.makeNormalTx(wif, destaddress, amount, network, peers)` - creates and signs transaction locally
 
-    cctokenstokelv2poc.js  - set values between comments in the sample file
 
-## Build test app to run in nodejs
+
+## Samples
+
+In the samples folder are included a several examples of CC usage.
+1. faucet.js - example of how to create cc faucet and get transactions.
+2. normaltx.js - example of how to conduct chain transactions
+3. tokens.js  - example of how to run tokensv2 cc functions
+4. tokenstokel.js  - example of how to run tokensv2tokel cc functions
+
+To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
+
+### Build test app to run in nodejs
 
 Build the cryptoconditions wasm module:<br>
 Setup the rust nightly build to build cryptoconditions:
