@@ -496,10 +496,13 @@ async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, cc
  * ...
  * @returns a promise to get the txns in hex
  */
-function TokenV2Address(peers, mypk, pubkey)
+function TokenV2Address(peers, network, wif, pubkey)
 {
   typeforce('PeerGroup', peers);
-  typeforce('Buffer', mypk);
+  typeforce('String', wif);
+
+  const mypair = ecpair.fromWIF(wif, network);
+  const mypk = mypair.getPublicKeyBuffer();
 
   let pubkeyhex;
   if (pubkey) {
