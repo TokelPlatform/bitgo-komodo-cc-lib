@@ -38,7 +38,7 @@ npm install
 ```
 
 
-## Basic API 
+## Basic API  (WIP)
 
 ### General
 
@@ -63,8 +63,6 @@ npm install
 `getRawTransaction(peers, mypk, txid)` - Get transaction both in hex and decoded 
 
 `getTransactionsMany(peers, mypk, ...args)` - Get many transactions (in hex)
-
-``
 
 ### CC Tokens
 
