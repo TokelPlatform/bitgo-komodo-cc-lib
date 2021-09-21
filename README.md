@@ -38,9 +38,9 @@ npm install
 ```
 
 
-## API 
+## Basic API 
 
-## General
+### General
 
 `general.keyToWif(String)` - Receives any string(WIF/seed phrase) and returns WIF.
 
@@ -48,7 +48,29 @@ npm install
 
 `general.makeNormalTx(wif, destaddress, amount, network, peers)` - creates and signs transaction locally
 
+### CC Utils
 
+`getNormalUtxos(peers, address, skipCount, maxrecords)` - get normal (non-CC) utxos from an address
+
+`getCCUtxos(peers, address, skipCount, maxrecords)` - get CC utxos  from an address
+
+`getTxids(peers, address, isCC, skipCount, maxrecords)` - returns txos (tx outputs bith spent and unspent) for an address
+
+`createTxAndAddNormalInputs(peers, mypk, amount)` - create a tx and adds normal inputs for equal or more than the amount param 
+
+`pubkey2NormalAddressKmd(pk)` - makes komodo normal address from a pubkey
+
+`getRawTransaction(peers, mypk, txid)` - Get transaction both in hex and decoded 
+
+`getTransactionsMany(peers, mypk, ...args)` - Get many transactions (in hex)
+
+``
+
+### CC Tokens
+
+### CC Tokens Tokel
+
+## Advanced API 
 
 ## Samples
 
