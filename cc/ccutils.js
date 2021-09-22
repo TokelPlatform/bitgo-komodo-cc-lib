@@ -14,6 +14,7 @@ const ecc = require('secp256k1');
 const crypto = require('../src/crypto');
 const address = require('../src/address');
 const bufferutils = require("../src/bufferutils");
+const bscript = require('../src/script')
 
 const types = require('../src/types');
 var typeforce = require('typeforce');
@@ -430,6 +431,34 @@ function getTransactionsMany(peers, mypk, ...args)
   });
 }
 
+/**
+ * Get many transactions decoded
+ * @param {*} peers PeerGroup obj
+ * @param {*} network
+ * @param {*} mypk my pubkey
+ * @param {*} ...args
+ * ...
+ * @returns a promise to get the txns in hex
+ */
+ async function getTransactionsManyDecoded(peers, network, mypk, args)
+ {
+   const txs = await getTransactionsMany(peers, mypk, args);
+   return txs.transactions.map( tx => {
+      let decoded = Transaction.fromHex(tx, network);
+      console.log(decoded.outs)
+      decoded.outs = decoded.outs.map(out => {
+        return {
+          ...out,
+          address: address.fromOutputScript(out.script, network),
+          scriptInfo: bscript.toASM(out.script),
+        }
+      })
+      return {
+        txid: decoded.getHash(),
+        ...decoded
+      }
+   })
+ }
 
 /**
  * helper to test if object is empty
