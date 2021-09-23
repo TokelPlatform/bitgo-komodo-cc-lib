@@ -7,6 +7,7 @@ const kmdmessages = require('../net/kmdmessages');
 const ccutils = require('../cc/ccutils');
 const cctokens = require('../cc/cctokensv2');
 const ecpair = require('../src/ecpair');
+const addressutils = require('../src/address');
 
 // create peer group
 var NspvPeerGroup = require('../net/nspvPeerGroup');
@@ -25,16 +26,15 @@ const mynetwork = networks.tkltest;
 var defaultPort = 1111
 
 // you will need to do a call like:
-// p2cryptoconditions.cryptoconditions = await ccimp;
+// ccbasic.cryptoconditions = await ccimp;
 // to init the cryptoconditions wasm lib 
 // (this is due to wasm delayed loading specifics)
-const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
+const ccbasic = require('../cc/ccbasic');
 var ccimp;
 if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
 else
   ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
-
 
 /*
 to connect over p2p:
@@ -127,7 +127,7 @@ async function create_normaltx(_wif, _destaddress, _satoshi) {
 async function makeNormalTx(wif, destaddress, amount) 
 {
   // init lib cryptoconditions
-  p2cryptoconditions.cryptoconditions = await ccimp;  // note we need cryptoconditions here bcz it is used in FinalizCCtx o check if a vin is normal or cc 
+  ccbasic.cryptoconditions = await ccimp;  // note we need cryptoconditions here bcz it is used in FinalizCCtx o check if a vin is normal or cc 
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
@@ -158,6 +158,7 @@ async function makeNormalTx(wif, destaddress, amount)
   return txbuilder.build();
 }
 
+
 // test key:
 const mywif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
 
@@ -171,6 +172,7 @@ if (!process.browser)
   peers.connect(async () => {
   
     try {
+      ccbasic.cryptoconditions = await ccimp;  // init cryptoconditions var
 
       let mypair = ecpair.fromWIF(mywif, mynetwork);
       let mypk = mypair.getPublicKeyBuffer();
@@ -192,12 +194,21 @@ if (!process.browser)
       //result = await ccutils.getCCUtxos(peers, "RXnxmVxXXvxF8Fo9kstYeJFRbWvhsJV2u8", 0, 0);
 
       // gettransactionsmany:
-      result = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad36577930b6", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad365779AAAA");
-      console.log('result=', result);
+      //result = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad36577930b6", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad365779AAAA");
+      //console.log('result=', result);
 
       // tokev2address:
-      let info = await cctokens.TokenV2Address(peers, mypk, mypk);
-      console.log('tokev2address=', info);
+      //let tokev2address = await cctokens.TokenV2Address(peers, mypk, mypk);
+      //console.log('tokev2address=', tokev2address);
+
+      // test fromOutputScript: 
+      let getxns = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "91a53a6b364345360c013ea3de379b647eb9d3f985700e4957b9f45cf275dfc4");
+      let tx = Transaction.fromHex(getxns.transactions[0], mynetwork);
+      let address = await addressutils.fromOutputScript(tx.outs[0].script, mynetwork); // normal output
+      console.log('address=', address);
+      let cctx = Transaction.fromHex(getxns.transactions[1], mynetwork);
+      let ccaddress = await addressutils.fromOutputScript(cctx.outs[0].script, mynetwork);
+      console.log('ccaddress=', ccaddress);
 
     }
     catch(err) {

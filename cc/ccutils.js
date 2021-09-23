@@ -7,12 +7,12 @@
 
 const Transaction = require('../src/transaction');
 //const TransactionBuilder = require('../src/transaction_builder');
-const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
+const ccbasic = require('./ccbasic');
 //const ecpair = require('../src/ecpair');
 //const ecc = require('tiny-secp256k1');
 const ecc = require('secp256k1');
 const crypto = require('../src/crypto');
-const address = require('../src/address');
+const addresslib = require('../src/address');
 const bufferutils = require("../src/bufferutils");
 
 const types = require('../src/types');
@@ -38,9 +38,9 @@ exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 exports.MYDUST = 100;
 
 /**
- * sign c cc transaction, checks inputs and calls either standard signing function or cc signing function
+ * sign c cc transaction in the txbuilder, checks inputs and calls either standard signing function or cc signing function
  * @param {*} keyPairIn ecc key pair
- * @param {*} psbt psbt object
+ * @param {*} txbuilder TransactionBuilder object
  * @param {*} ccProbes array of objects { cond, privateKey } specifying dedicated private keys for some cc conds
  */
 function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
@@ -64,7 +64,7 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
     console.log('unspent.script=', Buffer.from(unspent.script).toString('hex'));*/
     //let keyPairIn = ecpair.fromWIF(wif, mynetwork);
 
-    if (!p2cryptoconditions.isSpkPayToCryptocondition(txbuilder.inputs[index].prevOutScript))  {
+    if (!ccbasic.isSpkPayToCryptocondition(txbuilder.inputs[index].prevOutScript))  {
       txbuilder.sign(
         index, keyPairIn, undefined, Transaction.SIGHASH_ALL, txbuilder.inputs[index].value
       /*{
@@ -100,15 +100,15 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
 
       let signatureHash = txbuilder.tx.hashForZcashSignature(
         index,
-        p2cryptoconditions.makeCCSpk(inputCond),  // pure spk should be here
+        ccbasic.makeCCSpk(inputCond),  // pure spk should be here
         txbuilder.inputs[index].value,   // unspent.value,
         Transaction.SIGHASH_ALL,
       );    
 
-      let signedCond = p2cryptoconditions.cryptoconditions.js_sign_secp256k1(inputCond, privateKey, signatureHash);
-      let ccScriptSig = p2cryptoconditions.makeCCScriptSig(signedCond);
+      let signedCond = ccbasic.cryptoconditions.js_sign_secp256k1(inputCond, privateKey, signatureHash);
+      let ccScriptSig = ccbasic.makeCCScriptSig(signedCond);
 
-      //let ttt = p2cryptoconditions.makeCCSpk(signedCond);
+      //let ttt = ccbasic.makeCCSpk(signedCond);
       //console.log("signed spk=", ttt.toString('hex'));
       
       txbuilder.inputs[index].ccScriptSig = ccScriptSig;
@@ -122,6 +122,58 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
     }
   }
 }
+
+
+/**
+ * Creates a frequently used M of N cryptocondition
+ * @param {*} evalcode 
+ * @param {*} pubkeys array of pubkeys 
+ * @param {*} M M-value
+ * @param {*} opdrop optional opdrop data to be added with OP_DROP
+ */
+ function makeCCCondMofN(evalcode, pubkeys, M) {
+  typeforce(types.UInt8, evalcode);
+  typeforce(types.arrayOf('Buffer'), pubkeys)
+  typeforce(types.UInt32, M);
+
+  let subconds = [];
+  for (let i = 0; i < pubkeys.length; i ++)  {
+      let secpcond = {  
+      type:	"secp256k1-sha-256",
+      publicKey:	pubkeys[i].toString('hex')
+      };
+      subconds.push(secpcond);
+  }
+
+  let cond = {
+      type:	"threshold-sha-256",
+      threshold:	2,
+      subfulfillments:	[{
+          type:	"eval-sha-256",   
+          code:	byte2Base64(evalcode)     
+      }, {            
+          type:	"threshold-sha-256",
+          threshold:	M,
+          subfulfillments:	subconds  
+      }]   
+    };
+  return cond;
+}
+exports.makeCCCondMofN = makeCCCondMofN;
+
+
+/**
+ * Creates an spk in cc v2 format (mixed mode) for a frequently used M of N cryptocondition
+ * @param {*} evalcode 
+ * @param {*} pubkeys array of pubkeys 
+ * @param {*} M M-value
+ * @param {*} opdrop optional opdrop data to be added with OP_DROP
+ */
+ function makeCCSpkV2MofN(evalcode, pubkeys, M, opdrop) {
+  let cond = makeCCCondMofN(evalcode, pubkeys, M);
+  return ccbasic.makeCCSpkV2(cond, opdrop);
+}
+exports.makeCCSpkV2MofN = makeCCSpkV2MofN;
 
 /*
 function getOutScriptTypeFromOutType(outType)
@@ -182,7 +234,7 @@ function getPsbtPrevOut(psbt, index)
 function findCCProbeForSpk(ccProbes, spk)
 {
   let isMixed = false;
-  let condbin = p2cryptoconditions.parseSpkCryptocondition(spk);
+  let condbin = ccbasic.parseCCSpk(spk);
   if (condbin.length > 0 && condbin[0] == 'M'.charCodeAt(0)) {
     condbin = condbin.slice(1, condbin.length);
     isMixed = true;
@@ -192,13 +244,13 @@ function findCCProbeForSpk(ccProbes, spk)
     if (probe.cond === undefined)   
       throw new Error("FinalizeCCtx can't sign tx: invalid probe array");
     if (!isMixed) {
-      let condbinp = p2cryptoconditions.ccConditionBinary(probe.cond);
-      console.log('prev condbin=', condbin.toString('hex'), 'probe condbin=', condbinp.toString('hex'));
+      let condbinp = ccbasic.ccConditionBinary(probe.cond);
+      //console.log('prev condbin=', condbin.toString('hex'), 'probe condbin=', condbinp.toString('hex'));
       return condbin.equals(condbinp);
     }
     else {
-      let condbinv2p = p2cryptoconditions.ccConditionBinaryV2(probe.cond);
-      console.log('prev condbin=', condbin.toString('hex'), 'probe condbinv2=', condbinv2p.toString('hex'));
+      let condbinv2p = ccbasic.ccConditionBinaryV2(probe.cond);
+      //console.log('prev condbin=', condbin.toString('hex'), 'probe condbinv2=', condbinv2p.toString('hex'));
       return condbin.equals(condbinv2p);
     }
   });
@@ -308,6 +360,7 @@ function getCCUtxos(peers, address, skipCount, maxrecords)
 
   return getUtxos(peers, address, 1, skipCount, maxrecords);
 }
+
 /**
  * converts number encoded in hex into base64
  * @param {*} hexString to convert to base64
@@ -359,7 +412,7 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
  * @returns komodo normal address
  */
 function pubkey2NormalAddressKmd(pk) {
-  return address.toBase58Check(crypto.hash160(pk), 0x3c);
+  return addresslib.toBase58Check(crypto.hash160(pk), 0x3c);
 }
 
 /**

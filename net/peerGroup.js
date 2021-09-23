@@ -651,6 +651,8 @@ class PeerGroup extends EventEmitter {
     this._request('getBlocks', hashes, opts, cb)
   }
 
+  // get transactions via the standard p2p 'getdata' message, 
+  // it would return transaction from the block passed or from relay queue or mempool
   getTransactions (blockHash, txids, opts, cb) {
     this._request('getTransactions', blockHash, txids, opts, cb)
   }

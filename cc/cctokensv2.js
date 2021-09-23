@@ -32,10 +32,10 @@ const TKLNAME_ROYALTY = "royalty";
 const TKLNAME_ARBITRARY = "arbitrary";
 
 // you will need to do a call like:
-// p2cryptoconditions.cryptoconditions = await ccimp;
+// ccbasic.cryptoconditions = await ccimp;
 // to init the cryptoconditions wasm lib before cc usage
 // (this is due to wasm delayed loading specifics)
-const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
+const ccbasic = require('./ccbasic');
 var ccimp;
 if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
@@ -308,7 +308,7 @@ function makeTokensV2VData(tokenid, destpks)
 async function makeTokensV2CreateTokelTx(peers, mynetwork, wif, name, desc, amount, nftdata)
 {
   // init lib cryptoconditions
-  p2cryptoconditions.cryptoconditions = await ccimp;
+  ccbasic.cryptoconditions = await ccimp;
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
@@ -332,14 +332,14 @@ async function makeTokensV2CreateTokelTx(peers, mynetwork, wif, name, desc, amou
     throw new Error("insufficient normal inputs (" + added + ")")
 
   // create tokens cc to my address
-  let subfulfillments = [];
+  /*let subfulfillments = [];
   let threshold = 2;
   subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(EVAL_TOKENSV2) });  
   /* no nft evalcode anymore:
   if (Buffer.isBuffer(nftdata) && nftdata.length > 0 && nftdata[0]) {
     subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(nftdata[0]) });  // add nft data evalcode to cond
     threshold ++;
-  }*/
+  }*//*
   subfulfillments.push({            
     type:	"threshold-sha-256",
     threshold:	1,
@@ -350,14 +350,14 @@ async function makeTokensV2CreateTokelTx(peers, mynetwork, wif, name, desc, amou
     type:	"threshold-sha-256",
     threshold:	threshold,
     subfulfillments:	subfulfillments
-  };
-  let myccSpk = p2cryptoconditions.makeCCSpkV2(mycond);
+  };*/
+  let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1);
   if (myccSpk == null)  {
     throw new Error('could not create tokens cc spk');
   }
 
   // add search in chain marker
-  let markercond = {
+  /*let markercond = {
     type:	"threshold-sha-256",
     threshold:	2,
     subfulfillments:	[{
@@ -371,8 +371,8 @@ async function makeTokensV2CreateTokelTx(peers, mynetwork, wif, name, desc, amou
                 publicKey:	tokensv2GlobalPk
         }]  
       }]   
-    };
-  let markerccSpk = p2cryptoconditions.makeCCSpkV2(markercond);
+    }; */
+  let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [Buffer.from(tokensv2GlobalPk), 'hex'], 1);
   if (markerccSpk == null)  {
     throw new Error('could not create tokens marker cc spk');
   }
@@ -398,7 +398,7 @@ function sleep(ms) {
 async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, ccamount) 
 {
   // init lib cryptoconditions
-  p2cryptoconditions.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
+  ccbasic.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
 
@@ -419,7 +419,7 @@ async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, cc
   if (added < txfee)
     throw new Error("insufficient normal inputs (" + added + ")");
 
-  await sleep(1100); // to bypass old server rate limiter
+  //await sleep(1100); // to bypass old server rate limiter
   let ccutxos = await NspvAddTokensInputs(peers, tokenid, mypk, ccamount);
   let bearertx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
   let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, bearertx2, ccutxos.previousTxns, mynetwork);
@@ -427,14 +427,14 @@ async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, cc
     throw new Error("insufficient token inputs (" + ccadded + ")");
 
   // create tokens cc to dest address
-  let subfulfillments = [];
+  /*let subfulfillments = [];
   let threshold = 2;
   subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(EVAL_TOKENSV2) });  
   /* we do not add nft evalcode anymore
   if (ccutxos.evalcodeNFT)  {
     subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(ccutxos.evalcodeNFT) });  // add nft data evalcode to cond
     threshold ++;
-  }*/
+  }*//*
   subfulfillments.push({            
     type:	"threshold-sha-256",
     threshold:	1,
@@ -445,16 +445,16 @@ async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, cc
     type:	"threshold-sha-256",
     threshold:	threshold,
     subfulfillments:	subfulfillments   
-  };
+  };*/
 
-  let destccSpk = p2cryptoconditions.makeCCSpkV2(destcond, p2cryptoconditions.makeOpDropData(EVAL_TOKENSV2, 1,1, [destpk], makeTokensV2VData(tokenid)));
+  let destccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [destpk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [destpk], makeTokensV2VData(tokenid)));
   if (destccSpk == null)  
     throw new Error('could not create tokens cc spk for destination');
   
   txbuilder.addOutput(destccSpk, ccamount);
   
   // create tokens to my address for cc change and spending probe
-  let mycond = {
+  /*let mycond = {
     type:	"threshold-sha-256",
     threshold:	2,
     subfulfillments:	[{
@@ -468,11 +468,11 @@ async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, cc
                   publicKey:	mypk.toString('hex')
           }]  
       }]   
-    };
+    };*/
 
   if (ccadded - ccamount > 0)
   {
-    let myccSpk = p2cryptoconditions.makeCCSpkV2(mycond, p2cryptoconditions.makeOpDropData(EVAL_TOKENSV2, 1,1, [], makeTokensV2VData(tokenid, [mypk])));
+    let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [], makeTokensV2VData(tokenid, [mypk])));
     if (myccSpk == null)  
       throw new Error('could not create tokens cc spk for mypk');
 
@@ -487,7 +487,8 @@ async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, cc
   if (txbuilder.tx.version >= 4)
     txbuilder.setExpiryHeight(bearertx1.expiryHeight);
 
-  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: mycond}]);
+  let probeCond = ccutils.makeCCCondMofN(EVAL_TOKENSV2, [mypk], 1);
+  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeCond}]);
   return txbuilder.build();
 }
 
@@ -521,6 +522,7 @@ function TokenV2Address(peers, mypk, pubkey)
     });
   });
 }
+
 
 module.exports = {
   Connect, 

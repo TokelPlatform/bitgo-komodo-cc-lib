@@ -30,11 +30,11 @@ const mynetwork = networks.dimxy24;
 
 
 // you will need to do a call like:
-// p2cryptoconditions.cryptoconditions = await ccimp;
+// ccbasic.cryptoconditions = await ccimp;
 // to init the cryptoconditions wasm lib 
 // (this is due to wasm delayed loading specifics)
 /*
-const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
+const ccbasic = require('../cc/ccbasic');
 var ccimp;
 if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
