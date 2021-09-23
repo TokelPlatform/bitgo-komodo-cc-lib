@@ -37,8 +37,13 @@ const TKLNAME_ARBITRARY = "arbitrary";
 // ccbasic.cryptoconditions = await ccimp;
 // to init the cryptoconditions wasm lib before cc usage
 // (this is due to wasm delayed loading specifics)
-const ccimp = import('@tokel/cryptoconditions');   
 const ccbasic = require('./ccbasic');
+const ccimp;
+if (process.browser)
+  ccimp = import('@tokel/cryptoconditions');
+else
+  ccimp = require('@tokel/cryptoconditions');
+
 const tokensv2GlobalPk = "032fd27f72591b02f13a7f9701246eb0296b2be7cfdad32c520e594844ec3d4801"
 const tokensv2GlobalPrivkey = Buffer.from([ 0xb5, 0xba, 0x92, 0x7f, 0x53, 0x45, 0x4f, 0xf8, 0xa4, 0xad, 0x0d, 0x38, 0x30, 0x4f, 0xd0, 0x97, 0xd1, 0xb7, 0x94, 0x1b, 0x1f, 0x52, 0xbd, 0xae, 0xa2, 0xe7, 0x49, 0x06, 0x2e, 0xd2, 0x2d, 0xa5 ])
 const tokensv2GlobalAddress = "RSc4RycihBEWQP2GDvSYS46MvFJsTKaNVU"

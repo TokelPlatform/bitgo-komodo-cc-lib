@@ -36,7 +36,6 @@ if (process.browser)
 else
   ccimp = require('@tokel/cryptoconditions'); 
 
-
 /*
 to connect over p2p:
 var dnsSeeds = [
