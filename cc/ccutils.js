@@ -33,6 +33,7 @@ exports.addInputsFromPreviousTxns = addInputsFromPreviousTxns;
 exports.pubkey2NormalAddressKmd = pubkey2NormalAddressKmd;
 exports.getRawTransaction = getRawTransaction;
 exports.getTransactionsMany = getTransactionsMany;
+exports.getTransactionsManyDecoded = getTransactionsManyDecoded;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 
