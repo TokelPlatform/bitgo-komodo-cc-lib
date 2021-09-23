@@ -62,7 +62,7 @@ npm install
 
 `getRawTransaction(peers, mypk, txid)` - Get transaction both in hex and decoded 
 
-`getTransactionsMany(peers, mypk, ...args)` - Get many transactions (in hex)
+`getTransactionsMany(peers, mypk, args)` - Get many transactions (in hex), args - JSON array of txids
 
 ### CC Tokens
 
