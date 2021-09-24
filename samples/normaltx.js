@@ -69,7 +69,7 @@ var params = {
   //defaultPort: defaultPort,
   //dnsSeeds: dnsSeeds,
   //webSeeds: webSeeds,
-  staticPeers: staticPeers,  // dnsSeed works also
+  //staticPeers: staticPeers,  // dnsSeed works also
   protocolVersion: 170009,
   messages: kmdmessages.kmdMessages
 }
@@ -205,9 +205,10 @@ if (!process.browser)
       // test fromOutputScript: 
       let getxns = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "91a53a6b364345360c013ea3de379b647eb9d3f985700e4957b9f45cf275dfc4");
       let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
-      let header = Block.fromHex(getxns.transactions[0].block, mynetwork);
-      console.log('header=', header);
-
+      let header = Block.fromHex(getxns.transactions[0].blockHeader, mynetwork);
+      console.log('block header=', header);
+      console.log('block hash=', getxns.transactions[0].blockHash);
+      console.log('block height=', getxns.transactions[0].blockHeight);
 
       let address = await addressutils.fromOutputScript(tx.outs[0].script, mynetwork); // normal output
       console.log('address=', address);
