@@ -12,10 +12,10 @@ const ccutils = require('../cc/ccutils');
 const ecpair = require('../src/ecpair');
 
 // to init the cryptoconditions wasm lib you will need to do a call like:
-// p2cryptoconditions.cryptoconditions = await ccimp;
+// ccbasic.cryptoconditions = await ccimp;
 // (this is due to wasm delayed loading specifics)
 
-const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
+const ccbasic = require('../cc/ccbasic');
 var ccimp;
 if (process.browser)
   ccimp = import('@tokel/cryptoconditions'); 
@@ -81,7 +81,7 @@ async function FaucetGet(peers, mynetwork, myaddress) {
 async function makeFaucetCreateTx(peers, mynetwork, wif, amount) 
 {
   // init lib cryptoconditions
-  p2cryptoconditions.cryptoconditions = await ccimp;
+  ccbasic.cryptoconditions = await ccimp;
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
@@ -120,7 +120,7 @@ async function makeFaucetCreateTx(peers, mynetwork, wif, amount)
           }]  
       }]   
     };
-  let ccSpk = p2cryptoconditions.makeCCSpk(cond);
+  let ccSpk = ccbasic.makeCCSpk(cond);
   if (ccSpk == null)  {
     throw new Error('could not create faucet cc spk');
   }
@@ -138,7 +138,7 @@ async function makeFaucetCreateTx(peers, mynetwork, wif, amount)
 async function makeFaucetGetTx(peers, mynetwork, myaddress) 
 {
   // init lib cryptoconditions
-  p2cryptoconditions.cryptoconditions = await ccimp;
+  ccbasic.cryptoconditions = await ccimp;
 
   const txfee = 10000;
   const amount = FAUCETSIZE;
@@ -163,7 +163,7 @@ async function makeFaucetGetTx(peers, mynetwork, myaddress)
     }]   
   };
 
-  let ccSpk = p2cryptoconditions.makeCCSpk(cond);
+  let ccSpk = ccbasic.makeCCSpk(cond);
   if (ccSpk == null)  {
     throw new Error('could not create cc spk');
   }

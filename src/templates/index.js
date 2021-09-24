@@ -7,7 +7,10 @@ var scriptHash = require('./scripthash')
 var witnessPubKeyHash = require('./witnesspubkeyhash')
 var witnessScriptHash = require('./witnessscripthash')
 var witnessCommitment = require('./witnesscommitment')
-const p2cryptoconditions = require('../payments/p2cryptoconditions')
+//const ccbasic = require('../cc/ccbasic')
+var cryptoconditions = require('./cryptoconditions')
+//var cryptoconditionsv2 = require('./cryptoconditionsv2')
+
 
 var types = {
   MULTISIG: 'multisig',
@@ -34,7 +37,8 @@ function classifyOutput (script) {
   if (pubKey.output.check(chunks)) return types.P2PK
   if (witnessCommitment.output.check(chunks)) return types.WITNESS_COMMITMENT
 
-  if (p2cryptoconditions.isSpkPayToCryptocondition(script)) return types.CRYPTOCONDITIONS
+  if (cryptoconditions.output.check(script)) return types.CRYPTOCONDITIONS
+  if (cryptoconditionsv2.output.check(script)) return types.CRYPTOCONDITIONS // does the same but for readability
 
   if (nullData.output.check(chunks)) return types.NULLDATA
 
@@ -75,5 +79,7 @@ module.exports = {
   witnessPubKeyHash: witnessPubKeyHash,
   witnessScriptHash: witnessScriptHash,
   witnessCommitment: witnessCommitment,
+  cryptoconditions: cryptoconditions,
+ // cryptoconditionsv2: cryptoconditionsv2,
   types: types
 }

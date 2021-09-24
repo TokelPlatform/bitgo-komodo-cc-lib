@@ -313,6 +313,8 @@ class Peer extends EventEmitter {
     }, opts.timeout)
   }
 
+  // get transactions via the standard p2p 'getdata' message, 
+  // it would return transaction from the block passed or from relay queue or mempool
   getTransactions (blockHash, txids, opts, cb) {
     if (Array.isArray(blockHash)) {
       cb = opts

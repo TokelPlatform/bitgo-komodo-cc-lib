@@ -6,6 +6,7 @@ var btemplates = require('./templates')
 var networks = require('./networks')
 var typeforce = require('typeforce')
 var types = require('./types')
+var bcrypto = require('./crypto')
 
 function fromBase58Check (address) {
   var payload = bs58check.decode(address)
@@ -60,10 +61,18 @@ function toBech32 (data, version, prefix) {
 function fromOutputScript (outputScript, network) {
   network = network || networks.bitcoin
 
+  // dimxy added this for pubkey (strangely it was omitted):
+  if (btemplates.pubKey.output.check(outputScript)) return toBase58Check(bcrypto.hash160(bscript.compile(outputScript).slice(1, 33+1)), network.pubKeyHash)
+
   if (btemplates.pubKeyHash.output.check(outputScript)) return toBase58Check(bscript.compile(outputScript).slice(3, 23), network.pubKeyHash)
   if (btemplates.scriptHash.output.check(outputScript)) return toBase58Check(bscript.compile(outputScript).slice(2, 22), network.scriptHash)
   if (btemplates.witnessPubKeyHash.output.check(outputScript)) return toBech32(bscript.compile(outputScript).slice(2, 22), 0, network.bech32)
   if (btemplates.witnessScriptHash.output.check(outputScript)) return toBech32(bscript.compile(outputScript).slice(2, 34), 0, network.bech32)
+
+  // dimxy added for cc:
+  if (btemplates.cryptoconditions.output.check(outputScript)) return toBase58Check(bcrypto.hash160(btemplates.cryptoconditions.output.decode(outputScript)), network.pubKeyHash)
+  // does the same but for readability
+  if (btemplates.cryptoconditionsv2.output.check(outputScript)) return toBase58Check(bcrypto.hash160(btemplates.cryptoconditionsv2.output.decode(outputScript)), network.pubKeyHash)
 
   throw new Error(bscript.toASM(outputScript) + ' has no matching Address')
 }
