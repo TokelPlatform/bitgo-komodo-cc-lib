@@ -40,6 +40,40 @@ npm install
 
 ## Basic API  (WIP)
 
+First you need to connect to peers to start making requests.
+
+```
+
+const {
+  NspvPeerGroup,
+  kmdMessages,
+  networks,
+} = require('@tokel/bitgo-komodo-cc-lib');
+
+const params = {
+  network: networks.tkltest,
+  defaultPort: 22024,
+  staticPeers: ['167.99.114.240:22024', '3.19.194.93:22024'],
+  protocolVersion: 170009,
+  messages: kmdMessages ? kmdMessages.kmdMessages : [],
+};
+
+const opts = {
+  numPeers: 8,
+  wsOpts: { rejectUnauthorized: false }, // enable self-signed certificates
+};
+
+const peers = new NspvPeerGroup(params, opts);
+peers.on('error', e => {
+  console.log(e);
+});
+this.peers.connect(err => {
+  if (err) {
+    console.log('err', err);
+    return;
+  }
+})
+```
 ### General
 
 `general.keyToWif(String)` - Receives any string(WIF/seed phrase) and returns WIF.
@@ -63,6 +97,91 @@ npm install
 `getRawTransaction(peers, mypk, txid)` - Get transaction both in hex and decoded 
 
 `getTransactionsMany(peers, mypk, args)` - Get many transactions (in hex), args - JSON array of txids
+
+#### getTransactionsManyDecoded
+`getTransactionsManyDecoded(peers, mypk, args)` - Get many transactions decoded with extra info on inputs and outputs, args - JSON array of txids
+ 
+e.g. 
+
+```
+const { ccutils } = require('@tokel/bitgo-komodo-cc-lib');
+const uniqueIds = [
+  "69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9",
+  "76b63ddd43419320d24662294a154bb5fde96b5b1c8ac6d148e47e72ba9165f8"
+];
+
+ccutils.getTransactionsManyDecoded(
+    peers,
+    network,
+    pubkeyBuffer,
+    uniqueIds
+  );
+```
+
+Response sample
+
+```{
+    "txid": "69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9",
+    "ins": [
+        {
+            "hash": Buffer,
+            "index": 0,
+            "script": Buffer,
+            "sequence": 4294967295,
+            "witness": [],
+            "txid": "e932fdacaa16906e1ad70c4bfe52779094c565cec52c69b3182cbe081cf9f94b",
+            "tx": {
+                "value": 600000000,
+                "script": Buffer,
+                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
+                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
+            }
+        },
+        {
+            "hash": Buffer,
+            "index": 0,
+            "script": Buffer,
+            "sequence": 4294967295,
+            "witness": [],
+            "txid": "19f0ec147502bdd012d89f471d8a175ea7e689611faaefe26a9eba3d4375b70f",
+            "tx": {
+                "value": 300000000,
+                "script": Buffer,
+                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
+                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
+            }
+        },
+        {
+            "hash": Buffer,
+            "index": 0,
+            "script": Buffer,
+            "sequence": 4294967295,
+            "witness": [],
+            "txid": "2a145529738c82be0516b3dd6c4229d1a98b946dd6b80f0152da7dcbed0d9f21",
+            "tx": {
+                "value": 150000000,
+                "script": Buffer,
+                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
+                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
+            }
+        }
+    ],
+    "outs": [
+        {
+            "value": 1000000000,
+            "script": Buffer,
+            "address": "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE",
+            "asm": "OP_DUP OP_HASH160 09a7c48f0db7e8b54bf4494c01ed66b99f3216a6 OP_EQUALVERIFY OP_CHECKSIG"
+        },
+        {
+            "value": 49990000,
+            "script": Buffer,
+            "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
+            "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
+        }
+    ]
+}
+```
 
 ### CC Tokens
 
