@@ -3,6 +3,7 @@
 
 const TransactionBuilder = require('../src/transaction_builder');
 const Transaction = require('../src/transaction');
+const Block = require('../src/block');
 const kmdmessages = require('../net/kmdmessages');
 const ccutils = require('../cc/ccutils');
 const cctokens = require('../cc/cctokensv2');
@@ -203,10 +204,14 @@ if (!process.browser)
 
       // test fromOutputScript: 
       let getxns = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "91a53a6b364345360c013ea3de379b647eb9d3f985700e4957b9f45cf275dfc4");
-      let tx = Transaction.fromHex(getxns.transactions[0], mynetwork);
+      let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
+      let header = Block.fromHex(getxns.transactions[0].block, mynetwork);
+      console.log('header=', header);
+
+
       let address = await addressutils.fromOutputScript(tx.outs[0].script, mynetwork); // normal output
       console.log('address=', address);
-      let cctx = Transaction.fromHex(getxns.transactions[1], mynetwork);
+      let cctx = Transaction.fromHex(getxns.transactions[1].tx, mynetwork);
       let ccaddress = await addressutils.fromOutputScript(cctx.outs[0].script, mynetwork);
       console.log('ccaddress=', ccaddress);
 
