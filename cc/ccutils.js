@@ -13,6 +13,7 @@ const addresslib = require('../src/address');
 const bufferutils = require("../src/bufferutils");
 const bscript = require('../src/script')
 const types = require('../src/types');
+const { decodeTransactionData, parseTransactionData } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 
@@ -482,35 +483,6 @@ function getTransactionsMany(peers, mypk, ...args)
 }
 
 /**
- * Decode Transaction Data into more readable format
- * @param {*} tx  transaction to decode
- * @param {*} network  chosen network
- * @returns 
- */
-function decodeTransactionData (tx, network) {
-  console.log(tx);
-  const decoded = Transaction.fromHex(tx, network);
-  console.log(decoded)
-  return {
-    txid: decoded.getHash().reverse().toString('hex'),
-    ins: decoded.ins.map(one => {
-      const txid = one.hash.reverse().toString('hex')
-      return {
-        ...one,
-        txid,
-      }
-    }),
-    outs: decoded.outs.map(out => {
-      return {
-        ...out,
-        address: addresslib.fromOutputScript(out.script, network),
-        asm: bscript.toASM(out.script),
-      }
-    })
-  }
-}
-
-/**
  * Get many transactions decoded
  * @param {*} peers PeerGroup obj
  * @param {*} network
@@ -540,9 +512,8 @@ function decodeTransactionData (tx, network) {
       const newTx = decodeTransactionData(tx, network)
       parsedInTransactions[newTx.txid] = newTx
     });
-    
-    decodedTxs = decodedTxs.map(tx => {
-      return {
+    return decodedTxs.map(tx => {
+      const parsedTx = {
         ...tx,
         ins: tx.ins.map(txin => {
           return {
@@ -551,8 +522,15 @@ function decodeTransactionData (tx, network) {
           }
         })
       }
-    })
-    return decodedTxs;
+      const { recipients, senders, fees, value } = parseTransactionData(parsedTx);
+      return {
+        recipients,
+        senders,
+        fees,
+        value,
+        ...parsedTx
+      }
+    });
    } catch (e) {
      console.log(e)
      throw new Error(e);
