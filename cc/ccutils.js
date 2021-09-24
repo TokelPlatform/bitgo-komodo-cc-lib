@@ -34,7 +34,7 @@ exports.getTransactionsManyDecoded = getTransactionsManyDecoded;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 
-exports.MYDUST = 100;
+exports.MYDUST = 200;
 
 /**
  * sign c cc transaction in the txbuilder, checks inputs and calls either standard signing function or cc signing function
