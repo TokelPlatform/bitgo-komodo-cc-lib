@@ -24,7 +24,7 @@ const mynetwork = networks.tkltest;
 //const mynetwork = networks.tokel; 
 
 // not used for plan websockets, only for PXP which is not supported
-var defaultPort = 1111
+//var defaultPort = 1111
 
 // you will need to do a call like:
 // ccbasic.cryptoconditions = await ccimp;
@@ -50,17 +50,13 @@ var staticPeers = [
   //'rick.kmd.dev:25434'
   //'127.0.0.1:22024' // tkltest
   //'127.0.0.1:29404' //  tokel
-
   //'127.0.0.1:14722'  // dimxy chain def port
-
 ] 
-
-
 // to connect over websockets:
 var webSeeds = [
   //'ws://18.189.25.123:8192'
   //'ws://localhost:8192'
-  'ws:3.136.47.223:8192'
+  //'ws:3.136.47.223:8192'
   // TODO: add more
 ]
 
@@ -70,8 +66,8 @@ var params = {
   //dnsSeeds: dnsSeeds,
   //webSeeds: webSeeds,
   //staticPeers: staticPeers,  // dnsSeed works also
-  protocolVersion: 170009,
-  messages: kmdmessages.kmdMessages
+  //protocolVersion: 170009,
+  //messages: kmdmessages.kmdMessages
 }
 
 var opts = {

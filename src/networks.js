@@ -14,6 +14,8 @@ wif            src/chainparams.cpp  base58Prefixes[SECRET_KEY]        Testnets h
 
 */
 
+const kmdmessages = require('../net/kmdmessages');
+
 const coins = {
   BCH: 'bch',
   BSV: 'bsv',
@@ -212,6 +214,8 @@ module.exports = {
     coin: coins.ZEC,
     komodoAssetNet: true,
     magic: 0xb00668b4,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
   },
 
   dimxy20: {
@@ -232,6 +236,8 @@ module.exports = {
     coin: coins.ZEC,
     komodoAssetNet: true,
     magic: 0x09262b14,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
   },
 
   rick: {
@@ -272,6 +278,8 @@ module.exports = {
     coin: coins.ZEC,
     komodoAssetNet: true,
     magic: 0xf4b89a4f,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
   },
 
   dimxy23: {
@@ -311,20 +319,22 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:   0x0e4bef0d,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
+    magic: 0x0e4bef0d,
     //to connect over p2p:
     dnsSeeds: [],
-    staticPeers: [ 
-      //'localhost:14722' 
-      '18.190.86.67:14722'
-    ], 
+    staticPeers: [
+      'localhost:14722',
+      //'18.190.86.67:14722'
+    ],
     // to connect over websockets:
-    webSeeds: [ 
+    webSeeds: [
       //'ws://18.189.25.123:8192'
-      'wss://localhost:8192'
+      'wss://localhost:8192',
       //'ws://3.136.47.223:8192'
       // TODO: add more
-    ]     
+    ],
   },
 
   dimxy25: {
@@ -344,14 +354,16 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
     magic: 0x794cdf9b,
     //to connect over p2p:
     dnsSeeds: [],
-    staticPeers: [ '3.136.47.223:14722' ], 
+    staticPeers: ['3.136.47.223:14722'],
     // to connect over websockets:
-    webSeeds: [ 
+    webSeeds: [
       //'wss://localhost:8192'
-    ]     
+    ],
   },
 
   tkltest: {
@@ -371,18 +383,20 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:  0xf6475548,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
+    magic: 0xf6475548,
     // to connect over p2p:
     dnsSeeds: [],
-    staticPeers: [ 
+    staticPeers: [
       '167.99.114.240:22024',
-      //'18.190.86.67:22024' 
+      //'18.190.86.67:22024'
       //'localhost:22024'
-    ], 
+    ],
     // to connect over websockets:
-    webSeeds: [ 
+    webSeeds: [
       //'ws://18.189.25.123:8192'
-    ]      
+    ],
   },
 
   tokel: {
@@ -402,21 +416,24 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:  0x86c2fdd0,
-  
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
+    magic: 0x86c2fdd0,
+
     //to connect over p2p:
     dnsSeeds: [],
-    staticPeers: [ 
-      // '3.136.47.223:29404', 
-      '135.125.204.169:29404', '192.99.71.125:29404' 
+    staticPeers: [
+      // '3.136.47.223:29404',
+      '135.125.204.169:29404',
+      '192.99.71.125:29404',
       //'18.190.86.67:29404'
       //'localhost:29404'
-    ], 
+    ],
 
     // to connect over websockets:
-    webSeeds: [ 
+    webSeeds: [
       // 'wss://localhost:8192'
       // TODO: add more
-    ]     
+    ],
   },
 };

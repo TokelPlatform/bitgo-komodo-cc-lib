@@ -57,7 +57,7 @@ class Peer extends EventEmitter {
     super()
 
     this.params = params
-    this.protocolVersion = params.protocolVersion || 70012
+    this.protocolVersion = params.network.protocolVersion || 70012
     this.minimumVersion = params.minimumVersion || 70001
     this.requireBloom = opts.requireBloom && true
     this.userAgent = opts.userAgent
@@ -106,7 +106,7 @@ class Peer extends EventEmitter {
 
     var protocolOpts = {
       magic: this.params.network.magic,
-      messages: this.params.messages
+      messages: this.params.network.messages
     }
 
     var decoder = proto.createDecodeStream(protocolOpts)
