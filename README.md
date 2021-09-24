@@ -120,7 +120,8 @@ ccutils.getTransactionsManyDecoded(
 
 Response sample
 
-```{
+```
+{
     "txid": "69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9",
     "recepients": ["RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK"],
     "senders": ["RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK"],
