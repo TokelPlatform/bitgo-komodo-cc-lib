@@ -30,7 +30,7 @@ const TKLNAME_ARBITRARY = "arbitrary";
 // p2cryptoconditions.cryptoconditions = await ccimp;
 // to init the cryptoconditions wasm lib
 // (this is due to wasm delayed loading specifics)
-const p2cryptoconditions = require('../src/payments/p2cryptoconditions');
+const p2cryptoconditions = require('./ccbasic.js');
 const { varint } = require('bitcoin-protocol');
 var ccimp;
 if (process.browser)

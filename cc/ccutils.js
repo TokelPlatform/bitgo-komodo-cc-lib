@@ -6,16 +6,12 @@
  */
 
 const Transaction = require('../src/transaction');
-//const TransactionBuilder = require('../src/transaction_builder');
 const ccbasic = require('./ccbasic');
-//const ecpair = require('../src/ecpair');
-//const ecc = require('tiny-secp256k1');
 const ecc = require('secp256k1');
 const crypto = require('../src/crypto');
 const addresslib = require('../src/address');
 const bufferutils = require("../src/bufferutils");
 const bscript = require('../src/script')
-
 const types = require('../src/types');
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
@@ -486,6 +482,35 @@ function getTransactionsMany(peers, mypk, ...args)
 }
 
 /**
+ * Decode Transaction Data into more readable format
+ * @param {*} tx  transaction to decode
+ * @param {*} network  chosen network
+ * @returns 
+ */
+function decodeTransactionData (tx, network) {
+  console.log(tx);
+  const decoded = Transaction.fromHex(tx, network);
+  console.log(decoded)
+  return {
+    txid: decoded.getHash().reverse().toString('hex'),
+    ins: decoded.ins.map(one => {
+      const txid = one.hash.reverse().toString('hex')
+      return {
+        ...one,
+        txid,
+      }
+    }),
+    outs: decoded.outs.map(out => {
+      return {
+        ...out,
+        address: addresslib.fromOutputScript(out.script, network),
+        asm: bscript.toASM(out.script),
+      }
+    })
+  }
+}
+
+/**
  * Get many transactions decoded
  * @param {*} peers PeerGroup obj
  * @param {*} network
@@ -496,23 +521,43 @@ function getTransactionsMany(peers, mypk, ...args)
  */
  async function getTransactionsManyDecoded(peers, network, mypk, args)
  {
-   const txs = await getTransactionsMany(peers, mypk, args);
-   return txs.transactions.map( tx => {
-      let decoded = Transaction.fromHex(tx, network);
-      console.log(decoded.outs)
-      decoded.outs = decoded.outs.map(out => {
-        return {
-          ...out,
-          address: address.fromOutputScript(out.script, network),
-          scriptInfo: bscript.toASM(out.script),
-        }
-      })
+   try {
+    let decodedTxs = [];
+    let inTransactionsIds = [];
+    const txs = await getTransactionsMany(peers, mypk, ...args);
+
+    txs.transactions.forEach( tx => {
+      const decoded = decodeTransactionData(tx, network)
+      decodedTxs.push(decoded)
+      inTransactionsIds.push(decoded.ins.map(one => one.txid))
+    })
+    inTransactionsIds = inTransactionsIds.flat()
+    
+    let inTransactions = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
+
+    const parsedInTransactions = {}
+    inTransactions.transactions.forEach(tx => {
+      const newTx = decodeTransactionData(tx, network)
+      parsedInTransactions[newTx.txid] = newTx
+    });
+    
+    decodedTxs = decodedTxs.map(tx => {
       return {
-        txid: decoded.getHash(),
-        ...decoded
+        ...tx,
+        ins: tx.ins.map(txin => {
+          return {
+            ...txin,
+            tx: parsedInTransactions[txin.txid].outs[txin.index]
+          }
+        })
       }
-   })
- }
+    })
+    return decodedTxs;
+   } catch (e) {
+     console.log(e)
+     throw new Error(e);
+  }
+}
 
 /**
  * helper to test if object is empty
