@@ -1,6 +1,7 @@
 const Transaction = require('../src/transaction');
 const addresslib = require('../src/address');
 const bscript = require('../src/script')
+const Block = require('../src/block');
 
 /**
  * Decode Transaction Data into more readable format
@@ -8,9 +9,11 @@ const bscript = require('../src/script')
  * @param {*} network  chosen network
  * @returns 
  */
-const decodeTransactionData = (tx, network) => {
+const decodeTransactionData = (tx, header, network) => {
   const decoded = Transaction.fromHex(tx, network);
+  const decodedHeader = Block.fromHex(header, network);
   return {
+    time: decodedHeader.timestamp,
     txid: decoded.getHash().reverse().toString('hex'),
     ins: decoded.ins.map(one => {
       const txid = one.hash.reverse().toString('hex')

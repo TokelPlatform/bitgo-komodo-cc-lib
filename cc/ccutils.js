@@ -497,9 +497,8 @@ function getTransactionsMany(peers, mypk, ...args)
     let decodedTxs = [];
     let inTransactionsIds = [];
     const txs = await getTransactionsMany(peers, mypk, ...args);
-
     txs.transactions.forEach( tx => {
-      const decoded = decodeTransactionData(tx, network)
+      const decoded = decodeTransactionData(tx.tx, tx.blockHeader, network)
       decodedTxs.push(decoded)
       inTransactionsIds.push(decoded.ins.map(one => one.txid))
     })
@@ -509,7 +508,7 @@ function getTransactionsMany(peers, mypk, ...args)
 
     const parsedInTransactions = {}
     inTransactions.transactions.forEach(tx => {
-      const newTx = decodeTransactionData(tx, network)
+      const newTx = decodeTransactionData(tx.tx, tx.blockHeader, network)
       parsedInTransactions[newTx.txid] = newTx
     });
     return decodedTxs.map(tx => {
