@@ -126,26 +126,26 @@ if (!process.browser)
       let mypair = ecpair.fromWIF(mywif, mynetwork);
       let mypk = mypair.getPublicKeyBuffer();
 
-      // isTokenV2Output check:
-
+      /*
+      // isTokenV2Output test:
       //let getxns = await ccutils.getTransactionsMany(peers, mypk, "35ff378351468c43afcc1cea830f706d44979de024a59948ce7ccf4c086c1000"); // tokentransfer
       //let nvout = 0;
       //let getxns = await ccutils.getTransactionsMany(peers, mypk, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a"); // tokencreate
       //let nvout = 1;
-      //let getxns = await ccutils.getTransactionsMany(peers, mypk, "7ede39c986198aadc354436dad9ecd768a14a3b6b4626d2b193e1e9e2f356528"); //non-token
+      //let getxns = await ccutils.getTransactionsMany(peers, mypk, "7ede39c986198aadc354436dad9ecd768a14a3b6b4626d2b193e1e9e2f356528"); // non-token
       //let nvout = 0;
       let getxns = await ccutils.getTransactionsMany(peers, mypk, "f24e159ba9dce0ecdbe9e066518da063ea2028da01b9b09b97e13d81b345743c"); // tokencreatetokel
       let nvout = 1;
       let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
       let tokendata = cctokens.isTokenV2Output(tx, nvout);
       console.log(`IsTokenV2Output(tx,${nvout})=`, tokendata, "tokenid=", (tokendata ? ccutils.txidToHex(tokendata.tokenid) : null)); 
+      */
 
-      /*
-      //let ccoutputs = await ccutils.getCCUtxos(peers, "RJRjg45Tcx8tsvv6bzqjUFFsajXoJMH6bR", 0, 0);
-      let ccoutputs = await ccutils.getCCUtxos(peers, "RJkivfMQjLxfHyVHs1EY43Lr71YvLbZPL9", 0, 0);
+      // validateTokensV2Many test
+      let ccoutputs = await ccutils.getCCUtxos(peers, "RJRjg45Tcx8tsvv6bzqjUFFsajXoJMH6bR", 0, 0);
+      //let ccoutputs = await ccutils.getCCUtxos(peers, "RJkivfMQjLxfHyVHs1EY43Lr71YvLbZPL9", 0, 0);  // empty address
       let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
       console.log("ccoutputs_validated=", ccoutputs_validated);
-      */
 
     }
     catch(err) {
