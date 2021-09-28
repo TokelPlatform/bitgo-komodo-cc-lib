@@ -11,9 +11,11 @@ const bscript = require("../src/script");
 //var typeforceNT = require('typeforce/nothrow');
 
 const OPS = require('bitcoin-ops')
-exports.CCOPS = {
+const CCOPS = {
     OP_CRYPTOCONDITIONS: 0xCC
 };
+
+exports.CCOPS = CCOPS;
 
 /*
 // a.input: ccinput
@@ -55,17 +57,21 @@ exports.p2cryptoconditions = p2cryptoconditions;
  */
 function parseCCSpk(spk) {
     //console.log('IsPayToCryptocondition spk=', spk.toString('hex'));
+
+    let condbin
+    let opdropdata
     if (Buffer.isBuffer(spk) /*&& spk.length >= 46 && spk[spk.length-1] == 0xcc*/) {
         let chunks = bscript.decompile(spk);
         if (chunks && chunks.length >= 2) {
-            if (Buffer.isBuffer(chunks[0]) && chunks[1] == exports.CCOPS.OP_CRYPTOCONDITIONS) {
-                let condbin = chunks[0];
+            if (Buffer.isBuffer(chunks[0]) && chunks[1] == CCOPS.OP_CRYPTOCONDITIONS) {
+                condbin = chunks[0];
                 //console.log("parseCCSpk condbin=", condbin.toString('hex'));
-                return condbin;
+                if (chunks.length >= 4 && chunks[3] == OPS.OP_DROP)
+                    opdropdata = chunks[2];
             }
         }
     }
-    return Buffer.from([]);
+    return { cc: condbin, opdrop: opdropdata};
 }
 exports.parseCCSpk = parseCCSpk;
 
@@ -77,7 +83,7 @@ exports.parseCCSpk = parseCCSpk;
 function readCCSpk(spk) {
     if (exports.cryptoconditions === undefined)
         throw new Error("cryptoconditions lib not available");
-    let condbin = parseCCSpk(spk);
+    let condbin = parseCCSpk(spk).cc;
     if (Buffer.isBuffer(condbin) && condbin.length > 0) {
         //console.log("readCCSpk condbin=", condbin.toString('hex'));
         let cond;
@@ -144,9 +150,9 @@ function makeCCSpk(cond, opDropData) {
         //spk[1+len] = CCOPS.OP_CRYPTOCONDITIONS;
         let spk;
         if (opDropData === undefined)
-            spk = bscript.compile([Buffer.from(ccbin), exports.CCOPS.OP_CRYPTOCONDITIONS]);
+            spk = bscript.compile([Buffer.from(ccbin), CCOPS.OP_CRYPTOCONDITIONS]);
         else
-            spk = bscript.compile([Buffer.from(ccbin), exports.CCOPS.OP_CRYPTOCONDITIONS, opDropData, OPS.OP_DROP]);
+            spk = bscript.compile([Buffer.from(ccbin), CCOPS.OP_CRYPTOCONDITIONS, opDropData, OPS.OP_DROP]);
         return spk;
     }
     return Buffer.from([]);
@@ -199,9 +205,9 @@ function makeCCSpkV2(cond, opDropData) {
         //spk[1+len] = CCOPS.OP_CRYPTOCONDITIONS;
         let spk;
         if (opDropData === undefined)
-            spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), exports.CCOPS.OP_CRYPTOCONDITIONS]);
+            spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS]);
         else
-            spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), exports.CCOPS.OP_CRYPTOCONDITIONS, opDropData, OPS.OP_DROP]);
+            spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS, opDropData, OPS.OP_DROP]);
         return spk;
     }
     return Buffer.from([]);
@@ -228,18 +234,6 @@ function makeOpDropData(evalCode, m, n, vPubKeys, vData) {
     if (vData)
         opDropArr.push(vData);
     let opDropData = bscript.compile(opDropArr); //([vParams, vData]);
-    /*let params = Buffer.allocUnsafe(4);
-    let bufferWriter1 = new bufferUtils.BufferWriter(params);
-  
-    bufferWriter1.writeUInt8(version);
-    bufferWriter1.writeUInt8(evalCode);
-    bufferWriter1.writeUInt8(m);
-    bufferWriter1.writeUInt8(n);
-  
-    let opdrop = Buffer.allocUnsafe(1+4 + varuint.encodingLength(vData.length) + vData.length )
-    let bufferWriter2 = new bufferUtils.BufferWriter(opdrop);
-    bufferWriter2.writeSlice(params);
-    bufferWriter2.writeSlice(vData);*/
     return opDropData;
 }
 exports.makeOpDropData = makeOpDropData;
