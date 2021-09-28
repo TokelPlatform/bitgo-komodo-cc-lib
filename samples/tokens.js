@@ -1,8 +1,12 @@
 
 'use strict';
 
-const kmdmessages = require('../net/kmdmessages');
+//const kmdmessages = require('../net/kmdmessages');
 const cctokens = require('../cc/cctokensv2');
+const ccutils = require('../cc/ccutils');
+const ecpair = require('../src/ecpair');
+const Transaction = require('../src/transaction');
+const Block = require('../src/block');
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
@@ -45,8 +49,8 @@ var params = {
   //dnsSeeds: dnsSeeds,
   //webSeeds: webSeeds,
   //staticPeers: staticPeers,  // dnsSeed works also
-  protocolVersion: 170009,
-  messages: kmdmessages.kmdMessages
+  //protocolVersion: 170009,
+  //messages: kmdmessages.kmdMessages
 }
 
 var opts = {
@@ -102,16 +106,37 @@ if (!process.browser)
       //console.log('cc utxos=', ccutxos); 
 
       // make cc token create tx
-      //let tx = await cctokens.Tokensv2Create(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
+      //let tx = await cctokens.tokensv2Create(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
       //console.log('txhex=', tx.toHex());
 
       // make cc token transfer tx
-      let tx = await cctokens.Tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
-      console.log('txhex=', tx.toHex());
+      //let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
+      //console.log('txhex=', tx.toHex());
 
       // make tx with normal inputs for the specified amount
       // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);
       //console.log('txwnormals=', txwnormals);
+
+      // tokev2address:
+      //let tokev2address = await cctokens.tokenV2Address(peers, mypk, mypk);
+      //console.log('tokev2address=', tokev2address);
+
+      // test key:
+      const mywif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
+      let mypair = ecpair.fromWIF(mywif, mynetwork);
+      let mypk = mypair.getPublicKeyBuffer();
+
+      // isTokenV2Output check:
+      /*let getxns = await ccutils.getTransactionsMany(peers, mypk, "35ff378351468c43afcc1cea830f706d44979de024a59948ce7ccf4c086c1000");
+      //let getxns = await ccutils.getTransactionsMany(peers, mypk, "7ede39c986198aadc354436dad9ecd768a14a3b6b4626d2b193e1e9e2f356528"); //non-token
+      let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
+      let res = cctokens.isTokenV2Output(tx, 0);
+      console.log("IsTokenV2Output(tx[0], 0)=", res, "tokenid=", (res ? ccutils.txidToHex(res.tokenid) : null)); */
+
+      let ccoutputs = await ccutils.getCCUtxos(peers, "RJRjg45Tcx8tsvv6bzqjUFFsajXoJMH6bR", 0, 0);
+      let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
+      console.log("ccoutputs_validated=", ccoutputs_validated);
+
     }
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);

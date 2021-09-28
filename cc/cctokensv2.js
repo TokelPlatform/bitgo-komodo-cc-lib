@@ -12,12 +12,13 @@ const ccutils = require('./ccutils');
 const ecpair = require('../src/ecpair');
 const varuint = require('varuint-bitcoin');
 
-//const types = require('../src/types');
-var typeforce = require('typeforce');
-//var typeforceNT = require('typeforce/nothrow');
+const types = require('../src/types');
+const typeforce = require('typeforce');
+const typeforceNT = require('typeforce/nothrow');
+const bscript = require("../src/script");
 
 // create peer group
-var NspvPeerGroup = require('../net/nspvPeerGroup');
+const NspvPeerGroup = require('../net/nspvPeerGroup');
 require('../net/nspvPeer');  // init peer.js too
 
 // tokel data props ids:
@@ -30,6 +31,8 @@ const TKLNAME_URL = "url";
 const TKLNAME_ID = "id";
 const TKLNAME_ROYALTY = "royalty";
 const TKLNAME_ARBITRARY = "arbitrary";
+
+const OPDROP_HAS_PKS_VER = 2;
 
 // you will need to do a call like:
 // ccbasic.cryptoconditions = await ccimp;
@@ -128,11 +131,11 @@ function Connect()
  * @param {*} nftdata optional binary to add to token creation tx opreturn, in hex. First byte is the evalcode of additional validation cc or 0 if no validation 
  * @returns promise to create creation tx
  */
-async function Tokensv2Create(peers, mynetwork, wif, name, desc, satoshi, nftdatahex) {
+async function tokensv2Create(peers, mynetwork, wif, name, desc, satoshi, nftdatahex) {
   let nftdata;
   if (nftdatahex)
     nftdata = Buffer.from(nftdatahex, 'hex');
-    let txpromise = makeTokensCreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
+    let txpromise = makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
 
   return txpromise;
 };
@@ -149,11 +152,11 @@ async function Tokensv2Create(peers, mynetwork, wif, name, desc, satoshi, nftdat
  * @param {*} jsondata tokel data as json with properties "url":string, "id":number, "royalty":number, "arbitrary":hex-string
  * @returns promise to create creation tx
  */
-async function Tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, jsondata) {
+async function tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, jsondata) {
   let nftdata;
   if (jsondata)
     nftdata = makeTokelData(jsondata);
-  let txpromise = makeTokensV2CreateTokelTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
+  let txpromise = makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
   return txpromise;
 };
 
@@ -167,11 +170,11 @@ async function Tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, j
  * @param {*} satoshi token amount to transfer (must be 1 for Tokel NFT)
  * @returns promise to create transfer tx
  */
-async function Tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, satoshi) {
+async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, satoshi) {
   let tokenid = ccutils.txidFromHex(tokenidhex);
   let destpk = Buffer.from(destpkhex, 'hex');
 
-  let txpromise = makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, satoshi);
+  let txpromise = makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, satoshi);
   return txpromise;
 };
 
@@ -181,7 +184,7 @@ async function Tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, sa
  * @param {*} tokenidhex 
  * @returns promise to return info
  */
-async function TokenInfoV2Tokel(wif, tokenidhex) {
+async function tokenInfoV2Tokel(wif, tokenidhex) {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let tokenid = ccutils.txidFromHex(tokenidhex);
@@ -305,7 +308,7 @@ function makeTokensV2VData(tokenid, destpks)
 }
 
 // make token creation tx
-async function makeTokensV2CreateTokelTx(peers, mynetwork, wif, name, desc, amount, nftdata)
+async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, nftdata)
 {
   // init lib cryptoconditions
   ccbasic.cryptoconditions = await ccimp;
@@ -390,12 +393,12 @@ async function makeTokensV2CreateTokelTx(peers, mynetwork, wif, name, desc, amou
 }
 
 // sleep to insert delay between nspv calls to bypass the old nspv rate limiter
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+//function sleep(ms) {
+//  return new Promise(resolve => setTimeout(resolve, ms));
+//}
 
 // make token transfer tx
-async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, ccamount) 
+async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, ccamount) 
 {
   // init lib cryptoconditions
   ccbasic.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
@@ -500,7 +503,7 @@ async function makeTokensTransferV2Tx(peers, mynetwork, wif, tokenid, destpk, cc
  * ...
  * @returns a promise to get the txns in hex
  */
-function TokenV2Address(peers, mypk, pubkey)
+function tokenV2Address(peers, mypk, pubkey)
 {
   typeforce('PeerGroup', peers);
   typeforce('Buffer', mypk);
@@ -523,10 +526,165 @@ function TokenV2Address(peers, mypk, pubkey)
   });
 }
 
+function decodeVerusCompatVData(vdata)  {
+  
+  try {
+
+    let chunks = bscript.decompile(vdata);
+    if (Array.isArray(chunks) && chunks.length > 0) {
+      let bufferReader = new bufferutils.BufferReader(chunks[0]);
+      let version = bufferReader.readUInt8();
+      let evalcode = bufferReader.readUInt8();
+      let M = bufferReader.readUInt8();
+      let N = bufferReader.readUInt8();
+
+      let pubkeys = [];
+      let iAppdata = 1;
+      if (version == OPDROP_HAS_PKS_VER) {
+        if (chunks.length < 1 + M)
+          throw new Error("invalid cc opdrop version 2 format: no pubkeys")
+        for (let i = 0; i < M; i ++) {
+          let pk = chunks[1 + i];
+          pubkeys.push(pk);
+        }
+        iAppdata += M;
+      }
+      let appdata;
+      if (chunks.length > iAppdata)
+        appdata = chunks[iAppdata];
+      let verusdata = { 
+        evalcode, version, M, N
+      };
+      if (pubkeys)
+        verusdata.pubkeys = pubkeys;
+      if (appdata)
+        verusdata.appdata = appdata;
+      return verusdata;
+    }
+  } catch(err) {
+    console.log("decodeVerusCompatVData", err);
+  }
+  return undefined;
+}
+
+function decodeTokensV2VData(vdata)  {
+  
+  try {
+    let bufferReader = new bufferutils.BufferReader(vdata);
+    let evalcode = bufferReader.readUInt8();
+    let funcid = Buffer.from([ bufferReader.readUInt8() ]).toString();
+    let version = bufferReader.readUInt8();
+    let tokenid = ccutils.txidReverse(bufferReader.readSlice(32));  
+
+    // note: no pubkeys for Tokens V2 (they are in opdrop)
+    /*  let npks = bufferReader.readUInt8();
+    let pubkeys = []
+    for (let i = 0; i < npks; i ++) {
+      pk = bufferReader.readVarSlice();
+      pubkeys.push(pk);
+    }  */
+
+    return { 
+      evalcode, funcid, version,
+      tokenid,
+      // pubkeys
+    };
+  } catch(err) {
+    console.log("decodeTokensV2VData", err);
+  }
+  return undefined;
+}
+
+function isOpReturnSpk(script)
+{
+  let chunks = bscript.decompile(script);
+  if (Array.isArray(chunks) && chunks.length > 0) {
+    if (chunks[0] == OPS.OP_RETURN) {
+      if (chunks.length > 1)
+        return chunks[1];
+      else
+        Buffer.from([]);
+    }
+  }
+  return false;
+}
+
+/**
+ * Validates if a transaction output is a valid token
+ * @param {*} tx a token transaction object of Transaction type
+ * @param {*} nvout output order number
+ * @returnsan object with token properties or false
+ */
+function isTokenV2Output(tx, nvout)
+{
+  if (nvout >= 0 && nvout < tx.outs.length) {
+    let parsedSpk = ccbasic.parseCCSpk(tx.outs[nvout].script);
+    if (!parsedSpk.cc)
+      return false;
+    let verusData;
+    let vdata;
+    if (parsedSpk.opdrop) {
+      verusData = decodeVerusCompatVData(parsedSpk.opdrop);
+      if (verusData && verusData.appdata)
+        vdata = verusData.appdata;   // data in opdrop is the first priority
+    }
+    if (!vdata) 
+      vdata = isOpReturnSpk(tx.outs[tx.outs.length-1].script); // opreturn is the second priority
+    if (!vdata)
+      return false;
+    
+    let tokenData = decodeTokensV2VData(vdata);
+    if (!tokenData)
+      return false;
+    if (!tokenData.evalcode == EVAL_TOKENSV2)
+      return false;
+    if (!typeforceNT(types.Hash256bit, tokenData.tokenid))
+      return false;
+    return verusData ? Object.assign(verusData, tokenData) : tokenData;
+  }
+}
+
+/**
+ * Loads transactions from ccoutputs objects and validates if they are valid tokens
+ * @param {*} mynetwork 
+ * @param {*} peers 
+ * @param {*} mypk 
+ * @param {*} ccutxos - the 'utxos' nested array from the getCCUtxos() result ('result.utxos')
+ * @returns ccutxosOut array extended with 'tokenid' property if it is a valid token
+ */
+async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
+{
+  if (Array.isArray(ccutxos)) {
+    let params = [ peers, mypk ];
+    ccutxos.forEach(output => {
+      params.push(output.txid);
+    });
+
+    let ccutxosOut = [];
+    let returnedtxns = await ccutils.getTransactionsMany.apply(undefined, params); // maybe simply put txids in array?
+    if (returnedtxns && Array.isArray(returnedtxns.transactions)) {
+      returnedtxns.transactions.forEach(e => {
+        let tx = Transaction.fromHex(e.tx, mynetwork);
+        let txid = tx.getHash();
+        let out = ccutxos.find((out)=>{ return Buffer.compare(out.txid, txid) == 0; }); 
+        let tokendata = isTokenV2Output(tx, out.vout);
+        let newout = Object.assign([], out)
+        if (tokendata) {
+          newout.tokenid = tokendata.tokenid;
+        }
+        ccutxosOut.push(newout);
+      });
+    }
+    return ccutxosOut;
+  }
+  return null;
+}
+
 
 module.exports = {
   Connect, 
-  TokenInfoV2Tokel, Tokensv2Create, Tokensv2CreateTokel, Tokensv2Transfer, TokenV2Address,
+  tokenInfoV2Tokel, tokensv2Create, tokensv2CreateTokel, tokensv2Transfer, tokenV2Address,
+  isTokenV2Output, validateTokensV2Many,
   tokensv2GlobalPk, tokensv2GlobalPrivkey, tokensv2GlobalAddress, EVAL_TOKENSV2,
   assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
 }

@@ -194,10 +194,6 @@ if (!process.browser)
       //result = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad36577930b6", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad365779AAAA");
       //console.log('result=', result);
 
-      // tokev2address:
-      //let tokev2address = await cctokens.TokenV2Address(peers, mypk, mypk);
-      //console.log('tokev2address=', tokev2address);
-
       // test fromOutputScript: 
       let getxns = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "91a53a6b364345360c013ea3de379b647eb9d3f985700e4957b9f45cf275dfc4");
       let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
