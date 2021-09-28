@@ -234,7 +234,7 @@ function getPsbtPrevOut(psbt, index)
 function findCCProbeForSpk(ccProbes, spk)
 {
   let isMixed = false;
-  let condbin = ccbasic.parseCCSpk(spk);
+  let condbin = ccbasic.parseCCSpk(spk).cc;
   if (condbin.length > 0 && condbin[0] == 'M'.charCodeAt(0)) {
     condbin = condbin.slice(1, condbin.length);
     isMixed = true;
