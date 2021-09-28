@@ -551,7 +551,7 @@ exports.IsValidPubKey = IsValidPubKey;
  */
 function IsValidPubKey(pubkey)
 {
-  if (Buffer.isBuffer(pubkey) && pubkey.length == 33 /*&& !pubkey.equals(Buffer.allocUnsafe(33).fill('\0'))*/)
+  if (Buffer.isBuffer(pubkey) && pubkey.length == 33 && !pubkey.equals(Buffer.allocUnsafe(33).fill('\0')))
     return true;
   else
     return false;
