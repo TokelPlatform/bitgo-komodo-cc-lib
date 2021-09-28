@@ -6,6 +6,9 @@ const TransactionBuilder = require('../src/transaction_builder');
 const Transaction = require('../src/transaction');
 const OPS = require('bitcoin-ops');
 
+const Debug = require('debug')
+const logdebug = Debug('cctokens')
+
 const bufferutils = require("../src/bufferutils");
 const script = require("../src/script");
 const ccutils = require('./ccutils');
@@ -27,10 +30,10 @@ const TKLPROP_URL = 2;
 const TKLPROP_ROYALTY = 3;
 const TKLPROP_ARBITRARY = 4;
 
-const TKLNAME_URL = "url";
-const TKLNAME_ID = "id";
-const TKLNAME_ROYALTY = "royalty";
-const TKLNAME_ARBITRARY = "arbitrary";
+const TKLPROPNAME_URL = "url";
+const TKLPROPNAME_ID = "id";
+const TKLPROPNAME_ROYALTY = "royalty";
+const TKLPROPNAME_ARBITRARY = "arbitrary";
 
 const OPDROP_HAS_PKS_VER = 2;
 
@@ -39,6 +42,7 @@ const OPDROP_HAS_PKS_VER = 2;
 // to init the cryptoconditions wasm lib before cc usage
 // (this is due to wasm delayed loading specifics)
 const ccbasic = require('./ccbasic');
+const { tokel } = require('../src/networks');
 var ccimp;
 if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
@@ -54,6 +58,8 @@ const assetsv2GlobalPk =  "0345d2e7ab018619da6ed58ccc0138c5f58a7b754bd8e9a1a9d2b
 const assetsv2GlobalPrivkey = Buffer.from([ 0x46, 0x58, 0x3b, 0x18, 0xee, 0x16, 0x63, 0x51, 0x6f, 0x60, 0x6e, 0x09, 0xdf, 0x9d, 0x27, 0xc8, 0xa7, 0xa2, 0x72, 0xa5, 0xd4, 0x6a, 0x9b, 0xcb, 0xd5, 0x4f, 0x7d, 0x1c, 0xb1, 0x2e, 0x63, 0x21 ]);
 const assetsv2GlobalAddress = "RX99NCswvrLiM6vNE4zmpKKBWMZU9zqwAk";
 const EVAL_ASSETSV2 = 0xF6;
+
+const EVAL_TOKELDATA = 0xf7;
 
 // nspv calls:
 
@@ -110,7 +116,7 @@ function Connect()
     peers.on('error', (err)=>reject(err));
 
     peers.connect(() => {
-      console.log('in promise: connected to peer!!!');
+      logdebug('connected to peer!!!');
       resolve();
     });
   });
@@ -224,28 +230,28 @@ function makeTokelData(jsondata)
   let url;
   let arbitrary;
 
-  if(jsondata[TKLNAME_ROYALTY]) {
-    if (!Number.isInteger(jsondata[TKLNAME_ROYALTY]))
+  if(jsondata[TKLPROPNAME_ROYALTY]) {
+    if (!Number.isInteger(jsondata[TKLPROPNAME_ROYALTY]))
       throw new Error("invalid royalty: not an int")
-    if (jsondata[TKLNAME_ROYALTY] < 0 || jsondata[TKLNAME_ROYALTY] > 999)
+    if (jsondata[TKLPROPNAME_ROYALTY] < 0 || jsondata[TKLPROPNAME_ROYALTY] > 999)
       throw new Error("invalid royalty value")
-    royalty = jsondata[TKLNAME_ROYALTY];
+    royalty = jsondata[TKLPROPNAME_ROYALTY];
   }
-  if(jsondata[TKLNAME_ID]) {
-    if (!Number.isInteger(jsondata[TKLNAME_ID]))
+  if(jsondata[TKLPROPNAME_ID]) {
+    if (!Number.isInteger(jsondata[TKLPROPNAME_ID]))
       throw new Error("invalid id: not an int")
-    id = jsondata[TKLNAME_ID];
+    id = jsondata[TKLPROPNAME_ID];
   }
-  if(jsondata[TKLNAME_URL]) {
-    if (! jsondata[TKLNAME_URL] instanceof String)
+  if(jsondata[TKLPROPNAME_URL]) {
+    if (! jsondata[TKLPROPNAME_URL] instanceof String)
       throw new Error("invalid url: not a string")
-    url = Buffer.from(jsondata[TKLNAME_URL]);
+    url = Buffer.from(jsondata[TKLPROPNAME_URL]);
   }
-  if(jsondata[TKLNAME_ARBITRARY]) {
+  if(jsondata[TKLPROPNAME_ARBITRARY]) {
     let re = /[0-9A-Fa-f]{6}/g;
-    if (!jsondata[TKLNAME_ARBITRARY] instanceof String || !re.test(jsondata[TKLNAME_ARBITRARY]))
+    if (!jsondata[TKLPROPNAME_ARBITRARY] instanceof String || !re.test(jsondata[TKLPROPNAME_ARBITRARY]))
       throw new Error("invalid arbitrary: not a hex string")
-    arbitrary = Buffer.from(jsondata[TKLNAME_ARBITRARY], 'hex');
+    arbitrary = Buffer.from(jsondata[TKLPROPNAME_ARBITRARY], 'hex');
   }
   let buflen = 2;
   if (url)
@@ -263,7 +269,7 @@ function makeTokelData(jsondata)
   let buffer = Buffer.allocUnsafe(buflen);
   let bufferWriter = new bufferutils.BufferWriter(buffer);
 
-  bufferWriter.writeUInt8(0xf7); // tokel evalcode
+  bufferWriter.writeUInt8(EVAL_TOKELDATA); // tokel evalcode
   bufferWriter.writeUInt8(1);  // version
   if (id) {
     bufferWriter.writeUInt8(TKLPROP_ID);
@@ -562,7 +568,7 @@ function decodeVerusCompatVData(vdata)  {
       return verusdata;
     }
   } catch(err) {
-    console.log("decodeVerusCompatVData", err);
+    logdebug("decodeVerusCompatVData error:", err);
   }
   return undefined;
 }
@@ -574,7 +580,10 @@ function decodeTokensV2VData(vdata)  {
     let evalcode = bufferReader.readUInt8();
     let funcid = Buffer.from([ bufferReader.readUInt8() ]).toString();
     let version = bufferReader.readUInt8();
-    let tokenid = ccutils.txidReverse(bufferReader.readSlice(32));  
+     
+    let tokendata = { 
+      evalcode, funcid, version,
+    };
 
     // note: no pubkeys for Tokens V2 (they are in opdrop)
     /*  let npks = bufferReader.readUInt8();
@@ -584,13 +593,63 @@ function decodeTokensV2VData(vdata)  {
       pubkeys.push(pk);
     }  */
 
-    return { 
-      evalcode, funcid, version,
-      tokenid,
-      // pubkeys
-    };
+    if (funcid == 'c')  { 
+      // parse as tokenv2create
+      let origpk = bufferReader.readVarSlice();
+      tokendata.origpk = origpk;
+      let name = bufferReader.readVarSlice().toString();
+      tokendata.name = name;
+      let description = bufferReader.readVarSlice().toString();
+      tokendata.description = description;
+      let blobs = [];
+      while(bufferReader.offset < bufferReader.buffer.length) {
+        let blob = bufferReader.readVarSlice();
+        blobs.push(blob);
+      }
+      if (blobs.length > 0) {
+        tokendata.blobs = blobs;
+        if (blobs.length > 0 && blobs[0].length > 0 && blobs[0][0] == EVAL_TOKELDATA) {
+          // parse tokel data:
+          let bufferReaderTokel = new bufferutils.BufferReader(blobs[0]);
+          let evalcode = bufferReaderTokel.readUInt8();
+          let version = bufferReaderTokel.readUInt8();
+          let tokeldata = { evalcode, version };
+          let propid;
+          while (bufferReaderTokel.offset < bufferReaderTokel.buffer.length) {
+            propid = bufferReaderTokel.readUInt8();
+            if (propid == TKLPROP_ID) 
+              tokeldata.id = bufferReaderTokel.readVarInt();
+            else if (propid == TKLPROP_ROYALTY) 
+              tokeldata.royalty = bufferReaderTokel.readVarInt();
+            else if (propid == TKLPROP_URL) 
+              tokeldata.url = Buffer.from(bufferReaderTokel.readVarSlice()).toString();
+            else if (propid == TKLPROP_ARBITRARY) 
+              tokeldata.arbitrary = bufferReaderTokel.readVarSlice();
+            else 
+              throw new Error("invalid tokel data format");
+          }
+          tokendata.tokeldata = tokeldata;
+        }
+      }
+    }
+    else if (funcid == 't') {
+      // parse as tokenv2transfer
+      let tokenid = ccutils.txidReverse(bufferReader.readSlice(32)); 
+      tokendata.tokenid = tokenid;
+      let blobs = [];
+      while(bufferReader.offset < bufferReader.buffer.length) {
+        let blob = bufferReader.readVarSlice();
+        blobs.push(blob);
+      }
+      if (blobs.length > 0)
+        tokendata.blobs = blobs;
+    }
+    else {
+      throw new Error("invalid token funcid");
+    }
+    return tokendata;
   } catch(err) {
-    console.log("decodeTokensV2VData", err);
+    logdebug("decodeTokensV2VData error:", err);
   }
   return undefined;
 }
@@ -619,27 +678,41 @@ function isTokenV2Output(tx, nvout)
 {
   if (nvout >= 0 && nvout < tx.outs.length) {
     let parsedSpk = ccbasic.parseCCSpk(tx.outs[nvout].script);
-    if (!parsedSpk.cc)
+    if (!parsedSpk.cc) {
+      logdebug("isTokenV2Output error: not a cc output");
       return false;
+    }
     let verusData;
     let vdata;
     if (parsedSpk.opdrop) {
       verusData = decodeVerusCompatVData(parsedSpk.opdrop);
-      if (verusData && verusData.appdata)
-        vdata = verusData.appdata;   // data in opdrop is the first priority
+      if (verusData && verusData.extradata)
+        vdata = verusData.extradata;   // data in opdrop is the first priority
     }
     if (!vdata) 
       vdata = isOpReturnSpk(tx.outs[tx.outs.length-1].script); // opreturn is the second priority
-    if (!vdata)
+    if (!vdata) {
+      logdebug("isTokenV2Output error: no token data in opreturn or opdrop");
       return false;
+    }
     
     let tokenData = decodeTokensV2VData(vdata);
-    if (!tokenData)
+    if (!tokenData) {
+      logdebug("isTokenV2Output error: invalid token data");
       return false;
-    if (!tokenData.evalcode == EVAL_TOKENSV2)
+    }
+    if (!tokenData.evalcode == EVAL_TOKENSV2)  {
+      logdebug("isTokenV2Output error: not the token v2 evalcode");
       return false;
-    if (!typeforceNT(types.Hash256bit, tokenData.tokenid))
+    }
+    if (tokenData.funcid == 't' && !typeforceNT(types.Hash256bit, tokenData.tokenid)) {
+      logdebug("isTokenV2Output error: invalid tokenid in tx data");
       return false;
+    }
+    if (tokenData.funcid == 'c' && !ccutils.IsValidPubKey(tokenData.origpk)) {
+      logdebug("isTokenV2Output error: invalid token originator pubkey in tx data");
+      return false;
+    }
     return verusData ? Object.assign(verusData, tokenData) : tokenData;
   }
 }
@@ -670,7 +743,7 @@ async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
         let tokendata = isTokenV2Output(tx, out.vout);
         let newout = Object.assign([], out)
         if (tokendata) {
-          newout.tokenid = tokendata.tokenid;
+          newout.tokendata = tokendata;
         }
         ccutxosOut.push(newout);
       });
