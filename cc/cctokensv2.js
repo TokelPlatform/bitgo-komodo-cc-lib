@@ -38,7 +38,7 @@ const TKLNAME_ARBITRARY = "arbitrary";
 // to init the cryptoconditions wasm lib before cc usage
 // (this is due to wasm delayed loading specifics)
 const ccbasic = require('./ccbasic');
-const ccimp;
+let ccimp;
 if (process.browser)
   ccimp = import('@tokel/cryptoconditions');
 else

@@ -29,4 +29,5 @@ module.exports = {
   general: require('../cc/general'),
   cctokensv2: require('../cc/cctokensv2'),
   cctokensTokelv2: require('../cc/cctokenstokelv2'),
+  nspvConnect: require('../net/connect'),
 };
