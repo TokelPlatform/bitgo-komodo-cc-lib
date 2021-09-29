@@ -79,6 +79,7 @@ const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0
 //const mytokenid = "38b58149410b5d53f03b06e38452e7b0e232e561a65b89a4517c7dc518e7e739";
 const mytokenid = "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a";
 
+
 if (!process.browser) 
 {
   peers = new NspvPeerGroup(params, opts);
@@ -108,12 +109,12 @@ if (!process.browser)
       //console.log('cc utxos=', ccutxos); 
 
       // make cc token create tx
-      //let tx = await cctokens.Tokensv2CreateTokel(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1, "id":414565, "url":"https://site.org", "arbitrary":"0202ABCDEF"}'));
-      let tx = await cctokens.Tokensv2CreateTokel(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
-      console.log('txhex=', tx.toHex());
+      //let tx = await cctokens.tokensv2CreateTokel(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1, "id":414565, "url":"https://site.org", "arbitrary":"0202ABCDEF"}'));
+      //let tx = await cctokens.tokensv2CreateTokel(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
+      //console.log('txhex=', tx.toHex());
 
       // make cc token transfer tx
-      //let tx = await cctokens.Tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
+      //let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
       //console.log('txhex=', tx.toHex());
 
       //let info = await cctokens.TokenInfoV2Tokel(mytokencreatewif, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a");
@@ -122,10 +123,6 @@ if (!process.browser)
       // make tx with normal inputs for the specified amount
       // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);
       //console.log('txwnormals=', txwnormals);
-
-      // try nspv getrawtransaction - not supported yet
-      //let txhex = await ccutils.getRawTransaction(peers, ecpair.fromWIF(mytokencreatewif, mynetwork).getPublicKeyBuffer(), ccutils.txidFromHex(mytokenid));
-      //console.log('txhex=', txhex);
     }
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);

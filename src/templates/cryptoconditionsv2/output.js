@@ -6,7 +6,7 @@ var ccbasic = require('../../cc/ccbasic')
 //var OPS = require('bitcoin-ops')
 
 function check (script) {
-  return !!ccbasic.parseCCSpk(script)
+  return !!ccbasic.readCCSpk(script)
 }
 check.toJSON = function () { return 'cryptoconditions output' }
 
@@ -14,8 +14,8 @@ function encode (condition) {
   return ccbasic.makeCCSpkV2(condition)
 }
 
-function decode (buffer) {
-  return bscript.compile([ccbasic.parseCCSpk(buffer), ccbasic.CCOPS.OP_CRYPTOCONDITIONS])
+function decode (script) {
+  return bscript.compile([ccbasic.parseCCSpk(script).cc, ccbasic.CCOPS.OP_CRYPTOCONDITIONS])
 }
 
 module.exports = {

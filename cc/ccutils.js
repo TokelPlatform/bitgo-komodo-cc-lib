@@ -233,7 +233,7 @@ function getPsbtPrevOut(psbt, index)
 function findCCProbeForSpk(ccProbes, spk)
 {
   let isMixed = false;
-  let condbin = ccbasic.parseCCSpk(spk);
+  let condbin = ccbasic.parseCCSpk(spk).cc;
   if (condbin.length > 0 && condbin[0] == 'M'.charCodeAt(0)) {
     condbin = condbin.slice(1, condbin.length);
     isMixed = true;
@@ -607,7 +607,7 @@ exports.IsValidPubKey = IsValidPubKey;
  */
 function IsValidPubKey(pubkey)
 {
-  if (Buffer.isBuffer(pubkey) && pubkey.length == 33 /*&& !pubkey.equals(Buffer.allocUnsafe(33).fill('\0'))*/)
+  if (Buffer.isBuffer(pubkey) && pubkey.length == 33 && !pubkey.equals(Buffer.allocUnsafe(33).fill('\0')))
     return true;
   else
     return false;

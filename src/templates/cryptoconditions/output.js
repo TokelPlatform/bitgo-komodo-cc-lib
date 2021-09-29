@@ -5,8 +5,8 @@ var bscript = require('../../script')
 //var typeforce = require('typeforce')
 //var OPS = require('bitcoin-ops')
 
-function check (buffer) {
-  return !!ccbasic.readCCSpk(buffer)
+function check (script) {
+  return !!ccbasic.readCCSpk(script)
 }
 check.toJSON = function () { return 'cryptoconditions output' }
 
@@ -14,8 +14,8 @@ function encode (condition) {
   return ccbasic.makeCCSpk(condition)
 }
 
-function decode (buffer) {
-  return bscript.compile([ccbasic.parseCCSpk(buffer), ccbasic.CCOPS.OP_CRYPTOCONDITIONS])
+function decode (script) {
+  return bscript.compile([ccbasic.parseCCSpk(script).cc, ccbasic.CCOPS.OP_CRYPTOCONDITIONS])
 }
 
 module.exports = {
