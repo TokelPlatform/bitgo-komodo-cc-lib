@@ -43,36 +43,14 @@ npm install
 First you need to connect to peers to start making requests.
 
 ```
+try {
+  const { nspvConnect } = require('@tokel/bitgo-komodo-cc-lib');  
+  const network = networks.tkltest;
+  const peers = await nspvConnect({ network }, {});
+} catch (e) {
+  // do something
+}
 
-const {
-  NspvPeerGroup,
-  kmdMessages,
-  networks,
-} = require('@tokel/bitgo-komodo-cc-lib');
-
-const params = {
-  network: networks.tkltest,
-  defaultPort: 22024,
-  staticPeers: ['167.99.114.240:22024', '3.19.194.93:22024'],
-  protocolVersion: 170009,
-  messages: kmdMessages ? kmdMessages.kmdMessages : [],
-};
-
-const opts = {
-  numPeers: 8,
-  wsOpts: { rejectUnauthorized: false }, // enable self-signed certificates
-};
-
-const peers = new NspvPeerGroup(params, opts);
-peers.on('error', e => {
-  console.log(e);
-});
-this.peers.connect(err => {
-  if (err) {
-    console.log('err', err);
-    return;
-  }
-})
 ```
 ### General
 
