@@ -9,15 +9,35 @@ Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-kom
 
 ## Prerequisites
 
+You can use the library in your node server or in the browser only application.
+
+### Node Server 
+
 1. You need installed:
   - nodejs v.12+<br>
-  
-2. If you are going to use this lib in browser you also need:
+
+2. You'll need a komodo asset chain to run bitgo lib against. Or you can use one of the pre-defined chains in the network file in the library. 
+
+  ```
+  const { networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const network = networks.tkltest;
+  ```
+
+### Browser Only
+
+
+1. You need installed:
+  - nodejs v.12+<br>
   - browserify package<br> 
   - a webserver app (for example, webpack dev server)<br>
   - a wsproxy app (for example, webcoin-bridge)
 
-3. You'll need a komodo asset chain to run bitgo lib against.
+2. You'll need a komodo asset chain to run bitgo lib against. Or you can use one of the pre-defined chains in the network file in the library. 
+
+  ```
+  const { networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const network = networks.tkltest;
+  ```
 
 ## Installation
 
@@ -43,36 +63,14 @@ npm install
 First you need to connect to peers to start making requests.
 
 ```
+try {
+  const { nspvConnect, networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const network = networks.tkltest;
+  const peers = await nspvConnect({ network }, {});
+} catch (e) {
+  // do something
+}
 
-const {
-  NspvPeerGroup,
-  kmdMessages,
-  networks,
-} = require('@tokel/bitgo-komodo-cc-lib');
-
-const params = {
-  network: networks.tkltest,
-  defaultPort: 22024,
-  staticPeers: ['167.99.114.240:22024', '3.19.194.93:22024'],
-  protocolVersion: 170009,
-  messages: kmdMessages ? kmdMessages.kmdMessages : [],
-};
-
-const opts = {
-  numPeers: 8,
-  wsOpts: { rejectUnauthorized: false }, // enable self-signed certificates
-};
-
-const peers = new NspvPeerGroup(params, opts);
-peers.on('error', e => {
-  console.log(e);
-});
-this.peers.connect(err => {
-  if (err) {
-    console.log('err', err);
-    return;
-  }
-})
 ```
 ### General
 
