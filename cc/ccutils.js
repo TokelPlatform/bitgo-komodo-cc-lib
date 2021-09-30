@@ -6,16 +6,14 @@
  */
 
 const Transaction = require('../src/transaction');
-//const TransactionBuilder = require('../src/transaction_builder');
 const ccbasic = require('./ccbasic');
-//const ecpair = require('../src/ecpair');
-//const ecc = require('tiny-secp256k1');
 const ecc = require('secp256k1');
 const crypto = require('../src/crypto');
 const addresslib = require('../src/address');
 const bufferutils = require("../src/bufferutils");
-
+const bscript = require('../src/script')
 const types = require('../src/types');
+const { decodeTransactionData, parseTransactionData } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 
@@ -32,6 +30,7 @@ exports.addInputsFromPreviousTxns = addInputsFromPreviousTxns;
 exports.pubkey2NormalAddressKmd = pubkey2NormalAddressKmd;
 exports.getRawTransaction = getRawTransaction;
 exports.getTransactionsMany = getTransactionsMany;
+exports.getTransactionsManyDecoded = getTransactionsManyDecoded;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 
@@ -342,6 +341,8 @@ function getNormalUtxos(peers, address, skipCount, maxrecords)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
+  typeforce('Number', skipCount);
+  typeforce('Number', maxrecords);
 
   return getUtxos(peers, address, 0, skipCount, maxrecords);
 }
@@ -357,6 +358,8 @@ function getCCUtxos(peers, address, skipCount, maxrecords)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
+  typeforce('Number', skipCount);
+  typeforce('Number', maxrecords);
 
   return getUtxos(peers, address, 1, skipCount, maxrecords);
 }
@@ -479,6 +482,59 @@ function getTransactionsMany(peers, mypk, ...args)
   });
 }
 
+/**
+ * Get many transactions decoded
+ * @param {*} peers PeerGroup obj
+ * @param {*} network
+ * @param {*} mypk my pubkey
+ * @param {*} ...args
+ * ...
+ * @returns a promise to get the txns in hex
+ */
+ async function getTransactionsManyDecoded(peers, network, mypk, args)
+ {
+   try {
+    let decodedTxs = [];
+    let inTransactionsIds = [];
+    const txs = await getTransactionsMany(peers, mypk, ...args);
+    txs.transactions.forEach( tx => {
+      const decoded = decodeTransactionData(tx.tx, tx.blockHeader, network)
+      decodedTxs.push(decoded)
+      inTransactionsIds.push(decoded.ins.map(one => one.txid))
+    })
+    inTransactionsIds = inTransactionsIds.flat()
+    
+    let inTransactions = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
+
+    const parsedInTransactions = {}
+    inTransactions.transactions.forEach(tx => {
+      const newTx = decodeTransactionData(tx.tx, tx.blockHeader, network)
+      parsedInTransactions[newTx.txid] = newTx
+    });
+    return decodedTxs.map(tx => {
+      const parsedTx = {
+        ...tx,
+        ins: tx.ins.map(txin => {
+          return {
+            ...txin,
+            tx: parsedInTransactions[txin.txid].outs[txin.index]
+          }
+        })
+      }
+      const { recipients, senders, fees, value } = parseTransactionData(parsedTx);
+      return {
+        recipients,
+        senders,
+        fees,
+        value,
+        ...parsedTx
+      }
+    });
+   } catch (e) {
+     console.log(e)
+     throw new Error(e);
+  }
+}
 
 /**
  * helper to test if object is empty

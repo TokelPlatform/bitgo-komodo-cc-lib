@@ -3,7 +3,7 @@
     "serve": "webpack-dev-server"
   },
   "dependencies": {
-    "cryptoconditions-js": "git+https://github.com/dimxy/cryptoconditions-js.git#master"
+    "cryptoconditions-js": "@tokel/cryptoconditions"
   },
   "devDependencies": {
     "webpack": "^4.44.2",

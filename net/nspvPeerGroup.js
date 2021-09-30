@@ -6,6 +6,7 @@ let net
 try { net = require('net') } catch (err) {}
 const old = require('old')
 const PeerGroup = require('./peerGroup')
+require('./nspvPeer'); // init peer.js too
 
 const { nspvResp } = require('./kmdtypes');
 

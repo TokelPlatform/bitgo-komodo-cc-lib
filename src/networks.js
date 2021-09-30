@@ -23,29 +23,28 @@ const coins = {
   BTG: 'btg',
   LTC: 'ltc',
   ZEC: 'zec',
-  DASH: 'dash'
-}
+  DASH: 'dash',
+};
 
-function getDefaultBip32Mainnet () {
+function getDefaultBip32Mainnet() {
   return {
     // base58 'xpub'
     public: 0x0488b21e,
     // base58 'xprv'
-    private: 0x0488ade4
-  }
+    private: 0x0488ade4,
+  };
 }
 
-function getDefaultBip32Testnet () {
+function getDefaultBip32Testnet() {
   return {
     // base58 'tpub'
     public: 0x043587cf,
     // base58 'tprv'
-    private: 0x04358394
-  }
+    private: 0x04358394,
+  };
 }
 
 module.exports = {
-
   // https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp
   // https://github.com/bitcoin/bitcoin/blob/master/src/chainparams.cpp
   bitcoin: {
@@ -55,7 +54,7 @@ module.exports = {
     pubKeyHash: 0x00,
     scriptHash: 0x05,
     wif: 0x80,
-    coin: coins.BTC
+    coin: coins.BTC,
   },
   testnet: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
@@ -64,7 +63,7 @@ module.exports = {
     pubKeyHash: 0x6f,
     scriptHash: 0xc4,
     wif: 0xef,
-    coin: coins.BTC
+    coin: coins.BTC,
   },
 
   // https://github.com/Bitcoin-ABC/bitcoin-abc/blob/master/src/validation.cpp
@@ -76,7 +75,7 @@ module.exports = {
     scriptHash: 0x05,
     wif: 0x80,
     coin: coins.BCH,
-    forkId: 0x00
+    forkId: 0x00,
   },
   bitcoincashTestnet: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
@@ -84,7 +83,7 @@ module.exports = {
     pubKeyHash: 0x6f,
     scriptHash: 0xc4,
     wif: 0xef,
-    coin: coins.BCH
+    coin: coins.BCH,
   },
 
   // https://github.com/BTCGPU/BTCGPU/blob/master/src/validation.cpp
@@ -97,7 +96,7 @@ module.exports = {
     scriptHash: 0x17,
     wif: 0x80,
     coin: coins.BTG,
-    forkId: 0x4F /* 79 */
+    forkId: 0x4f /* 79 */,
   },
   // bitcoingoldTest: TODO
 
@@ -110,7 +109,7 @@ module.exports = {
     scriptHash: 0x05,
     wif: 0x80,
     coin: coins.BSV,
-    forkId: 0x00
+    forkId: 0x00,
   },
   bitcoinsvTestnet: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
@@ -118,7 +117,7 @@ module.exports = {
     pubKeyHash: 0x6f,
     scriptHash: 0xc4,
     wif: 0xef,
-    coin: coins.BSV
+    coin: coins.BSV,
   },
 
   // https://github.com/dashpay/dash/blob/master/src/validation.cpp
@@ -129,7 +128,7 @@ module.exports = {
     pubKeyHash: 0x4c,
     scriptHash: 0x10,
     wif: 0xcc,
-    coin: coins.DASH
+    coin: coins.DASH,
   },
   dashTest: {
     messagePrefix: '\x19DarkCoin Signed Message:\n',
@@ -137,7 +136,7 @@ module.exports = {
     pubKeyHash: 0x8c,
     scriptHash: 0x13,
     wif: 0xef,
-    coin: coins.DASH
+    coin: coins.DASH,
   },
 
   // https://github.com/litecoin-project/litecoin/blob/master/src/validation.cpp
@@ -149,7 +148,7 @@ module.exports = {
     pubKeyHash: 0x30,
     scriptHash: 0x32,
     wif: 0xb0,
-    coin: coins.LTC
+    coin: coins.LTC,
   },
   litecoinTest: {
     messagePrefix: '\x19Litecoin Signed Message:\n',
@@ -158,7 +157,7 @@ module.exports = {
     pubKeyHash: 0x6f,
     scriptHash: 0x3a,
     wif: 0xef,
-    coin: coins.LTC
+    coin: coins.LTC,
   },
 
   // https://github.com/zcash/zcash/blob/master/src/validation.cpp
@@ -177,9 +176,9 @@ module.exports = {
       3: 0x5ba81b19,
       // 4: 0x76b809bb (old Sapling branch id). Blossom branch id becomes effective after block 653600
       // 4: 0x2bb40e60
-      4: 0xf5b9230b
+      4: 0xf5b9230b,
     },
-    coin: coins.ZEC
+    coin: coins.ZEC,
   },
   zcashTest: {
     messagePrefix: '\x18ZCash Signed Message:\n',
@@ -193,9 +192,9 @@ module.exports = {
       3: 0x5ba81b19,
       // 4: 0x76b809bb (old Sapling branch id)
       // 4: 0x2bb40e60
-      4: 0xf5b9230b
+      4: 0xf5b9230b,
     },
-    coin: coins.ZEC
+    coin: coins.ZEC,
   },
   dimxy19: {
     messagePrefix: '\x18DIMXY19 asset chain:\n',
@@ -208,7 +207,7 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
@@ -230,7 +229,7 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
@@ -252,13 +251,13 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id, used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id, used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic: 0xfd750df6
+    magic: 0xfd750df6,
   },
 
   tok6: {
@@ -272,7 +271,7 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
@@ -294,13 +293,13 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    magic:   0x902f7aae
+    magic: 0x902f7aae,
   },
 
   dimxy24: {
@@ -314,7 +313,7 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
@@ -330,12 +329,12 @@ module.exports = {
       //'18.190.86.67:14722'
     ], 
     // to connect over websockets:
-    webSeeds: [ 
+    webSeeds: [
       //'ws://18.189.25.123:8192'
-      'wss://localhost:8192'
+      'wss://localhost:8192',
       //'ws://3.136.47.223:8192'
       // TODO: add more
-    ]     
+    ],
   },
 
   dimxy25: {
@@ -349,7 +348,7 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
@@ -360,13 +359,13 @@ module.exports = {
     magic: 0x794cdf9b,
     //to connect over p2p:
     dnsSeeds: [],
-    staticPeers: [ '3.136.47.223:14722' ], 
+    staticPeers: ['3.136.47.223:14722'],
     // to connect over websockets:
-    webSeeds: [ 
+    webSeeds: [
       //'wss://localhost:8192'
-    ]     
+    ],
   },
-  
+
   tkltest: {
     messagePrefix: '\x18TKLTEST asset chain:\n',
     bech32: 'R',
@@ -378,7 +377,7 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
@@ -389,17 +388,17 @@ module.exports = {
     magic:  0xf6475548,
     // to connect over p2p:
     dnsSeeds: [],
-    staticPeers: [ 
+    staticPeers: [
       '167.99.114.240:22024',
-      //'18.190.86.67:22024' 
+      //'18.190.86.67:22024'
       //'localhost:22024'
-    ], 
+    ],
     // to connect over websockets:
-    webSeeds: [ 
+    webSeeds: [
       //'ws://18.189.25.123:8192'
-    ]      
+    ],
   },
-  
+
   tokel: {
     messagePrefix: '\x18TOKEL chain:\n',
     bech32: 'R',
@@ -411,7 +410,7 @@ module.exports = {
       1: 0x00,
       2: 0x00,
       3: 0x5ba81b19,
-      4: 0x76b809bb // (old Sapling branch id - used in kmd)
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
       // 4: 0x2bb40e60
       // 4: 0xf5b9230b
     },
@@ -423,17 +422,18 @@ module.exports = {
   
     //to connect over p2p:
     dnsSeeds: [],
-    staticPeers: [ 
-      // '3.136.47.223:29404', 
-      '135.125.204.169:29404', '192.99.71.125:29404' 
+    staticPeers: [
+      // '3.136.47.223:29404',
+      '135.125.204.169:29404',
+      '192.99.71.125:29404',
       //'18.190.86.67:29404'
       //'localhost:29404'
-    ], 
+    ],
 
     // to connect over websockets:
-    webSeeds: [ 
+    webSeeds: [
       // 'wss://localhost:8192'
       // TODO: add more
-    ]     
+    ],
   },
-}
+};

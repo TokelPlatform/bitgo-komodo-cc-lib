@@ -1,34 +1,55 @@
 # BitGo-utxo with Komodo Antara (Cryptoconditions) Support
 
-A fork from BitGo javascript library [bitgo-utxo-lib](https://github.com/bitgo/bitgo-utxo-lib).<br>
-A javascript Bitcoin library for node.js and browsers. Written mostly in javascript, with the cryptoconditions (cc) library written in rust and built as a wasm module.<br>
-Added support for komodo messages including nSPV protocol and cc features along with the cryptoconditions lib (as a wasm module).<br>
-Komodo Antara (Cryptoconditions, CC) technology allows to create complex multisignature transactions and add custom consensus code to komodo based assets chains.<br>
-This javascript library allows to develop SPV clients using Antara (CC) technology.<br>
+A javascript Bitcoin library for node.js and browsers. Written in javascript with the cryptoconditions (cc) library written in rust and built as a wasm module.
+
+This javascript library allows to develop nSPV clients using Antara (CC) technology.<br>
 More info: [Antara Development Docs](http://developers.komodoplatform.com/basic-docs/antara/introduction-to-antara.html)<br>
 
 Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-komodo-cc-lib/blob/master/LICENSE).
 
 ## Prerequisites
 
-You need installed:
+You can use the library in your node server or in the browser only application.
+
+### Node Server 
+
+1. You need installed:
   - nodejs v.12+<br>
-  - rust and<br>
-  - wasm-pack, both to build wasm cryptoconditions module<br> 
-  
-If you are going to use this lib in browser you also need:
+
+2. You'll need a komodo asset chain to run bitgo lib against. Or you can use one of the pre-defined chains in the network file in the library. 
+
+  ```
+  const { networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const network = networks.tkltest;
+  ```
+
+### Browser Only
+
+
+1. You need installed:
+  - nodejs v.12+<br>
   - browserify package<br> 
   - a webserver app (for example, webpack dev server)<br>
   - a wsproxy app (for example, webcoin-bridge)
 
-## What test app does
+2. You'll need a komodo asset chain to run bitgo lib against. Or you can use one of the pre-defined chains in the network file in the library. 
 
-Included a ccfaucetpoc.js file that allows to create cc faucet create and get transactions.<br>
-To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
+  ```
+  const { networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const network = networks.tkltest;
+  ```
 
 ## Installation
 
-Clone this git repository go to the new dir and checkout dev-kmd branch.
+### Using npm
+
+```
+npm i @tokel/bitgo-komodo-cc-lib
+```
+
+### Manual installation
+
+Clone this git repository go to the new dir and checkout `development` branch.
 
 Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
 
@@ -36,39 +57,152 @@ Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
 npm install
 ```
 
-You'll need a komodo test asset chain to run the ccfaucetpoc sample.
-Setup network parameters for your komodo chain:<br>
-Open `networks.js` and make a new entry for your chain. You need to fix the yourchainname and magic params for your chain, like:
+
+## Basic API  (WIP)
+
+First you need to connect to peers to start making requests.
+
 ```
-module.exports = {
-  yourchainname: {
-    messagePrefix: '\xYourChainName asset chain:\n',
-    bech32: 'R',
-    bip32: getDefaultBip32Mainnet(),   
-    pubKeyHash: 0x3c,
-    scriptHash: 0x55,
-    wif: 0xbc,
-    consensusBranchId: {
-      1: 0x00,
-      2: 0x00,
-      3: 0x5ba81b19,
-      4: 0x76b809bb // (Sapling branch id used in kmd)
-    },
-    coin: coins.ZEC,
-    komodoAssetNet: true,
-    magic: 0x12345678  // komodo chain magic, obtain with getinfo rpc
-  },
-};
+try {
+  const { nspvConnect, networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const network = networks.tkltest;
+  const peers = await nspvConnect({ network }, {});
+} catch (e) {
+  // do something
+}
+
+```
+### General
+
+`general.keyToWif(String)` - Receives any string(WIF/seed phrase) and returns WIF.
+
+`general.getSeedPhrase(Number)` - Generates a bip39 mnemonic seed phrase, specify strength 128 or 256 as a parameter.
+
+`general.makeNormalTx(wif, destaddress, amount, network, peers)` - creates and signs transaction locally
+
+### CC Utils
+
+`getNormalUtxos(peers, address, skipCount, maxrecords)` - get normal (non-CC) utxos from an address
+
+`getCCUtxos(peers, address, skipCount, maxrecords)` - get CC utxos  from an address
+
+`getTxids(peers, address, isCC, skipCount, maxrecords)` - returns txos (tx outputs bith spent and unspent) for an address
+
+`createTxAndAddNormalInputs(peers, mypk, amount)` - create a tx and adds normal inputs for equal or more than the amount param 
+
+`pubkey2NormalAddressKmd(pk)` - makes komodo normal address from a pubkey
+
+`getRawTransaction(peers, mypk, txid)` - Get transaction both in hex and decoded 
+
+`getTransactionsMany(peers, mypk, args)` - Get many transactions (in hex), args - JSON array of txids
+
+#### getTransactionsManyDecoded
+`getTransactionsManyDecoded(peers, mypk, args)` - Get many transactions decoded with extra info on inputs and outputs, args - JSON array of txids
+ 
+e.g. 
+
+```
+const { ccutils } = require('@tokel/bitgo-komodo-cc-lib');
+const uniqueIds = [
+  "69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9",
+  "76b63ddd43419320d24662294a154bb5fde96b5b1c8ac6d148e47e72ba9165f8"
+];
+
+ccutils.getTransactionsManyDecoded(
+    peers,
+    network,
+    pubkeyBuffer,
+    uniqueIds
+  );
 ```
 
-In ccfaucetpoc.js source change mynetwork var to some yourchainname:<br>
+Response sample
+
 ```
-var mynetwork=networks.yourchainname
+{
+    "txid": "69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9",
+    "recipients": ["RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK"],
+    "senders": ["RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK"],
+    "value": 1000000000,
+    "fees": "10000",
+    "ins": [
+        {
+            "hash": Buffer,
+            "index": 0,
+            "script": Buffer,
+            "sequence": 4294967295,
+            "witness": [],
+            "txid": "e932fdacaa16906e1ad70c4bfe52779094c565cec52c69b3182cbe081cf9f94b",
+            "tx": {
+                "value": 600000000,
+                "script": Buffer,
+                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
+                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
+            }
+        },
+        {
+            "hash": Buffer,
+            "index": 0,
+            "script": Buffer,
+            "sequence": 4294967295,
+            "witness": [],
+            "txid": "19f0ec147502bdd012d89f471d8a175ea7e689611faaefe26a9eba3d4375b70f",
+            "tx": {
+                "value": 300000000,
+                "script": Buffer,
+                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
+                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
+            }
+        },
+        {
+            "hash": Buffer,
+            "index": 0,
+            "script": Buffer,
+            "sequence": 4294967295,
+            "witness": [],
+            "txid": "2a145529738c82be0516b3dd6c4229d1a98b946dd6b80f0152da7dcbed0d9f21",
+            "tx": {
+                "value": 150000000,
+                "script": Buffer,
+                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
+                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
+            }
+        }
+    ],
+    "outs": [
+        {
+            "value": 1000000000,
+            "script": Buffer,
+            "address": "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE",
+            "asm": "OP_DUP OP_HASH160 09a7c48f0db7e8b54bf4494c01ed66b99f3216a6 OP_EQUALVERIFY OP_CHECKSIG"
+        },
+        {
+            "value": 49990000,
+            "script": Buffer,
+            "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
+            "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
+        }
+    ]
+}
 ```
 
-Set your funding faucet wif and address and a wif and address getting funds in ccfaucetpoc.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
+### CC Tokens
 
-## Build test app to run in nodejs
+### CC Tokens Tokel
+
+## Advanced API 
+
+## Samples
+
+In the samples folder are included a several examples of CC usage.
+1. faucet.js - example of how to create cc faucet and get transactions.
+2. normaltx.js - example of how to conduct chain transactions
+3. tokens.js  - example of how to run tokensv2 cc functions
+4. tokenstokel.js  - example of how to run tokensv2tokel cc functions
+
+To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
+
+### Build test app to run in nodejs
 
 Build the cryptoconditions wasm module:<br>
 Setup the rust nightly build to build cryptoconditions:
