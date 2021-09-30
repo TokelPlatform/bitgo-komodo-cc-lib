@@ -12,7 +12,6 @@ const bufferutils = require("../src/bufferutils");
 const kmdmessages = require('../net/kmdmessages');
 const ccutils = require('../cc/ccutils');
 const networks = require('../src/networks');
-const tokensv2 = require('../cc/cctokenstokelv2');
 const script = require("../src/script");
 const ecpair = require('../src/ecpair');
 const varuint = require('varuint-bitcoin');
