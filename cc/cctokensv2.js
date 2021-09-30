@@ -510,7 +510,7 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, cc
  * ...
  * @returns a promise to get the txns in hex
  */
-function TokenV2Address(peers, network, wif, pubkey)
+function tokenV2Address(peers, network, wif, pubkey)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', wif);
