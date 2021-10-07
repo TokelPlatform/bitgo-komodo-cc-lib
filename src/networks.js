@@ -196,12 +196,15 @@ module.exports = {
     },
     coin: coins.ZEC,
   },
+
+  // komodo chains:
   dimxy19: {
     messagePrefix: '\x18DIMXY19 asset chain:\n',
     bech32: 'R',
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -224,6 +227,7 @@ module.exports = {
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -246,6 +250,7 @@ module.exports = {
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -266,6 +271,7 @@ module.exports = {
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -288,6 +294,7 @@ module.exports = {
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -308,6 +315,7 @@ module.exports = {
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -343,6 +351,7 @@ module.exports = {
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -372,6 +381,7 @@ module.exports = {
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -405,6 +415,7 @@ module.exports = {
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,

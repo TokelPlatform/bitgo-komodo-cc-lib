@@ -70,9 +70,12 @@ function fromOutputScript (outputScript, network) {
   if (btemplates.witnessScriptHash.output.check(outputScript)) return toBech32(bscript.compile(outputScript).slice(2, 34), 0, network.bech32)
 
   // dimxy added for cc:
-  if (btemplates.cryptoconditions.output.check(outputScript)) return toBase58Check(bcrypto.hash160(btemplates.cryptoconditions.output.decode(outputScript)), network.pubKeyHash)
+  if (!network.cryptoconditionHash)
+    throw new Error(bscript.toASM(outputScript) + ' not cc enabled network (no cryptoconditionHash)')
+
+  if (btemplates.cryptoconditions.output.check(outputScript)) return toBase58Check(bcrypto.hash160(btemplates.cryptoconditions.output.decode(outputScript)), network.cryptoconditionHash)
   // does the same but for readability
-  if (btemplates.cryptoconditionsv2.output.check(outputScript)) return toBase58Check(bcrypto.hash160(btemplates.cryptoconditionsv2.output.decode(outputScript)), network.pubKeyHash)
+  if (btemplates.cryptoconditionsv2.output.check(outputScript)) return toBase58Check(bcrypto.hash160(btemplates.cryptoconditionsv2.output.decode(outputScript)), network.cryptoconditionHash)
 
   throw new Error(bscript.toASM(outputScript) + ' has no matching Address')
 }
