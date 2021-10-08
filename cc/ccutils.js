@@ -132,14 +132,14 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
  */
  function makeCCCondMofN(evalcode, pubkeys, M) {
   typeforce(types.UInt8, evalcode);
-  typeforce(types.arrayOf('Buffer'), pubkeys)
+  typeforce(typeforce.anyOf(types.arrayOf('Buffer'), types.arrayOf('String')), pubkeys);
   typeforce(types.UInt32, M);
 
   let subconds = [];
   for (let i = 0; i < pubkeys.length; i ++)  {
       let secpcond = {  
-      type:	"secp256k1-sha-256",
-      publicKey:	pubkeys[i].toString('hex')
+        type:	"secp256k1-sha-256",
+        publicKey:	Buffer.isBuffer(pubkeys[i]) ? pubkeys[i].toString('hex') : pubkeys[i]  // assume buffer or string
       };
       subconds.push(secpcond);
   }

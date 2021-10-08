@@ -7,6 +7,7 @@ const ccutils = require('../cc/ccutils');
 const ecpair = require('../src/ecpair');
 const Transaction = require('../src/transaction');
 const Block = require('../src/block');
+const address = require('../src/address');
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
@@ -19,6 +20,17 @@ const networks = require('../src/networks');
 //const mynetwork = networks.dimxy23;
 const mynetwork = networks.dimxy24;
 // const mynetwork = networks.dimxy25;
+
+// you will need to do a call like:
+// ccbasic.cryptoconditions = await ccimp;
+// to init the cryptoconditions wasm lib before cc usage
+// (this is due to wasm delayed loading specifics)
+const ccbasic = require('../cc/ccbasic');
+let ccimp;
+if (process.browser)
+  ccimp = import('@tokel/cryptoconditions');
+else
+  ccimp = require('@tokel/cryptoconditions');
 
 
 // additional seeds:
@@ -87,6 +99,10 @@ if (!process.browser)
   peers.connect(async () => {
   
     try {
+
+      // load cryptoconditions lib
+      ccbasic.cryptoconditions = await ccimp;
+
       // Several tests (uncomment needed):
       
       // test get blocks from peer (TODO: update for kmd block and transactions support) : 
@@ -142,7 +158,9 @@ if (!process.browser)
       */
 
       // validateTokensV2Many test
-      let ccoutputs = await ccutils.getCCUtxos(peers, "RJRjg45Tcx8tsvv6bzqjUFFsajXoJMH6bR", 0, 0);
+      let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, ["035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db"], 1 ), mynetwork)
+      console.log("getting cc outputs for indexkey=", ccindexkey);
+      let ccoutputs = await ccutils.getCCUtxos(peers, ccindexkey, 0, 0);
       //let ccoutputs = await ccutils.getCCUtxos(peers, "RJkivfMQjLxfHyVHs1EY43Lr71YvLbZPL9", 0, 0);  // empty address
       let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
       console.log("ccoutputs_validated=", ccoutputs_validated);

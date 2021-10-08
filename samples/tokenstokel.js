@@ -18,6 +18,18 @@ const networks = require('../src/networks');
 const mynetwork = networks.dimxy24;
 //const mynetwork = networks.tkltest;
 
+// you will need to do a call like:
+// ccbasic.cryptoconditions = await ccimp;
+// to init the cryptoconditions wasm lib before cc usage
+// (this is due to wasm delayed loading specifics)
+const ccbasic = require('../cc/ccbasic');
+let ccimp;
+if (process.browser)
+  ccimp = import('@tokel/cryptoconditions');
+else
+  ccimp = require('@tokel/cryptoconditions');
+
+
 // additional seeds:
 // (default seeds are in the mynetwork object)
 
@@ -90,6 +102,10 @@ if (!process.browser)
   peers.connect(async () => {
   
     try {
+
+      // load cryptoconditions lib
+      ccbasic.cryptoconditions = await ccimp;
+
       // Several tests (uncomment needed):
       
       // test get blocks from peer (TODO: update for kmd block and transactions support) : 

@@ -26,27 +26,16 @@ const networks = require('../src/networks');
 const mynetwork = networks.dimxy24; 
 //const mynetwork = networks.tkltest; 
 
-
-
-
 // you will need to do a call like:
 // ccbasic.cryptoconditions = await ccimp;
 // to init the cryptoconditions wasm lib 
 // (this is due to wasm delayed loading specifics)
-/*
 const ccbasic = require('../cc/ccbasic');
 var ccimp;
 if (process.browser)
   ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
 else
   ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
-const FAUCETSIZE = 10000000;
-
-// faucet global privkey/pubkey:
-const faucetGlobalPk = "03682b255c40d0cde8faee381a1a50bbb89980ff24539cb8518e294d3a63cefe12";
-const faucetGlobalPrivkey = Buffer.from([ 0xd4, 0x4f, 0xf2, 0x31, 0x71, 0x7d, 0x28, 0x02, 0x4b, 0xc7, 0xdd, 0x71, 0xa0, 0x39, 0xc4, 0xbe, 0x1a, 0xfe, 0xeb, 0xc2, 0x46, 0xda, 0x76, 0xf8, 0x07, 0x53, 0x3d, 0x96, 0xb4, 0xca, 0xa0, 0xe9 ]);
-const faucetGlobalAddress = "R9zHrofhRbub7ER77B7NrVch3A63R39GuC";
-*/
 
 // not used for plan websockets, only for PXP which is not supported
 var defaultPort = 14722
@@ -116,6 +105,9 @@ if (!process.browser)
   peers.connect(async () => {
   
     try {
+
+      // load cryptoconditions lib
+      ccbasic.cryptoconditions = await ccimp;
 
       // Several tests:
       

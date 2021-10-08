@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const networks_1 = require("../src/networks");
+//const networks_1 = require("../src/networks");
 const bscript = require("../src/script");
 //import * as lazy from './lazy';
 
@@ -185,6 +185,7 @@ exports.ccConditionBinaryV2 = ccConditionBinaryV2;
  * @returns scriptPubKey
  */
 function makeCCSpkV2(cond, opDropData) {
+
     if (exports.cryptoconditions === undefined)
         throw new Error("cryptoconditions lib not available");
 

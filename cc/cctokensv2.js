@@ -21,9 +21,6 @@ const typeforce = require('typeforce');
 const typeforceNT = require('typeforce/nothrow');
 const bscript = require("../src/script");
 
-// create peer group
-const NspvPeerGroup = require('../net/nspvPeerGroup');
-require('../net/nspvPeer');  // init peer.js too
 
 // tokel data props ids:
 const TKLPROP_ID = 1;
@@ -38,17 +35,13 @@ const TKLPROPNAME_ARBITRARY = "arbitrary";
 
 const OPDROP_HAS_PKS_VER = 2;
 
-// you will need to do a call like:
-// ccbasic.cryptoconditions = await ccimp;
-// to init the cryptoconditions wasm lib before cc usage
-// (this is due to wasm delayed loading specifics)
 const ccbasic = require('./ccbasic');
-const { tokel } = require('../src/networks');
+/* decided to init cryptoconditions at the user level
 let ccimp;
 if (process.browser)
   ccimp = import('@tokel/cryptoconditions');
 else
-  ccimp = require('@tokel/cryptoconditions');
+  ccimp = require('@tokel/cryptoconditions');  */
 
 const tokensv2GlobalPk = "032fd27f72591b02f13a7f9701246eb0296b2be7cfdad32c520e594844ec3d4801"
 const tokensv2GlobalPrivkey = Buffer.from([ 0xb5, 0xba, 0x92, 0x7f, 0x53, 0x45, 0x4f, 0xf8, 0xa4, 0xad, 0x0d, 0x38, 0x30, 0x4f, 0xd0, 0x97, 0xd1, 0xb7, 0x94, 0x1b, 0x1f, 0x52, 0xbd, 0xae, 0xa2, 0xe7, 0x49, 0x06, 0x2e, 0xd2, 0x2d, 0xa5 ])
@@ -98,27 +91,6 @@ function NspvTokenV2InfoTokel(peers, pk, tokenid)
         resolve(res);
       else
         reject(err);
-    });
-  });
-}
-
-// connect to peers, for calling from browser
-function Connect()
-{
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    //console.log('in event: connected to peer', peer.socket.remoteAddress)
-  });
-
-  return new Promise((resolve, reject) => {
-
-    peers.on('connectError', (err, peer)=>{ reject(err, peer) });
-    peers.on('peerError', (err)=>reject(err));
-    peers.on('error', (err)=>reject(err));
-
-    peers.connect(() => {
-      logdebug('connected to peer!!!');
-      resolve();
     });
   });
 }
@@ -318,7 +290,7 @@ function makeTokensV2VData(tokenid, destpks)
 async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, nftdata)
 {
   // init lib cryptoconditions
-  ccbasic.cryptoconditions = await ccimp;
+  //ccbasic.cryptoconditions = await ccimp;  // lets load it in the topmost call
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
@@ -408,7 +380,7 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
 async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, ccamount) 
 {
   // init lib cryptoconditions
-  ccbasic.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
+  // ccbasic.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
 
@@ -759,7 +731,6 @@ async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
 
 
 module.exports = {
-  Connect, 
   tokenInfoV2Tokel, tokensv2Create, tokensv2CreateTokel, tokensv2Transfer, tokenV2Address,
   isTokenV2Output, validateTokensV2Many,
   tokensv2GlobalPk, tokensv2GlobalPrivkey, tokensv2GlobalAddress, EVAL_TOKENSV2,
