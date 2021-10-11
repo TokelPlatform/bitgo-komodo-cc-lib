@@ -20,6 +20,7 @@ const types = require('../src/types');
 const typeforce = require('typeforce');
 const typeforceNT = require('typeforce/nothrow');
 const bscript = require("../src/script");
+const address = require('../src/address');
 
 
 // tokel data props ids:
@@ -36,12 +37,12 @@ const TKLPROPNAME_ARBITRARY = "arbitrary";
 const OPDROP_HAS_PKS_VER = 2;
 
 const ccbasic = require('./ccbasic');
-/* decided to init cryptoconditions at the user level
+/* decided to init cryptoconditions at the user level */
 let ccimp;
 if (process.browser)
   ccimp = import('@tokel/cryptoconditions');
 else
-  ccimp = require('@tokel/cryptoconditions');  */
+  ccimp = require('@tokel/cryptoconditions');
 
 const tokensv2GlobalPk = "032fd27f72591b02f13a7f9701246eb0296b2be7cfdad32c520e594844ec3d4801"
 const tokensv2GlobalPrivkey = Buffer.from([ 0xb5, 0xba, 0x92, 0x7f, 0x53, 0x45, 0x4f, 0xf8, 0xa4, 0xad, 0x0d, 0x38, 0x30, 0x4f, 0xd0, 0x97, 0xd1, 0xb7, 0x94, 0x1b, 0x1f, 0x52, 0xbd, 0xae, 0xa2, 0xe7, 0x49, 0x06, 0x2e, 0xd2, 0x2d, 0xa5 ])
@@ -163,12 +164,11 @@ async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, sa
  * @param {*} tokenidhex 
  * @returns promise to return info
  */
-async function tokenInfoV2Tokel(wif, tokenidhex) {
+async function tokenInfoV2Tokel(mynetwork, peers, wif, tokenidhex) {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let tokenid = ccutils.txidFromHex(tokenidhex);
-  let promiseinfo = NspvTokenV2InfoTokel(peers, mypk, tokenid);
-  return promiseinfo;
+  return NspvTokenV2InfoTokel(peers, mypk, tokenid);;
 };
 
 // encode token OP_RETURN data
@@ -710,7 +710,7 @@ async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
     });
 
     let ccutxosOut = [];
-    let returnedtxns = await ccutils.getTransactionsMany.apply(undefined, params); // maybe simply put txids in array?
+    let returnedtxns = await ccutils.getTransactionsMany(...params); // maybe simply put txids in array?
     if (returnedtxns && Array.isArray(returnedtxns.transactions)) {
       returnedtxns.transactions.forEach(e => {
         let tx = Transaction.fromHex(e.tx, mynetwork);
@@ -729,10 +729,28 @@ async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
   return null;
 }
 
+/**
+ * Returns validated tokens for the given pubkey
+ */
+async function getTokensForPubkey(mynetwork, peers, wif, mypk, skipCount, maxrecords) {
+  ccbasic.cryptoconditions = await ccimp;
+  let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk.toString('hex')], 1 ), mynetwork)
+  const ccutxos = await ccutils.getCCUtxos(peers, ccindexkey, skipCount, maxrecords);
+  const validated = await validateTokensV2Many(mynetwork, peers, mypk, ccutxos.utxos);
+  if (validated && validated.length > 0) {
+    let tokens = []
+    validated.forEach(valid => {
+      tokens.push(tokenInfoV2Tokel(mynetwork, peers, wif, valid.tokendata.tokenid.reverse().toString('hex')));
+    })
+    return Promise.all(tokens);
+  }
+  return [];
+}
+
 
 module.exports = {
   tokenInfoV2Tokel, tokensv2Create, tokensv2CreateTokel, tokensv2Transfer, tokenV2Address,
-  isTokenV2Output, validateTokensV2Many,
+  isTokenV2Output, validateTokensV2Many, getTokensForPubkey,
   tokensv2GlobalPk, tokensv2GlobalPrivkey, tokensv2GlobalAddress, EVAL_TOKENSV2,
   assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
 }
