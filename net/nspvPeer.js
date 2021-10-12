@@ -8,16 +8,23 @@ const errorlog = Debug('net:peer:error');
 
 const bufferutils = require("../src/bufferutils");
 const Peer = require('./peer')
-const { NSPVREQ, NSPVRESP, nspvReq, nspvResp } = require('./kmdtypes');
-const { txidFromHex, txidToHex } = require('../cc/ccutils');
+const { NSPVMSGS, nspvReq, nspvResp } = require('./kmdtypes');
+const { txidFromHex, txidToHex, isValidTxid, castTxid } = require('../cc/ccutils');
 
 Peer.prototype._registerListenersPrev = Peer.prototype._registerListeners;
 Peer.prototype._registerListeners = function() {
   this._registerListenersPrev();
   this.on('nSPV', (buf) => {
     let resp = nspvResp.decode(buf);
-    this.emit(`nSPV:${resp.respCode}`, resp);
+    this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp);
   })
+}
+
+var requestId = 0;
+function incRequestId() {
+  requestId ++;
+  if (requestId == 0xFFFFFFFF)
+    requestId = 1;
 }
 
 // nspv get utxos
@@ -33,10 +40,12 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, c
     if (timeout) clearTimeout(timeout)
     cb(null, resp)
   }
-  this.once(`nSPV:${NSPVRESP.NSPV_UTXOSRESP}`, onNspvResp)
+  incRequestId();
+  this.once(`nSPV:${NSPVMSGS.NSPV_UTXOSRESP}.${requestId}`, onNspvResp)
 
   let nspvReqUtxos = {
-    reqCode: NSPVREQ.NSPV_UTXOS,
+    reqCode: NSPVMSGS.NSPV_UTXOS,
+    requestId: requestId,
     coinaddr: address,
     CCflag: isCC ? 1 : 0,
     skipcount: skipCount,
@@ -67,10 +76,12 @@ Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, c
     if (timeout) clearTimeout(timeout)
     cb(null, resp)
   }
-  this.once(`nSPV:${NSPVRESP.NSPV_TXIDSRESP}`, onNspvResp)
+  incRequestId();
+  this.once(`nSPV:${NSPVMSGS.NSPV_TXIDSRESP}.${requestId}`, onNspvResp)
 
   let nspvReqTxids = {
-    reqCode: NSPVREQ.NSPV_TXIDS,
+    reqCode: NSPVMSGS.NSPV_TXIDS,
+    requestId: requestId,
     coinaddr: address,
     CCflag: isCC ? 1 : 0,
     skipcount: skipCount,
@@ -152,11 +163,13 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
     cb(null, result.result); //yes result inside result
     //this._nextHeadersRequest()  // TODO: do we also need call to next?
   }
-  this.once(`nSPV:${NSPVRESP.NSPV_REMOTERPCRESP}`, onNspvResp)
+  incRequestId();
+  this.once(`nSPV:${NSPVMSGS.NSPV_REMOTERPCRESP}.${requestId}`, onNspvResp)
 
   let jsonSer = Buffer.from(jsonRequest);
   let nspvRemoteRpcReq = {
-    reqCode: NSPVREQ.NSPV_REMOTERPC,
+    reqCode: NSPVMSGS.NSPV_REMOTERPC,
+    requestId: requestId,
     length: jsonSer.length,
     jsonSer: jsonSer
   }
@@ -173,15 +186,16 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
 }
 
 // nspv broadcast
-Peer.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
+Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
   if (typeof opts === 'function') {
     cb = opts
     opts = {}
   }
   if (opts.timeout == null) opts.timeout = this._getTimeout()
 
-  if (typeof txidhex !== 'string' || txidhex.length != 64) {
-    cb(new Error('txid hex should be a string of 64'));
+  let txid = castTxid(_txid);
+  if (!txid) {
+    cb(new Error('txid param invalid'));
     return;
   }
 
@@ -199,11 +213,13 @@ Peer.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
     }
     cb(null, { retcode: resp.retcode, txid: txidToHex(resp.txid) }); 
   }
-  this.once(`nSPV:${NSPVRESP.NSPV_BROADCASTRESP}`, onNspvResp)
+  incRequestId();
+  this.once(`nSPV:${NSPVMSGS.NSPV_BROADCASTRESP}.${requestId}`, onNspvResp)
 
   let nspvBroadcastReq = {
-    reqCode: NSPVREQ.NSPV_BROADCAST,
-    txid: txidFromHex(txidhex),
+    reqCode: NSPVMSGS.NSPV_BROADCAST,
+    requestId: requestId,
+    txid: txid,
     txdata: Buffer.from(txhex, 'hex')  
   }
   let buf = nspvReq.encode(nspvBroadcastReq)
@@ -218,16 +234,17 @@ Peer.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
   }, opts.timeout)
 }
 
-// nspv broadcast
-Peer.prototype.nspvTxproof = function(txidhex, vout, height, opts, cb) {
+// nspv tx proof
+Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
   if (typeof opts === 'function') {
     cb = opts
     opts = {}
   }
   if (!opts.timeout) opts.timeout = this._getTimeout()
 
-  if (typeof txidhex !== 'string' || txidhex.length != 64) {
-    cb(new Error('txid hex should be a string of 64'));
+  let txid = castTxid(_txid)
+  if (!txid) {
+    cb(new Error('txid param invalid'));
     return;
   }
 
@@ -248,13 +265,16 @@ Peer.prototype.nspvTxproof = function(txidhex, vout, height, opts, cb) {
       cb(new Error("could not parse nspv txproof response"));
       return;
     }
-    cb(null, { retcode: resp.retcode, txid: txidToHex(resp.txid), unspentValue:  resp.unspentValue, height: resp.height, vout: resp.vout, txbin: resp.txbin, txproof: resp.txproof }); 
+    //cb(null, { retcode: resp.retcode, txid: txidToHex(resp.txid), unspentValue:  resp.unspentValue, height: resp.height, vout: resp.vout, txbin: resp.txbin, txproof: resp.txproof }); 
+    cb(null, resp); 
   }
-  this.once(`nSPV:${NSPVRESP.NSPV_TXPROOFRESP}`, onNspvResp)
+  incRequestId();
+  this.once(`nSPV:${NSPVMSGS.NSPV_TXPROOFRESP}.${requestId}`, onNspvResp)
 
   let nspvTxproofReq = {
-    reqCode: NSPVREQ.NSPV_TXPROOF,
-    txid: txidFromHex(txidhex),
+    reqCode: NSPVMSGS.NSPV_TXPROOF,
+    requestId: requestId,
+    txid: txid,
     vout: vout,
     height: height,
   }
@@ -272,3 +292,95 @@ Peer.prototype.nspvTxproof = function(txidhex, vout, height, opts, cb) {
 
 
 
+// get ntz txids and opreturn data
+Peer.prototype.nspvNtzs = function(height, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+  if (!opts.timeout) opts.timeout = this._getTimeout()
+
+  if (typeof height !== 'number') {
+    cb(new Error('height not a number'));
+    return;
+  }
+
+  var timeout
+  var onNspvResp = (resp) => {
+    if (timeout) clearTimeout(timeout)
+    if (!resp || !resp.respCode || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined || typeof resp.reqHeight === undefined ) { // check parsed props
+      cb(new Error("could not parse nspv txproof response"));
+      return;
+    }
+    cb(null, resp); 
+  }
+  incRequestId();
+  this.once(`nSPV:${NSPVMSGS.NSPV_NTZSRESP}.${requestId}`, onNspvResp)
+
+  let nspvNtzsReq = {
+    reqCode: NSPVMSGS.NSPV_NTZS,
+    requestId: requestId,
+    height: height,
+  }
+  let buf = nspvReq.encode(nspvNtzsReq)
+  this.send('getnSPV', buf)
+
+  if (!opts.timeout) return
+  timeout = setTimeout(() => {
+    errorlog(`getnSPV NSPV_NTZS timed out: ${opts.timeout} ms`)
+    var error = new Error('Request timed out')
+    error.timeout = true
+    cb(error)
+  }, opts.timeout)
+}
+
+// get ntz txns
+Peer.prototype.nspvNtzsProof = function(_prevTxid, _nextTxid, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+  if (!opts.timeout) opts.timeout = this._getTimeout()
+
+  let prevTxid = castTxid(_prevTxid);
+  let nextTxid = castTxid(_nextTxid);
+
+  if (!prevTxid) {
+    cb(new Error('prevTxid param invalid'));
+    return;
+  }
+
+  if (!nextTxid) {
+    cb(new Error('nextTxid param invalid'));
+    return;
+  }
+
+  var timeout
+  var onNspvResp = (resp) => {
+    if (timeout) clearTimeout(timeout)
+    if (!resp || !resp.respCode || typeof resp.common === undefined || typeof resp.prevtxid === undefined || typeof resp.nexttxid === undefined || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined ) { // check all props
+      cb(new Error("could not parse nspv txproof response"));
+      return;
+    }
+    cb(null, resp); 
+  }
+  incRequestId();
+  this.once(`nSPV:${NSPVMSGS.NSPV_NTZSPROOFRESP}.${requestId}`, onNspvResp)
+
+  let nspvNtzsProofReq = {
+    reqCode: NSPVMSGS.NSPV_NTZSPROOF,
+    requestId: requestId,
+    prevTxid: prevTxid,
+    nextTxid: nextTxid,
+  }
+  let buf = nspvReq.encode(nspvNtzsProofReq)
+  this.send('getnSPV', buf)
+
+  if (!opts.timeout) return
+  timeout = setTimeout(() => {
+    errorlog(`getnSPV NSPV_NTZSPROOF timed out: ${opts.timeout} ms`)
+    var error = new Error('Request timed out')
+    error.timeout = true
+    cb(error)
+  }, opts.timeout)
+}

@@ -31,6 +31,7 @@ const mynetwork = networks.tkltest;
 // to init the cryptoconditions wasm lib 
 // (this is due to wasm delayed loading specifics)
 const ccbasic = require('../cc/ccbasic');
+const { strict } = require('once');
 var ccimp;
 if (process.browser)
   ccimp = import('@tokel/cryptoconditions'); 
@@ -194,11 +195,42 @@ if (!process.browser)
       //result = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad36577930b6", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad365779AAAA");
       //console.log('result=', result);
 
+      // gettransactionsmany:
+      let result1 = ccutils.getTransactionsMany(peers, Buffer.from('02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e', 'hex'), 
+        'e932fdacaa16906e1ad70c4bfe52779094c565cec52c69b3182cbe081cf9f94b',
+        '19f0ec147502bdd012d89f471d8a175ea7e689611faaefe26a9eba3d4375b70f',
+        '2a145529738c82be0516b3dd6c4229d1a98b946dd6b80f0152da7dcbed0d9f21',
+        '27de267b9562d43540ba923a30872e0a4254c55d986ceeb41cbc24b104237706',
+        'eed7f4fc948871e3c386a49cde0a71c497cbc430595c72c2d57af65500767906',
+        '649b936d2994fdb40df11bc7d59e480e19b216ad8e86d3eb2df6e4ee4ad17d06',
+        '95a677e308b493311bc06f3ccbc6e42583d8e8329c3b782594222a4afdb97a06',
+        '645e20c551ad1c654cfbc8df892acc6568e59b782c804ae486dfdddfed1f7f06',
+        '69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9',
+        'a9bb817e1351d969576ee43936b63ff2ac7ad0aab2c076a6ad43e2de0e509b82',
+        'f2b4b311a119db206d8849e3e8082185b9158e616be5b35201ed1f017f21164a',
+        '7637227de11ecf4ab870bcbdea5f928632ac957759e8de6069f29f6993e2da6a',
+        '014518a956ef11a718414071e0ac132e9e2cfca28c8f0815c7e781de0ba67475',
+        'e7a73ec8dcc9e7ffc3fe01ce25ad3fd373f275ec4347363ac49fd5cca0f10bd6');
+
+      let result2 = ccutils.getTransactionsMany(peers, Buffer.from('02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e', 'hex'), 
+      '69b8d6eaaa2af8a952c5df329961ecec00a32e9e58eebb8bb831fb8e845e1c25');
+
+      let results = await Promise.all([result1, result2]);
+
+      //console.log('result1=', result1);
+      //console.log('result2=', result2);
+      let i = 0;
+      results.forEach(r => {
+        i++;
+        console.log("r" + new String(i) + "=", r);
+      });
+
       // tokev2address:
       //let tokev2address = await cctokens.TokenV2Address(peers, mypk, mypk);
       //console.log('tokev2address=', tokev2address);
 
       // test fromOutputScript: 
+      /*
       let getxns = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "91a53a6b364345360c013ea3de379b647eb9d3f985700e4957b9f45cf275dfc4");
       let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
       let header = Block.fromHex(getxns.transactions[0].blockHeader, mynetwork);
@@ -211,6 +243,7 @@ if (!process.browser)
       let cctx = Transaction.fromHex(getxns.transactions[1].tx, mynetwork);
       let ccaddress = await addressutils.fromOutputScript(cctx.outs[0].script, mynetwork);
       console.log('ccaddress=', ccaddress);
+      */
 
     }
     catch(err) {
