@@ -737,13 +737,15 @@ async function getTokensForPubkey(mynetwork, peers, wif, mypk, skipCount, maxrec
   let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk.toString('hex')], 1 ), mynetwork)
   const ccutxos = await ccutils.getCCUtxos(peers, ccindexkey, skipCount, maxrecords);
   const validated = await validateTokensV2Many(mynetwork, peers, mypk, ccutxos.utxos);
-  if (validated && validated.length > 0) {
-    let tokens = []
-    validated.forEach(valid => {
-      tokens.push(tokenInfoV2Tokel(mynetwork, peers, wif, valid.tokendata.tokenid.reverse().toString('hex')));
-    })
-    return Promise.all(tokens);
-  }
+  console.log(validated);
+  return validated;
+  // if (validated && validated.length > 0) {
+  //   let tokens = []
+  //   validated.forEach(valid => {
+  //     tokens.push(tokenInfoV2Tokel(mynetwork, peers, wif, valid.tokendata.tokenid.reverse().toString('hex')));
+  //   })
+  //   return Promise.all(tokens);
+  // }
   return [];
 }
 

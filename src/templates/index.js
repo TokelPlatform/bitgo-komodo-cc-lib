@@ -9,7 +9,7 @@ var witnessScriptHash = require('./witnessscripthash')
 var witnessCommitment = require('./witnesscommitment')
 //const ccbasic = require('../cc/ccbasic')
 var cryptoconditions = require('./cryptoconditions')
-//var cryptoconditionsv2 = require('./cryptoconditionsv2')
+var cryptoconditionsv2 = require('./cryptoconditionsv2')
 
 
 var types = {
@@ -80,6 +80,6 @@ module.exports = {
   witnessScriptHash: witnessScriptHash,
   witnessCommitment: witnessCommitment,
   cryptoconditions: cryptoconditions,
- // cryptoconditionsv2: cryptoconditionsv2,
+  cryptoconditionsv2: cryptoconditionsv2,
   types: types
 }
