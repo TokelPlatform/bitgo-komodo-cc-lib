@@ -355,7 +355,7 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
         }]  
       }]   
     }; */
-  let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [Buffer.from(tokensv2GlobalPk), 'hex'], 1);
+  let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [Buffer.from(tokensv2GlobalPk, 'hex')], 1);
   if (markerccSpk == null)  {
     throw new Error('could not create tokens marker cc spk');
   }
