@@ -15,6 +15,7 @@ const networks = require('../src/networks');
 const script = require("../src/script");
 const ecpair = require('../src/ecpair');
 const varuint = require('varuint-bitcoin');
+const address = require('../src/address');
 
 const types = require('../src/types');
 const typeforce = require('typeforce');
@@ -62,8 +63,8 @@ const EVAL_TOKELDATA = 0xf7;
 function NspvAddTokensInputs(peers, tokenid, pk, amount)
 {
   assert(peers);
-  assert(ccutils.IsValidPubKey(pk));
-  assert(ccutils.IsValidTxid(tokenid));
+  assert(ccutils.isValidPubKey(pk));
+  assert(ccutils.isValidTxid(tokenid));
 
   return new Promise((resolve, reject) => {
 
@@ -81,8 +82,8 @@ function NspvAddTokensInputs(peers, tokenid, pk, amount)
 function NspvTokenV2InfoTokel(peers, pk, tokenid)
 {
   assert(peers);
-  assert(ccutils.IsValidPubKey(pk));
-  assert(ccutils.IsValidTxid(tokenid));
+  assert(ccutils.isValidPubKey(pk));
+  assert(ccutils.isValidTxid(tokenid));
 
   return new Promise((resolve, reject) => {
 
@@ -685,7 +686,7 @@ function isTokenV2Output(tx, nvout)
       logdebug("isTokenV2Output error: invalid tokenid in tx data");
       return false;
     }
-    if (tokenData.funcid == 'c' && !ccutils.IsValidPubKey(tokenData.origpk)) {
+    if (tokenData.funcid == 'c' && !ccutils.isValidPubKey(tokenData.origpk)) {
       logdebug("isTokenV2Output error: invalid token originator pubkey in tx data");
       return false;
     }
@@ -715,13 +716,16 @@ async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
       returnedtxns.transactions.forEach(e => {
         let tx = Transaction.fromHex(e.tx, mynetwork);
         let txid = tx.getHash();
-        let out = ccutxos.find((out)=>{ return Buffer.compare(out.txid, txid) == 0; }); 
-        let tokendata = isTokenV2Output(tx, out.vout);
-        let newout = Object.assign([], out)
-        if (tokendata) {
-          newout.tokendata = tokendata;
+        if (txid) {
+          let out = ccutxos.find((out)=>{ return Buffer.compare(out.txid, txid) == 0; }); 
+          if (out) {
+            let newout = Object.assign([], out);
+            let tokendata = isTokenV2Output(tx, out.vout);
+            if (tokendata) 
+              newout.tokendata = tokendata;
+            ccutxosOut.push(newout);
+          }
         }
-        ccutxosOut.push(newout);
       });
     }
     return ccutxosOut;

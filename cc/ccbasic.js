@@ -4,6 +4,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const bscript = require("../src/script");
 //import * as lazy from './lazy';
 
+const Debug = require('debug')
+const logdebug = Debug('cc')
+
 //const ccutils = require('../../cc/ccutils');
 
 //const types = require('../src/types');
@@ -85,10 +88,10 @@ function readCCSpk(spk) {
         throw new Error("cryptoconditions lib not available");
     let condbin = parseCCSpk(spk).cc;
     if (Buffer.isBuffer(condbin) && condbin.length > 0) {
-        //console.log("readCCSpk condbin=", condbin.toString('hex'));
+        //logdebug("readCCSpk condbin=", condbin.toString('hex'));
         let cond;
         if (condbin[0] ==  'M'.charCodeAt(0)) { // mixed mode
-            //console.log("readCCSpk sliced=", condbin.slice(1, condbin.length));
+            //logdebug("readCCSpk sliced=", condbin.slice(1, condbin.length));
             cond = exports.cryptoconditions.js_read_fulfillment_binary_mixed(condbin.slice(1, condbin.length));
         }
         else
@@ -138,11 +141,11 @@ function makeCCSpk(cond, opDropData) {
     if (exports.cryptoconditions === undefined)
         throw new Error("cryptoconditions lib not available");
     let ccbin = exports.cryptoconditions.js_cc_condition_binary(cond);
-    //console.log("makeCCSpk ccbin=", ccbin);
+    //logdebug("makeCCSpk ccbin=", ccbin);
     if (ccbin == null)
         return Buffer.from([]);
     let len = ccbin.length;
-    //console.log('makeCCSpk ccbin=', Buffer.from(ccbin.buffer).toString('hex'));
+    //logdebug('makeCCSpk ccbin=', Buffer.from(ccbin.buffer).toString('hex'));
     if (len > 0) {
         //let spk = Buffer.alloc(len+2);
         //spk[0] = len;  // TODO: should be VARINT here
@@ -194,11 +197,11 @@ function makeCCSpkV2(cond, opDropData) {
         return Buffer.from([]);
 
     let ccbin = exports.cryptoconditions.js_cc_fulfillment_binary_mixed(anon);
-    //console.log("makeCCSpkV2 ccbin=", ccbin);
+    //logdebug("makeCCSpkV2 ccbin=", ccbin);
     if (ccbin == null)
         return Buffer.from([]);
     let len = ccbin.length;
-    //console.log('makeCCSpkV2 ccbin=', Buffer.from(ccbin.buffer).toString('hex'));
+    //logdebug('makeCCSpkV2 ccbin=', Buffer.from(ccbin.buffer).toString('hex'));
     if (len > 0) {
         //let spk = Buffer.alloc(len+2);
         //spk[0] = len;  // TODO: should be VARINT here
@@ -206,7 +209,8 @@ function makeCCSpkV2(cond, opDropData) {
         //spk[1+len] = CCOPS.OP_CRYPTOCONDITIONS;
         let spk;
         if (opDropData === undefined)
-            spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS]);
+            // 'M' - prefix indicating a cc version 2 ('mixed mode) follows
+            spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS]); 
         else
             spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS, opDropData, OPS.OP_DROP]);
         return spk;

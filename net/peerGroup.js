@@ -586,14 +586,14 @@ class PeerGroup extends EventEmitter {
   }
 
   _onAddr(message) {
-    logdebug('received addr message=', message);
+    //logdebug('received addr message=', message);
 
     if (!Array.isArray(message))
       return;
 
     message.forEach((elem)=> {
       // TODO: check nspv service bit
-      // this._addTcpAddr(elem.address, elem.port)
+      // this._addTcpAddr(elem.address, elem.port)  // TODO: enable!!  (disable to connect always to only one node, for debug)
     })
   }
 
