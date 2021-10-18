@@ -18,8 +18,10 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.tok6;
 //const mynetwork = networks.dimxy23;
-const mynetwork = networks.dimxy24;
+//const mynetwork = networks.dimxy24;
 // const mynetwork = networks.dimxy25;
+const mynetwork = networks.tkltest;
+
 
 // you will need to do a call like:
 // ccbasic.cryptoconditions = await ccimp;
@@ -88,6 +90,7 @@ const mytokenid = "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f6
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 
 if (!process.browser) 
 {
@@ -158,11 +161,13 @@ if (!process.browser)
       */
 
       // validateTokensV2Many test
-      let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, ["035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db"], 1 ), mynetwork)
-      console.log("getting cc outputs for indexkey=", ccindexkey);
-      let ccoutputs = await ccutils.getCCUtxos(peers, ccindexkey, 0, 0);
+      //let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, ["035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db"], 1 ), mynetwork)
+      //let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, ["02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e"], 1), mynetwork)
+      //console.log("getting cc outputs for indexkey=", ccindexkey);
+      //let ccoutputs = await ccutils.getCCUtxos(peers, ccindexkey, 0, 0);
       //let ccoutputs = await ccutils.getCCUtxos(peers, "RJkivfMQjLxfHyVHs1EY43Lr71YvLbZPL9", 0, 0);  // empty address
-      let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
+      //let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
+      let ccoutputs_validated = await cctokens.getTokensForPubkey(mynetwork, peers, Buffer.from("02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e", 'hex'), 0 ,0);
       console.log("ccoutputs_validated=", ccoutputs_validated);
 
     }

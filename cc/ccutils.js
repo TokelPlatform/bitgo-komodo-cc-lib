@@ -17,6 +17,8 @@ const { decodeTransactionData, parseTransactionData } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 
+const Debug = require('debug')
+const logdebug = Debug('cc')
 
 exports.finalizeCCtx = finalizeCCtx;
 exports.createTxAndAddNormalInputs = createTxAndAddNormalInputs;
@@ -54,13 +56,13 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
     /*let unspent = addedUnspents.find((u) => {
       //let txid = bufferutils.reverseBuffer(Buffer.from(u.txId, 'hex'));
       let txid = u.txId;
-      //console.log('hash=', tx.ins[index].hash.toString('hex'), ' txId=', txid.toString('hex'));
+      //logdebug('hash=', tx.ins[index].hash.toString('hex'), ' txId=', txid.toString('hex'));
       return txb.__TX.ins[index].hash.toString('hex') === txid.toString('hex');
     });
     if (unspent === undefined) 
       throw new Error('internal err: could not find tx unspent in addedUnspents');
     
-    console.log('unspent.script=', Buffer.from(unspent.script).toString('hex'));*/
+    logdebug('unspent.script=', Buffer.from(unspent.script).toString('hex'));*/
     //let keyPairIn = ecpair.fromWIF(wif, mynetwork);
 
     if (!ccbasic.isSpkPayToCryptocondition(txbuilder.inputs[index].prevOutScript))  {
@@ -107,9 +109,6 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
       let signedCond = ccbasic.cryptoconditions.js_sign_secp256k1(inputCond, privateKey, signatureHash);
       let ccScriptSig = ccbasic.makeCCScriptSig(signedCond);
 
-      //let ttt = ccbasic.makeCCSpk(signedCond);
-      //console.log("signed spk=", ttt.toString('hex'));
-      
       txbuilder.inputs[index].ccScriptSig = ccScriptSig;
       
       /*txbuilder.finalizeInput(index, (index, psbtInput) => {
@@ -117,7 +116,7 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
         //  psbtInput.finalScriptSig = undefined;  // 'un-finalize' psbt output. No need of this as we now recreating all inputs/outputs for each faucet get txpow try
         return { finalScriptSig: ccScriptSig };  // looks like a hack but to avoid extra psbt after-signing checks 
       });*/
-      //console.log('signed cccond=', signedCond);
+      //logdebug('signed cccond=', signedCond);
     }
   }
 }
@@ -244,12 +243,12 @@ function findCCProbeForSpk(ccProbes, spk)
       throw new Error("FinalizeCCtx can't sign tx: invalid probe array");
     if (!isMixed) {
       let condbinp = ccbasic.ccConditionBinary(probe.cond);
-      //console.log('prev condbin=', condbin.toString('hex'), 'probe condbin=', condbinp.toString('hex'));
+      //logdebug('prev condbin=', condbin.toString('hex'), 'probe condbin=', condbinp.toString('hex'));
       return condbin.equals(condbinp);
     }
     else {
       let condbinv2p = ccbasic.ccConditionBinaryV2(probe.cond);
-      //console.log('prev condbin=', condbin.toString('hex'), 'probe condbinv2=', condbinv2p.toString('hex'));
+      //logdebug('prev condbin=', condbin.toString('hex'), 'probe condbinv2=', condbinv2p.toString('hex'));
       return condbin.equals(condbinv2p);
     }
   });
@@ -396,8 +395,8 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
   let added = 0;
   for(let i = 0; i < tx.ins.length; i ++) {
     let prevTxHex = prevTxnsHex.find((txHex) => {
-        let r = Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
-        // console.log('prevtx getHash()=', Transaction.fromHex(txHex, network).getHash().toString('hex'), 'tx.ins[i].hash=', tx.ins[i].hash.toString('hex'), 'equals=', r);
+        // let r = Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
+        // logdebug('prevtx getHash()=', Transaction.fromHex(txHex, network).getHash().toString('hex'), 'tx.ins[i].hash=', tx.ins[i].hash.toString('hex'), 'equals=', r);
         return Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
     });
     if (prevTxHex !== undefined) {
@@ -531,8 +530,8 @@ function getTransactionsMany(peers, mypk, ...args)
       }
     });
    } catch (e) {
-     console.log(e)
-     throw new Error(e);
+    // logdebug(e)
+    throw new Error(e);
   }
 }
 
@@ -573,12 +572,12 @@ function ccTxidPubkey_tweak(txid)
   return Buffer.from([]);
 }
 
-exports.IsValidTxid = IsValidTxid;
+exports.isValidTxid = isValidTxid;
 /**
  * valid txid means it is a buf of correct length and non empty
  * @param {*} txid 
  */
-function IsValidTxid(txid)
+function isValidTxid(txid)
 {
   return typeforceNT(types.Hash256bit, txid);
   //if (Buffer.isBuffer(txid) && txid.length == 32 /*&& !txid.equals(Buffer.allocUnsafe(32).fill('\0'))*/)
@@ -587,12 +586,12 @@ function IsValidTxid(txid)
   //  return false;
 }
 
-//exports.IsValidTxidHex = IsValidTxidHex;
+//exports.isValidTxidHex = isValidTxidHex;
 /**
  * valid txid means it is a string of correct length and has hex chars
  * @param {string} txid 
  */
-/*function IsValidTxidHex(txid)
+/*function isValidTxidHex(txid)
 {
   if (typeof txid === 'string' && txid.length == 64 && txid.match(/[0-9a-f]/gi) /*&& (txid.match(/0/g) || '').length !== txid.length*//*)
     return true;
@@ -600,24 +599,24 @@ function IsValidTxid(txid)
     return false;
 }*/
 
-exports.IsValidPubKey = IsValidPubKey;
+exports.isValidPubKey = isValidPubKey;
 /**
  * buf of correct length and non-empty
  * @param {buffer} pubkey 
  */
-function IsValidPubKey(pubkey)
+function isValidPubKey(pubkey)
 {
   if (Buffer.isBuffer(pubkey) && pubkey.length == 33 && !pubkey.equals(Buffer.allocUnsafe(33).fill('\0')))
     return true;
   else
     return false;
 }
-//exports.IsValidPubKeyHex = IsValidPubKeyHex;
+//exports.isValidPubKeyHex = isValidPubKeyHex;
 /**
  * string of correct length and has hex chars and non empty
  * @param {string} pubkey 
  */
-/*function IsValidPubKeyHex(pubkey)
+/*function isValidPubKeyHex(pubkey)
 {
   if (typeof pubkey === 'string' && pubkey.length == 66 && txid.match(/[0-9a-f]/gi) && (txid.match(/0/g) || '').length !== txid.length)
     return true;
@@ -679,4 +678,14 @@ exports.toSatoshi = function (val) {
   if (typeof val !== 'number')
     throw new Error('amount not a number');
   return Math.round(val * 100000000);
+}
+
+exports.castTxid = function(_txid) {
+  let txid = _txid;
+  if (typeof _txid === 'string')
+    txid = txidFromHex(_txid);
+  if (!isValidTxid(txid)) {
+    return;
+  }
+  return txid;
 }
