@@ -33,7 +33,7 @@ function nspvConnect(params, opts) {
       reject(err);
     });
 
-    return peers.connect(() => {
+    return peers.nspvConnect(() => {
       // maybe let the GUI print this:  
       //logdebug('nspvBrowserConnect connected to peer');
       resolve(peers);
