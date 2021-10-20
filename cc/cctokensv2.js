@@ -15,7 +15,6 @@ const networks = require('../src/networks');
 const script = require("../src/script");
 const ecpair = require('../src/ecpair');
 const varuint = require('varuint-bitcoin');
-const address = require('../src/address');
 
 const types = require('../src/types');
 const typeforce = require('typeforce');
@@ -736,21 +735,12 @@ async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
 /**
  * Returns validated tokens for the given pubkey
  */
-async function getTokensForPubkey(mynetwork, peers, wif, mypk, skipCount, maxrecords) {
+async function getTokensForPubkey(mynetwork, peers, mypk, skipCount, maxrecords) {
   ccbasic.cryptoconditions = await ccimp;
   let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk.toString('hex')], 1 ), mynetwork)
   const ccutxos = await ccutils.getCCUtxos(peers, ccindexkey, skipCount, maxrecords);
   const validated = await validateTokensV2Many(mynetwork, peers, mypk, ccutxos.utxos);
-  console.log(validated);
   return validated;
-  // if (validated && validated.length > 0) {
-  //   let tokens = []
-  //   validated.forEach(valid => {
-  //     tokens.push(tokenInfoV2Tokel(mynetwork, peers, wif, valid.tokendata.tokenid.reverse().toString('hex')));
-  //   })
-  //   return Promise.all(tokens);
-  // }
-  return [];
 }
 
 
