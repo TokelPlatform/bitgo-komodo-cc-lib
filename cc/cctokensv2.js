@@ -355,14 +355,16 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
         }]  
       }]   
     }; */
-  let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [Buffer.from(tokensv2GlobalPk), 'hex'], 1);
+  let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [Buffer.from(tokensv2GlobalPk, 'hex')], 1);
   if (markerccSpk == null)  {
     throw new Error('could not create tokens marker cc spk');
   }
 
   txbuilder.addOutput(markerccSpk, markerfee);
   txbuilder.addOutput(myccSpk, amount);
-  txbuilder.addOutput(mynormaladdress, added - amount - txfee - markerfee);  // change
+
+  if (added - amount - txfee - markerfee > ccutils.MYDUST)
+    txbuilder.addOutput(mynormaladdress, added - amount - txfee - markerfee);  // change
   txbuilder.addOutput(makeTokensCreateV2Opreturn(mypk, name, desc, nftdata), 0); // make opreturn
 
   if (txbuilder.tx.version >= 4)
@@ -378,8 +380,10 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
 //}
 
 // make token transfer tx
-async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, ccamount) 
+async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, ccamount) 
 {
+  typeforce(typeforce.anyOf(types.Buffer, types.String), _destpk);
+
   // init lib cryptoconditions
   // ccbasic.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
   const txbuilder = new TransactionBuilder(mynetwork);
@@ -388,6 +392,10 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, cc
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
+
+  let destpk = Buffer.isBuffer(_destpk) ? _destpk : Buffer.from(_destpk, 'hex');
+  if (!ccutils.isValidPubKey(destpk))
+    throw new Error("invalid destination pubkey");
 
   let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.getPublicKeyBuffer(), txfee);
   let bearertx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
@@ -455,7 +463,7 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, cc
 
   if (ccadded - ccamount > 0)
   {
-    let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [], makeTokensV2VData(tokenid, [mypk])));
+    let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [mypk], makeTokensV2VData(tokenid)));
     if (myccSpk == null)  
       throw new Error('could not create tokens cc spk for mypk');
 

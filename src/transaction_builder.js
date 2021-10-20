@@ -9,7 +9,7 @@ var ops = require('bitcoin-ops')
 var typeforce = require('typeforce')
 var types = require('./types')
 var scriptTypes = btemplates.types
-var SIGNABLE = [btemplates.types.P2PKH, btemplates.types.P2PK, btemplates.types.MULTISIG /*, btemplates.types.CRYPTOCONDITIONS*/]
+var SIGNABLE = [btemplates.types.P2PKH, btemplates.types.P2PK, btemplates.types.MULTISIG, /*, btemplates.types.CRYPTOCONDITIONS, */ btemplates.types.P2PKH_CLTV, btemplates.types.P2PK_CLTV]
 var P2SH = SIGNABLE.concat([btemplates.types.P2WPKH, btemplates.types.P2WSH])
 
 var ECPair = require('./ecpair')
@@ -270,6 +270,20 @@ function expandOutput (script, scriptType, ourPubKey) {
       pubKeys = scriptChunks.slice(1, -2)
       break
 
+    case scriptTypes.P2PK_CLTV:
+      var decoded = btemplates.pubKeyCLTV.output.decode(script)
+      pubKeys = [decoded.pubKey]
+      break
+
+    case scriptTypes.P2PKH_CLTV:
+      if (!ourPubKey) break
+      var decoded = btemplates.pubKeyHashCLTV.output.decode(script)
+
+      var pkh1 = decoded.pubKeyHash
+      var pkh2 = bcrypto.hash160(ourPubKey)
+      if (pkh1.equals(pkh2)) pubKeys = [ourPubKey]
+      break
+
     default: return { scriptType: scriptType }
   }
 
@@ -405,9 +419,9 @@ function prepareInput (input, kpPubKey, redeemScript, witnessValue, witnessScrip
 }
 
 function buildStack (type, signatures, pubKeys, allowIncomplete) {
-  if (type === scriptTypes.P2PKH) {
+  if (type === scriptTypes.P2PKH || type === scriptTypes.P2PKH_CLTV) {
     if (signatures.length === 1 && Buffer.isBuffer(signatures[0]) && pubKeys.length === 1) return btemplates.pubKeyHash.input.encodeStack(signatures[0], pubKeys[0])
-  } else if (type === scriptTypes.P2PK) {
+  } else if (type === scriptTypes.P2PK || type === scriptTypes.P2PK_CLTV) {
     if (signatures.length === 1 && Buffer.isBuffer(signatures[0])) return btemplates.pubKey.input.encodeStack(signatures[0])
   } else if (type === scriptTypes.MULTISIG) {
     if (signatures.length > 0) {

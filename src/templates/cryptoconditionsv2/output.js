@@ -1,6 +1,6 @@
 // {condbin} OP_CRYPTOCONDITION
 
-var ccbasic = require('../../cc/ccbasic')
+var ccbasic = require('../../../cc/ccbasic')
 //var bscript = require('../../script')
 //var typeforce = require('typeforce')
 //var OPS = require('bitcoin-ops')

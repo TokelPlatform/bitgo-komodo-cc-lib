@@ -1,7 +1,7 @@
 // {condition}
 
 //var bscript = require('../../script')
-var ccbasic = require('../../cc/ccbasic')
+var ccbasic = require('../../../cc/ccbasic')
 //var typeforce = require('typeforce')
 
 function check (script) {
