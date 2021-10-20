@@ -2,9 +2,7 @@
 
 const struct = require('varstruct')
 const varint = require('varuint-bitcoin')
-const defaultTypes = require('./kmdtypes.js')
-//const kmdTypes = require('./kmdtypes.js')
-
+var defaultTypes = require('./kmdtypes.js')
 
 function createMessages (messages) {
   function extend (child) {
@@ -99,7 +97,7 @@ function createStructs (overrideTypes) {
       { name: 'flags', type: types.varBuffer }
     ]),
     notfound: struct.VarArray(varint, types.inventoryVector),
-    tx: types.transaction,
+    tx: types.kmdtransaction,
 
     // Control Messages
     addr: struct.VarArray(varint, struct([

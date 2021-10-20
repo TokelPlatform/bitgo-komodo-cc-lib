@@ -3,7 +3,7 @@
 const crypto = require('crypto')
 const Debug = require('debug')
 const logdebug = Debug('net:peer')
-var logerror = Debug('net:peer:error');
+const logerror = Debug('net:peer:error');
 logdebug.rx = Debug('net:messages:rx')
 logdebug.tx = Debug('net:messages:tx')
 const proto = require('bitcoin-protocol')

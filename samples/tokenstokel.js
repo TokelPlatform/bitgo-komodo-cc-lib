@@ -15,8 +15,8 @@ const networks = require('../src/networks');
 //const mynetwork = networks.tok6;
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy20;
-const mynetwork = networks.dimxy24;
-//const mynetwork = networks.tkltest;
+//const mynetwork = networks.dimxy24;
+const mynetwork = networks.tkltest;
 
 // you will need to do a call like:
 // ccbasic.cryptoconditions = await ccimp;
@@ -86,10 +86,10 @@ function sleep(ms) {
 // Example test calls running under nodejs
 const mytokencreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
 const mytokentransferwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
-//const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
-const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc";
+const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
+//const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc";
 //const mytokenid = "38b58149410b5d53f03b06e38452e7b0e232e561a65b89a4517c7dc518e7e739";
-const mytokenid = "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a";
+const mytokenid = "620e6951cf238e978a001f3848f9225c3eaca89e9490a3f0c21d223345cdb567";
 
 
 if (!process.browser) 
@@ -99,7 +99,7 @@ if (!process.browser)
     console.log('added new peer', peerutils.getPeerUrl(peer))
   });
   // create connections to peers
-  peers.connect(async () => {
+  peers.nspvConnect(async () => {
   
     try {
 
@@ -126,12 +126,12 @@ if (!process.browser)
 
       // make cc token create tx
       //let tx = await cctokens.tokensv2CreateTokel(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1, "id":414565, "url":"https://site.org", "arbitrary":"0202ABCDEF"}'));
-      //let tx = await cctokens.tokensv2CreateTokel(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, JSON.parse('{"royalty": 1}'));
+      //let tx = await cctokens.tokensv2CreateTokel(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 10, JSON.parse('{"royalty": 1}'));
       //console.log('txhex=', tx.toHex());
 
       // make cc token transfer tx
-      //let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
-      //console.log('txhex=', tx.toHex());
+      let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
+      console.log('txhex=', tx.toHex());
 
       //let info = await cctokens.TokenInfoV2Tokel(mytokencreatewif, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a");
       //console.log('info=', info);

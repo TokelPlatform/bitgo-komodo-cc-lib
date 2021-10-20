@@ -4,7 +4,7 @@ var bscript = require('../../script')
 var typeforce = require('typeforce')
 var OPS = require('bitcoin-ops')
 
-function check (script) {
+function check (script) {  // could be either script or chunks
   var chunks = bscript.decompile(script)
 
   return chunks.length === 2 &&

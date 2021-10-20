@@ -10,6 +10,8 @@ var typeforce = require('typeforce');
 const { varBuffer } = require('bitcoin-protocol/src/types');
 //var typeforceNT = require('typeforce/nothrow');
 
+exports.nspvVersion = 0x0005;
+
 exports.buffer8 = struct.Buffer(8)
 exports.buffer32 = struct.Buffer(32)
 exports.varBuffer = struct.VarBuffer(varint)
@@ -199,7 +201,7 @@ exports.kmdtransaction = (function () {
 
   function decode (buffer, offset = 0, end = buffer.length) {
     let hasWitness = buffer[offset + 4] === 0
-    let type = hasWitness ? witnessTransaction : transaction
+    let type = hasWitness ? witnessTransaction : kmdtransaction
 
     let tx = type.decode(buffer, offset, end)
     decode.bytes = type.decode.bytes
@@ -210,7 +212,7 @@ exports.kmdtransaction = (function () {
     value = Object.assign({}, value)
     let hasWitness = value.ins.some(({ witness }) =>
       witness != null && witness.length > 0)
-    let type = hasWitness ? witnessTransaction : transaction
+    let type = hasWitness ? witnessTransaction : kmdtransaction
 
     let witnessLength = 0
     if (hasWitness) {
@@ -237,11 +239,13 @@ exports.kmdheader = struct([
   { name: 'solution', type: exports.varBuffer }
 ])
 
+/* this struct made compatible with kmdheader in nspv v5 
+
 // for some unknown reason in nspv protocol solution is sent not as varBuffer but simply as array of 1344 
 // (TODO: change it as this was a bad design)
 // so I made a nspv version of kmdheader
 let buffer1344 = struct.Buffer(1344)
-let kmdheaderNspv = struct([
+exports.kmdheaderNspv = struct([
   { name: 'version', type: struct.Int32LE },
   { name: 'prevHash', type: exports.buffer32 },
   { name: 'merkleRoot', type: exports.buffer32 },
@@ -250,9 +254,10 @@ let kmdheaderNspv = struct([
   { name: 'bits', type: struct.UInt32LE },
   { name: 'nonce', type: exports.buffer32 },
   { name: 'solution', type: buffer1344 }
-])
+]) */
 
-/* old version
+
+/* yet another old kmd header version
 function decodeEquiHdr(bufferReader) {
   let version = bufferReader.readUInt32();
   let hashPrevBlock = bufferReader.readSlice(32);
@@ -269,6 +274,7 @@ let vhashes = struct.VarArray(varint, exports.buffer32)
 
 const NSPVMSGS = {
   NSPV_INFO: 0x00,
+  NSPV_INFORESP: 0x01,
   NSPV_UTXOS: 0x02,
   NSPV_UTXOSRESP: 0x03,
   NSPV_NTZS: 0x04,
@@ -283,12 +289,66 @@ const NSPVMSGS = {
   NSPV_TXIDSRESP: 0x0f,
   NSPV_REMOTERPC: 0x14,
   NSPV_REMOTERPCRESP: 0x15,  
+  NSPV_ERRORRESP: 0xff,  
 };
 
 exports.NSPVMSGS = NSPVMSGS;
 
 let bufferaddr = struct.Buffer(64);
 //let methodtype = struct.Buffer(64);
+
+/*
+struct NSPV_ntz {
+    bits256 blockhash, txid, othertxid;
+    int32_t height, txidheight;
+    uint32_t timestamp;
+}; */
+
+let nspvNtz = struct([
+  { name: 'blockhash', type: exports.buffer32 },
+  { name: 'txid', type: exports.buffer32 },
+  { name: 'otherTxid', type: exports.buffer32 },
+  { name: 'height', type: struct.Int32LE },
+  { name: 'txidheight', type: struct.Int32LE },
+  { name: 'timestamp', type: struct.UInt32LE },
+]);
+
+/*
+struct NSPV_inforesp
+{
+    struct NSPV_ntz notarization;
+    uint256 blockhash;
+    int32_t height,hdrheight;
+    struct NSPV_equihdr H;
+    uint32_t version;
+};*/
+/*
+    len += NSPV_rwntz(rwflag,&serialized[len],&ptr->notarization);
+    len += iguana_rwbignum(rwflag,&serialized[len],sizeof(ptr->blockhash),(uint8_t *)&ptr->blockhash);
+    len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->height),&ptr->height);
+    len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->hdrheight),&ptr->hdrheight);
+    len += NSPV_rwequihdr(rwflag,&serialized[len],&ptr->H);
+    len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->version),&ptr->version);
+    */
+
+let nspvInfoReq = struct([
+  { name: 'reqCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'version', type: struct.UInt32LE },
+  { name: 'reqHeight', type: struct.Int32LE }
+]);
+
+let nspvInfoResp = struct([
+  { name: 'respCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'notarization', type: nspvNtz },
+  { name: 'blockhash', type: exports.buffer32 },
+  { name: 'height', type: struct.Int32LE },
+  { name: 'hdrheight', type: struct.Int32LE },
+  { name: 'header', type: exports.kmdheader },
+  { name: 'version', type: struct.UInt32LE },
+]);
+
 
 let nspvUtxosReq = struct([
   { name: 'reqCode', type: struct.UInt8 },
@@ -299,7 +359,7 @@ let nspvUtxosReq = struct([
   { name: 'filter', type: struct.UInt32LE }
 ]);
 
-let utxosresp = struct([
+let nspvUtxosResp = struct([
   { name: 'respCode', type: struct.UInt8 },
   { name: 'requestId', type: struct.UInt32LE },
   {
@@ -310,7 +370,7 @@ let utxosresp = struct([
       { name: 'extradata', type: struct.UInt64LE },
       { name: 'vout', type: struct.UInt32LE },
       { name: 'height', type: struct.UInt32LE },
-      //{ name: 'script', type: exports.varBuffer }
+      { name: 'script', type: exports.varBuffer }
     ]))
   },
   { name: 'total', type: struct.UInt64LE },
@@ -382,6 +442,7 @@ let nspvRemoteRpcReq = (function(){
 let nspvRemoteRpcResp = (function(){
   function encode(value, buffer, offset) {
     // not used, only decode
+    return {};
   }
   function encodingLength(value) {
     return 0; // not used, only decode
@@ -395,7 +456,7 @@ let nspvRemoteRpcResp = (function(){
     let jsonSer = bufferReader.readSlice(slicedBuffer.length - bufferReader.offset);  // read until end
     return { respCode, requestId, method, jsonSer };
   }
-  return { encode, decode, encodingLength }
+  return { encode, decode, encodingLength };
 })();
 
 let nspvTxidsReq = struct([
@@ -407,7 +468,7 @@ let nspvTxidsReq = struct([
   { name: 'filter', type: struct.UInt32LE }
 ]);
 
-let txidsResp = struct([
+let nspvTxidsResp = struct([
   { name: 'respCode', type: struct.UInt8 },
   { name: 'requestId', type: struct.UInt32LE },
   {
@@ -426,6 +487,7 @@ let txidsResp = struct([
   { name: 'coinaddr', type: bufferaddr }
 ]);
 
+// same as kmdmessages.merkleblock but formats flags as array as bitcoin-merkle-proof lib wants it
 exports.txProof = (function(){
   function encode(value, buffer, offset) {
     // not used
@@ -442,30 +504,6 @@ exports.txProof = (function(){
     let hashes = vhashes.decode(bufferReader.buffer, bufferReader.offset);
     bufferReader.offset += vhashes.decode.bytes;
     let vBits = bufferReader.readVarSlice();
-    //let vBits = new Array(vBytes.length * 8);
-
-    /*             
-      us.vBits.resize(vBytes.size() * 8);
-      for (unsigned int p = 0; p < us.vBits.size(); p++)
-        us.vBits[p] = (vBytes[p / 8] & (1 << (p % 8))) != 0;
-    */
-   /*
-    for(let p = 0; p < vBits.length; p ++)  {
-      console.log("p / 8=", (p / 8) >>> 0, " (p % 8) >>> 0=", (p % 8) >>> 0);
-      vBits[p] = (vBytes[(p / 8) >>> 0] & (1 << ( (p % 8) >>> 0 ))) != 0 ? 1 : 0;
-    }
-
-    var bytes = []
-    for (var i = 0; 8 * i < vBytes.length; ++i) {
-      for (var j = 0; j < 8; ++j) {
-        bytes[i] |= vBytes[8 * i + j] << j
-      }
-    }*/
-
-    //let vBits2 = new Array(vBits.length);
-    //for (let i = 0; i < vBits.length; i ++ )
-    //  vBits2[i] = vBits[vBits.length-i-1]; 
-
     // make partial merkle tree structure for bitcoin-merkle-proof lib:
     return { numTransactions: numTransactions, hashes: hashes, flags: vBits, merkleRoot: header.merkleRoot }; 
   }
@@ -473,7 +511,7 @@ exports.txProof = (function(){
 })();
 
 
-// custom parser for txproof rpc req/resp as varBuffer is not supported on the server side
+// custom parser for txproof rpc req/resp msgs (as varBuffer is not used on the server side)
 let nspvTxProofReq = (function(){
   function encode(value, buffer, offset) {
     let bufferWriter = new bufferutils.BufferWriter(buffer, offset);
@@ -501,14 +539,6 @@ let nspvTxProofResp = (function(){
     return 0; // not used, only decode
   }
 
-  /*function decodeTxProof(buffer, offset = 0, end = buffer.length)  {
-    let slicedBuffer = buffer.slice(offset, end);
-    let bufferReader = new bufferutils.BufferReader(slicedBuffer);
-    let hdr = kmdheaderNspv.decode(bufferReader.buffer, bufferReader.offset);
-    bufferReader.offset += kmdheaderNspv.decode.bytes;
-    let numTransactions = 
-  }*/
-
   function decode(buffer, offset = 0, end = buffer.length) {
     let slicedBuffer = buffer.slice(offset, end);
     let bufferReader = new bufferutils.BufferReader(slicedBuffer);
@@ -523,29 +553,22 @@ let nspvTxProofResp = (function(){
     let txprooflen = bufferReader.readUInt32();
     let txproofbuf = bufferReader.readSlice(txprooflen);
 
-    //let tx = exports.kmdtransaction.decode(txbuf)
-
-    //let txproof = decodeTxProof(txproofbuf);
+    let tx = exports.kmdtransaction.decode(txbuf);
     let pmt = exports.txProof.decode(txproofbuf);
     bufferReader.offset += exports.txProof.decode.bytes;
 
-    return { respCode, requestId, txid, unspentValue, height, vout, txbin: txbuf, partialMerkleTree: pmt };
+    return { respCode, requestId, txid, unspentValue, height, vout, tx, partialMerkleTree: pmt };
   }
   return { encode, decode, encodingLength }
 })();
 
 /*
-struct NSPV_ntz {
-    bits256 blockhash, txid, othertxid;
-    int32_t height, txidheight;
-    uint32_t timestamp;
-};
-
 struct NSPV_ntzsresp {
     struct NSPV_ntz prevntz, nextntz;
     int32_t reqheight;
 };
 */
+
 
 // custom parser for ntz req/resp nspv msgs
 let nspvNtzsReq = (function(){
@@ -573,6 +596,7 @@ let nspvNtzsResp = (function(){
   function encodingLength(value) {
     return 0; // not used, only decode
   }
+  /*
   function decodeNtz(bufferReader) {
     let blockHash = bufferReader.readSlice(32);
     let txid = bufferReader.readSlice(32);
@@ -581,14 +605,18 @@ let nspvNtzsResp = (function(){
     let txidHeight = bufferReader.readUInt32();
     let timestamp = bufferReader.readUInt32();
     return { blockHash, txid, otherTxid, height, txidHeight, timestamp };
-  }
+  } */
   function decode(buffer, offset, end) {
     let slicedBuffer = buffer.slice(offset, end);
     let bufferReader = new bufferutils.BufferReader(slicedBuffer);
     let respCode = bufferReader.readUInt8();
     let requestId = bufferReader.readUInt32();
-    let prevntz = decodeNtz(bufferReader);
-    let nextntz = decodeNtz(bufferReader);
+    //let prevntz = decodeNtz(bufferReader);
+    //let nextntz = decodeNtz(bufferReader);
+    let prevntz = nspvNtz.decode(bufferReader.offset);
+    bufferReader.offset += nspvNtz.decode.bytes;
+    let nextntz = nspvNtz.decode(bufferReader.offset);
+    bufferReader.offset += nspvNtz.decode.bytes;
     let reqHeight = bufferReader.readUInt32();
     return { respCode, requestId, prevntz, nextntz, reqHeight };
   }
@@ -672,8 +700,8 @@ let nspvNtzsProofResp = (function(){
     let hdrs = [];
     for (let i = 0; i < numhdrs; i ++)   {
       //hdrs.push(decodeEquiHdr(bufferReader));
-      hdrs.push(kmdheaderNspv.decode(bufferReader.buffer, bufferReader.offset));
-      bufferReader.offset += kmdheaderNspv.decode.bytes;
+      hdrs.push(kmdheade.decode(bufferReader.buffer, bufferReader.offset));
+      bufferReader.offset += kmdheader.decode.bytes;
     }
 
     let prevht = bufferReader.readUInt32();   // from prev ntz tx opreturn
@@ -704,6 +732,13 @@ let nspvNtzsProofResp = (function(){
   return { encode, decode, encodingLength };
 })();
 
+// error may be returned to any request:
+let nspvErrorResp = struct([
+  { name: 'respCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'errCode', type: struct.Int32LE },
+  { name: 'errDesc', type: struct.VarString(struct.UInt8, 'ascii')  },  
+]);
 
 // encode nspv requests
 exports.nspvReq = (function () {
@@ -723,6 +758,9 @@ exports.nspvReq = (function () {
     let type;
     switch(code)
     {
+      case NSPVMSGS.NSPV_INFO:
+        type = nspvInfoReq;
+        break;
       case NSPVMSGS.NSPV_UTXOS:
         type = nspvUtxosReq;
         break;
@@ -788,8 +826,11 @@ exports.nspvResp = (function () {
     let type;
     switch(code)
     {
+      case NSPVMSGS.NSPV_INFORESP:
+        type = nspvInfoResp;
+        break;
       case NSPVMSGS.NSPV_UTXOSRESP:
-        type = utxosresp;
+        type = nspvUtxosResp;
         break;
       case NSPVMSGS.NSPV_BROADCASTRESP:
         type = nspvBroadcastResp;
@@ -804,10 +845,13 @@ exports.nspvResp = (function () {
         type = nspvTxProofResp;
         break;
       case NSPVMSGS.NSPV_TXIDSRESP:
-        type = txidsResp;
+        type = nspvTxidsResp;
         break;
       case NSPVMSGS.NSPV_REMOTERPCRESP:
         type = nspvRemoteRpcResp;
+        break;
+      case NSPVMSGS.NSPV_ERRORRESP:
+        type = nspvErrorResp;
         break;
       default:
         return;

@@ -1,6 +1,10 @@
 'use strict'
 
 //const debug = require('debug')('net:peergroup')
+const Debug = require('debug')
+const logdebug = Debug('nspv')
+const logerror = Debug('nspv:error');
+
 
 let net
 try { net = require('net') } catch (err) {}
@@ -8,7 +12,7 @@ const old = require('old')
 const PeerGroup = require('./peerGroup')
 require('./nspvPeer'); // init peer.js too
 
-const { nspvResp } = require('./kmdtypes');
+const { nspvResp, nspvVersion } = require('./kmdtypes');
 
 class NspvPeerGroup extends PeerGroup {
   constructor (params, opts) {
@@ -18,9 +22,32 @@ class NspvPeerGroup extends PeerGroup {
       let resp = nspvResp.decode(buf);
       if (resp === undefined)
         throw new Error('unknown nSPV response received');
-      this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp)
+      //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp)
+      this.emit(`nSPV:${resp.requestId}`, resp)
     })
   }
+}
+
+PeerGroup.prototype.nspvConnect = function(cb) {
+  this.connect(() => {
+    // after verack received we must send NSPV_INFO (sort of secondary nspv connect) to check versions
+    this.nspvGetInfo(0, {}, (err, nspvInfo, peer) => {
+      if (nspvInfo && nspvInfo.version === nspvVersion)
+        cb(nspvInfo);
+      else {
+        if (!nspvInfo)
+          logerror('could not parse nspv getinfo response');
+        if (nspvInfo && nspvInfo.version !== nspvVersion)
+          logerror('unsupported remote nspv node version');
+        peer.disconnect(new Error('Node disconnected because of invalid response or version'));
+        cb();
+      }
+    });
+  });
+}
+
+PeerGroup.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
+  this._request('nspvGetInfo', reqHeight, opts, cb)
 }
 
 PeerGroup.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, cb) {
