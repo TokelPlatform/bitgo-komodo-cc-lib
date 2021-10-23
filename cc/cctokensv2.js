@@ -747,8 +747,11 @@ async function getTokensForPubkey(mynetwork, peers, mypk, skipCount, maxrecords)
   ccbasic.cryptoconditions = await ccimp;
   let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk.toString('hex')], 1 ), mynetwork)
   const ccutxos = await ccutils.getCCUtxos(peers, ccindexkey, skipCount, maxrecords);
-  const validated = await validateTokensV2Many(mynetwork, peers, mypk, ccutxos.utxos);
-  return validated;
+  if (ccutxos.utxos.length > 0) {
+    const validated = await validateTokensV2Many(mynetwork, peers, mypk, ccutxos.utxos);
+    return validated;
+  }
+  return [];
 }
 
 
