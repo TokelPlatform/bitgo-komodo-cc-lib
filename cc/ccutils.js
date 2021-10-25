@@ -498,6 +498,9 @@ function getTransactionsMany(peers, mypk, ...args)
     const txs = await getTransactionsMany(peers, mypk, ...args);
     txs.transactions.forEach( tx => {
       const decoded = decodeTransactionData(tx.tx, tx.blockHeader, network)
+      if (!decoded) {
+        return;
+      }
       decodedTxs.push(decoded)
       inTransactionsIds.push(decoded.ins.map(one => one.txid))
     })

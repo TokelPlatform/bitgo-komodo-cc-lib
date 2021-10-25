@@ -23,9 +23,16 @@ const decodeTransactionData = (tx, header, network) => {
       }
     }),
     outs: decoded.outs.map(out => {
+      let address = null;
+      try {
+        address = addresslib.fromOutputScript(out.script, network);
+      } catch (e) {
+        console.log(e);
+        return null;
+      }
       return {
         ...out,
-        address: addresslib.fromOutputScript(out.script, network),
+        address,
         asm: bscript.toASM(out.script),
       }
     })
