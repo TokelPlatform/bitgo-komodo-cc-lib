@@ -671,8 +671,8 @@ function isTokenV2Output(tx, nvout)
     let vdata;
     if (parsedSpk.opdrop) {
       verusData = decodeVerusCompatVData(parsedSpk.opdrop);
-      if (verusData && verusData.extradata)
-        vdata = verusData.extradata;   // data in opdrop is the first priority
+      if (verusData && verusData.appdata)
+        vdata = verusData.appdata;   // data in opdrop is the first priority
     }
     if (!vdata) 
       vdata = isOpReturnSpk(tx.outs[tx.outs.length-1].script); // opreturn is the second priority
