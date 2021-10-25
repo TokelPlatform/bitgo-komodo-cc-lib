@@ -50,7 +50,8 @@ const parseTransactionData = (tx) => {
   })
   let change = 0;
   if (changeReceivingAddress) {
-    change = tx.outs.find(s => s.address === changeReceivingAddress).value;
+    const address = tx.outs.find(s => s.address === changeReceivingAddress)
+    change = address ? address.value : 0;
   }
   return {
     fees: sumIns - sumOuts,
