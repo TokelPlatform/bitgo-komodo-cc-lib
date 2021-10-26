@@ -366,8 +366,8 @@ let nspvUtxosResp = struct([
     name: 'utxos',
     type: struct.VarArray(struct.UInt16LE, struct([
       { name: 'txid', type: exports.buffer32 },
-      { name: 'satoshis', type: struct.UInt64LE },
-      { name: 'extradata', type: struct.UInt64LE },
+      { name: 'satoshis', type: struct.Int64LE },
+      { name: 'extradata', type: struct.Int64LE },
       { name: 'vout', type: struct.UInt32LE },
       { name: 'height', type: struct.UInt32LE },
       { name: 'script', type: exports.varBuffer }
@@ -475,7 +475,7 @@ let nspvTxidsResp = struct([
     name: 'txids',
     type: struct.VarArray(struct.UInt16LE, struct([
       { name: 'txid', type: exports.buffer32 },
-      { name: 'satoshis', type: struct.UInt64LE },
+      { name: 'satoshis', type: struct.Int64LE },
       { name: 'vout', type: struct.UInt32LE },
       { name: 'height', type: struct.UInt32LE },
     ]))
@@ -613,9 +613,9 @@ let nspvNtzsResp = (function(){
     let requestId = bufferReader.readUInt32();
     //let prevntz = decodeNtz(bufferReader);
     //let nextntz = decodeNtz(bufferReader);
-    let prevntz = nspvNtz.decode(bufferReader.offset);
+    let prevntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
     bufferReader.offset += nspvNtz.decode.bytes;
-    let nextntz = nspvNtz.decode(bufferReader.offset);
+    let nextntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
     bufferReader.offset += nspvNtz.decode.bytes;
     let reqHeight = bufferReader.readUInt32();
     return { respCode, requestId, prevntz, nextntz, reqHeight };
@@ -700,8 +700,8 @@ let nspvNtzsProofResp = (function(){
     let hdrs = [];
     for (let i = 0; i < numhdrs; i ++)   {
       //hdrs.push(decodeEquiHdr(bufferReader));
-      hdrs.push(kmdheade.decode(bufferReader.buffer, bufferReader.offset));
-      bufferReader.offset += kmdheader.decode.bytes;
+      hdrs.push(exports.kmdheader.decode(bufferReader.buffer, bufferReader.offset));
+      bufferReader.offset += exports.kmdheader.decode.bytes;
     }
 
     let prevht = bufferReader.readUInt32();   // from prev ntz tx opreturn
