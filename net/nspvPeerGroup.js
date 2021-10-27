@@ -30,8 +30,9 @@ class NspvPeerGroup extends PeerGroup {
 
 PeerGroup.prototype.nspvConnect = function(cb) {
   this.connect(() => {
+    cb();
     // after verack received we must send NSPV_INFO (sort of secondary nspv connect) to check versions
-    this.nspvGetInfo(0, {}, (err, nspvInfo, peer) => {
+    /*this.nspvGetInfo(0, {}, (err, nspvInfo, peer) => {
       if (nspvInfo && nspvInfo.version === nspvVersion)
         cb(nspvInfo);
       else {
@@ -42,7 +43,7 @@ PeerGroup.prototype.nspvConnect = function(cb) {
         peer.disconnect(new Error('Node disconnected because of invalid response or version'));
         cb();
       }
-    });
+    }); */
   });
 }
 

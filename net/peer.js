@@ -187,7 +187,8 @@ class Peer extends EventEmitter {
     this.on('verack', () => {
       if (this.ready) return this._error(new Error('Got duplicate verack'))
       this.verack = true
-      this._maybeReady()
+      // Note: _maybeReady called from nspvPeer
+      //this._maybeReady()
     })
 
     this.on('ping', (message) => this.send('pong', message))
