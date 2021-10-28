@@ -180,12 +180,15 @@ class PeerGroup extends EventEmitter {
 
 
       // setup getaddr or getwsaddr loop
-      if (this.fConnectPlainWeb)  {
-        this.getWsAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
-        this.getAddrTimer = setInterval(this.getWsAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getwsaddr interval 120 sec
-      } else {
-        this.getAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
-        this.getAddrTimer = setInterval(this.getAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getaddr interval 120 sec
+      if (!this.getAddrTimer)
+      {
+        if (this.fConnectPlainWeb)  {
+          this.getWsAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
+          this.getAddrTimer = setInterval(this.getWsAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getwsaddr interval 120 sec
+        } else {
+          this.getAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
+          this.getAddrTimer = setInterval(this.getAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getaddr interval 120 sec
+        }
       }
 
       // set conn time
@@ -248,7 +251,8 @@ class PeerGroup extends EventEmitter {
           setImmediate(this.connect.bind(this))
         }, this.connectTimeout)
       }
-      this._onConnection(Error(`No methods available to get new peers for required ${this._numPeers} peers, current number ${this.peers.length}`))
+      //this._onConnection(Error(`No more methods available to get new peers for required ${this._numPeers} peers, current number ${this.peers.length}`))
+      logdebug(`No more methods available to get new peers for required ${this._numPeers} peers`);
       return false
     }
     let getPeerFunc = utils.getRandom(getPeerArray)
@@ -536,6 +540,7 @@ class PeerGroup extends EventEmitter {
       })
       peer.disconnect(Error('PeerGroup closing'))
     }
+    logdebug('finished:', this.peers.length)
     //if (this.getAddrTimer) clearInterval(this.getAddrTimer)
   }
 
