@@ -12,6 +12,18 @@ const Block = require('../src/block');
 const decodeTransactionData = (tx, header, network) => {
   const decoded = Transaction.fromHex(tx, network);
   const decodedHeader = Block.fromHex(header, network);
+  const outs = decoded.outs.map(out => {
+    try {
+      return {
+        ...out,
+        address: addresslib.fromOutputScript(out.script, network),
+        asm: bscript.toASM(out.script),
+      }
+    } catch (e) {
+      console.log(e);
+      return null;
+    }
+  })
   return {
     time: decodedHeader.timestamp,
     txid: decoded.getHash().reverse().toString('hex'),
@@ -22,20 +34,7 @@ const decodeTransactionData = (tx, header, network) => {
         txid,
       }
     }),
-    outs: decoded.outs.filter(out => {
-      let address = null;
-      try {
-        address = addresslib.fromOutputScript(out.script, network);
-      } catch (e) {
-        console.log(e);
-        return null;
-      }
-      return {
-        ...out,
-        address,
-        asm: bscript.toASM(out.script),
-      }
-    })
+    outs: outs.filter(a => !!a)
   }
 }
 
