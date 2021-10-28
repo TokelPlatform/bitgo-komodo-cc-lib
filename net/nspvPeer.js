@@ -107,7 +107,7 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, c
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) 
-      cb(new Error("nspv remote error: " + resp.errDesc)); 
+      cb(new Error("nspv remote get utxos error: " + resp.errDesc)); 
     cb(null, resp)
   }
   incRequestId();
@@ -146,7 +146,7 @@ Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, c
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) 
-      cb(new Error("nspv remote error: " + resp.errDesc)); 
+      cb(new Error("nspv get txids remote error: " + resp.errDesc)); 
     cb(null, resp)
   }
   incRequestId();
@@ -202,7 +202,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) 
-      cb(new Error("nspv remote error: " + resp.errDesc)); 
+      cb(new Error("nspv remote rpc error: " + resp.errDesc)); 
     if (!resp || !resp.jsonSer) {
       cb(new Error("could not parse nspv remote rpc response"));
       return;
@@ -218,7 +218,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
       else if (result.error.code)
         cb(new Error(result.error.code));
       else
-        cb(new Error('nspv error (could not parse)'));
+        cb(new Error('nspv error (could not parse error msg)'));
       return;
     }
 
@@ -285,7 +285,7 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) 
-      cb(new Error("nspv remote error: " + resp.errDesc));
+      cb(new Error("nspv broadcast remote error: " + resp.errDesc));
     if (!resp || !resp.txid || !resp.retcode) {
       cb(new Error("could not parse nspv broadcast response"));
       return;
@@ -342,7 +342,7 @@ Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) 
-      cb(new Error("nspv remote error: " + resp.errDesc));
+      cb(new Error("nspv txproof remote error: " + resp.errDesc));
     if (!resp || !resp.respCode || typeof resp.txid === undefined || typeof resp.unspentValue === undefined || typeof resp.vout === undefined || typeof resp.height === undefined || typeof resp.tx === undefined || typeof resp.txproof === undefined) { // check all props?
       cb(new Error("could not parse nspv txproof response"));
       return;
