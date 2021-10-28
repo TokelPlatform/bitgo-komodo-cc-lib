@@ -22,7 +22,7 @@ const decodeTransactionData = (tx, header, network) => {
         txid,
       }
     }),
-    outs: decoded.outs.map(out => {
+    outs: decoded.outs.filter(out => {
       let address = null;
       try {
         address = addresslib.fromOutputScript(out.script, network);
@@ -58,8 +58,11 @@ const parseTransactionData = (tx) => {
   let change = 0;
   if (changeReceivingAddress) {
     const address = tx.outs.find(s => s.address === changeReceivingAddress)
-    change = address ? address.value : 0;
+    if (address) {
+      change = address ? address.value : 0;
+    }
   }
+
   return {
     fees: sumIns - sumOuts,
     value: sumOuts - change,
