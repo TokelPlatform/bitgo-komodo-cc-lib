@@ -17,6 +17,7 @@ const networks = require('../src/networks');
 //const mynetwork = networks.dimxy20;
 //const mynetwork = networks.dimxy24;
 const mynetwork = networks.tkltest;
+//const mynetwork = networks.tokel;
 
 // you will need to do a call like:
 // ccbasic.cryptoconditions = await ccimp;
@@ -89,9 +90,9 @@ const mytokentransferwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq
 const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
 //const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc";
 //const mytokenid = "38b58149410b5d53f03b06e38452e7b0e232e561a65b89a4517c7dc518e7e739";
-const mytokenid = "620e6951cf238e978a001f3848f9225c3eaca89e9490a3f0c21d223345cdb567";
-
-
+const mytokenid = "102cc18e4cd8bf48438196f6713d5cf195eb29e19afd2a06168940190c8df9b6";
+//const mytokenid = "f372e9e0c07ce57ccc2a0256ad4febd968757db55156ee954ff23e28e424efb9"; //tokel
+/*
 if (!process.browser) 
 {
   peers = new NspvPeerGroup(params, opts);
@@ -130,15 +131,22 @@ if (!process.browser)
       //console.log('txhex=', tx.toHex());
 
       // make cc token transfer tx
-      let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
-      console.log('txhex=', tx.toHex());
+      //let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
+      //console.log('txhex=', tx.toHex());
 
-      //let info = await cctokens.TokenInfoV2Tokel(mytokencreatewif, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a");
-      //console.log('info=', info);
+      // tkltest
+      //let info = await cctokens.tokensInfoV2Tokel(peers, mynetwork, mytokencreatewif, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a");
+      // tokel
+      let info = await cctokens.tokensInfoV2Tokel(peers, mynetwork, mytokencreatewif, mytokenid);
+      console.log('info=', info);
 
       // make tx with normal inputs for the specified amount
       // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);
       //console.log('txwnormals=', txwnormals);
+
+      //let v = await cctokens.getTokensForPubkey(mynetwork, peers, Buffer.from("02bd54776ba32d42c06a17f7a32344b4775c185ef7c48417698b1262e8c91d07ff", 'hex'), 0, 0);
+      //console.log('validate=', v);
+
     }
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
@@ -147,3 +155,37 @@ if (!process.browser)
     console.log('test finished, waiting for peers to close...');
   });
 }
+*/
+//const Debug = require('debug')
+//const logdebug = Debug('net:peergroup')
+//const utils = require('../net/utils');
+const nspvConnect = require('../net/connect');
+
+async function testNspv() {
+  let peers
+  try {
+    peers = await nspvConnect(params, opts);
+    //await sleep(1000);
+    // load cryptoconditions lib
+    ccbasic.cryptoconditions = await ccimp;
+    let info = await cctokens.tokensInfoV2Tokel(peers, mynetwork, mytokencreatewif, mytokenid);
+    console.log('info1=', info);
+    info = await cctokens.tokensInfoV2Tokel(peers, mynetwork, mytokencreatewif, mytokenid);
+    console.log('info2=', info);
+    info = await cctokens.tokensInfoV2Tokel(peers, mynetwork, mytokencreatewif, mytokenid);
+    console.log('info3=', info);
+    info = await cctokens.tokensInfoV2Tokel(peers, mynetwork, mytokencreatewif, mytokenid);
+    console.log('info4=', info);
+    info = await cctokens.tokensInfoV2Tokel(peers, mynetwork, mytokencreatewif, mytokenid);
+    console.log('info5=', info);
+    info = await cctokens.tokensInfoV2Tokel(peers, mynetwork, mytokencreatewif, mytokenid);
+    console.log('info6=', info);
+  }
+  catch(err) {
+    console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
+  }
+  peers.close();
+  console.log('test finished, waiting for peers to close...');
+}
+
+testNspv();
