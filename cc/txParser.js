@@ -43,30 +43,34 @@ const getRecipients = (tx) => tx.outs.map(out => out.address).flat();
 const getSenders = (tx) => [...new Set(tx.ins.map(v => v.tx.address).flat())];
 
 const parseTransactionData = (tx) => {
-  const sumOuts = tx.outs.reduce((a, b) => a += b.value, 0);
-  const sumIns = tx.ins.reduce((a, b) => a += b.tx.value, 0);
-  const senders = getSenders(tx);
-  const recipients = getRecipients(tx);
-
-  let changeReceivingAddress = null;
-  senders.forEach(addr => {
-    if (!changeReceivingAddress) {
-      changeReceivingAddress = senders.find(s => s === addr);
+  try {
+    const sumOuts = tx.outs.reduce((a, b) => a += b.value, 0);
+    const sumIns = tx.ins.reduce((a, b) => a += b.tx.value, 0);
+    const senders = getSenders(tx);
+    const recipients = getRecipients(tx);
+  
+    let changeReceivingAddress = null;
+    senders.forEach(addr => {
+      if (!changeReceivingAddress) {
+        changeReceivingAddress = senders.find(s => s === addr);
+      }
+    })
+    let change = 0;
+    if (changeReceivingAddress) {
+      const address = tx.outs.find(s => s.address === changeReceivingAddress)
+      if (address) {
+        change = address ? address.value : 0;
+      }
     }
-  })
-  let change = 0;
-  if (changeReceivingAddress) {
-    const address = tx.outs.find(s => s.address === changeReceivingAddress)
-    if (address) {
-      change = address ? address.value : 0;
+  
+    return {
+      fees: sumIns - sumOuts,
+      value: sumOuts - change,
+      senders,
+      recipients
     }
-  }
-
-  return {
-    fees: sumIns - sumOuts,
-    value: sumOuts - change,
-    senders,
-    recipients
+  } catch (e) {
+    throw new Error(e);
   }
 }
   
