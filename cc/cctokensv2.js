@@ -164,7 +164,7 @@ async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, sa
  * @param {*} tokenidhex 
  * @returns promise to return info
  */
-async function tokenInfoV2Tokel(mynetwork, peers, wif, tokenidhex) {
+async function tokensInfoV2Tokel(peers, mynetwork, wif, tokenidhex) {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let tokenid = ccutils.txidFromHex(tokenidhex);
@@ -756,7 +756,7 @@ async function getTokensForPubkey(mynetwork, peers, mypk, skipCount, maxrecords)
 
 
 module.exports = {
-  tokenInfoV2Tokel, tokensv2Create, tokensv2CreateTokel, tokensv2Transfer, tokenV2Address,
+  tokensInfoV2Tokel, tokensv2Create, tokensv2CreateTokel, tokensv2Transfer, tokenV2Address,
   isTokenV2Output, validateTokensV2Many, getTokensForPubkey,
   tokensv2GlobalPk, tokensv2GlobalPrivkey, tokensv2GlobalAddress, EVAL_TOKENSV2,
   assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
