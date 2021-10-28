@@ -12,6 +12,26 @@ const { txidFromHex, txidToHex, isValidTxid, castTxid } = require('../cc/ccutils
 Peer.prototype._registerListenersPrev = Peer.prototype._registerListeners;
 Peer.prototype._registerListeners = function() {
   this._registerListenersPrev();
+
+  this.on('verack', () => {
+    console.log('on verack')
+    // after verack received we must send NSPV_INFO (sort of secondary nspv connect) to check versions
+    this.nspvGetInfo(0, {}, (err, nspvInfo, peer) => {
+      if (nspvInfo && nspvInfo.version === nspvVersion)  {
+        //cb(nspvInfo);
+        this.gotNspvInfo = true;
+        this._nspvReady();
+      } else {
+        if (!nspvInfo)
+          logerror('could not parse nspv getinfo response', err);
+        if (nspvInfo && nspvInfo.version !== nspvVersion)
+          logerror('unsupported remote nspv node version', err);
+        peer.disconnect(new Error('Node disconnected because of invalid response or version '));
+        //cb();
+      }
+    });
+  })
+
   this.on('nSPV', (buf) => {
     let resp = nspvResp.decode(buf);
     //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp);
@@ -19,6 +39,12 @@ Peer.prototype._registerListeners = function() {
   })
 }
 
+
+Peer.prototype._nspvReady = function() {
+  if (!this.verack || !this.version || !this.gotNspvInfo) return
+  this.ready = true
+  this.emit('ready')
+}
 var requestId = 0;
 function incRequestId() {
   requestId ++;
@@ -26,7 +52,9 @@ function incRequestId() {
     requestId = 1;
 }
 
-// get ntz txns
+Peer.prototype.gotNspvInfo = false;
+
+// get nspv info 
 Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
   if (typeof opts === 'function') {
     cb = opts
@@ -362,9 +390,9 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) 
-      cb(new Error("nspv remote error: " + resp.errDesc));
+      cb(new Error("nspv ntzs remote error: " + resp.errDesc));
     if (!resp || !resp.respCode || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined || typeof resp.reqHeight === undefined ) { // check parsed props
-      cb(new Error("could not parse nspv txproof response"));
+      cb(new Error("could not parse nspv ntzs response"));
       return;
     }
     cb(null, resp); 
@@ -405,7 +433,6 @@ Peer.prototype.nspvNtzsProof = function(_prevTxid, _nextTxid, opts, cb) {
     cb(new Error('prevTxid param invalid'));
     return;
   }
-
   if (!nextTxid) {
     cb(new Error('nextTxid param invalid'));
     return;
@@ -415,9 +442,9 @@ Peer.prototype.nspvNtzsProof = function(_prevTxid, _nextTxid, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) 
-      cb(new Error("nspv remote error: " + resp.errDesc));
+      cb(new Error("nspv ntzs proof remote error: " + resp.errDesc));
     if (!resp || !resp.respCode || typeof resp.common === undefined || typeof resp.prevtxid === undefined || typeof resp.nexttxid === undefined || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined ) { // check all props
-      cb(new Error("could not parse nspv txproof response"));
+      cb(new Error("could not parse nspv ntzs proof response"));
       return;
     }
     cb(null, resp); 
