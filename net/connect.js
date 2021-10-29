@@ -17,25 +17,36 @@ function nspvConnect(params, opts) {
     });
 
     peers.on('connectError', (err, peer) => {
-      // some peers may fail to connect to, but thts okay as long as there enough peers in the network
-      logdebug('nspvConnect connectError', err);
+      // some peers may fail to connect to, but this okay as long as there enough peers in the network
+      if (!peers.hasMethods)  { // nothing to do
+        logdebug("nspvConnect got 'connectError'", err.message, 'no connect methods, exiting...');
+        peers.close();
+        reject(err);
+      }
     });
 
     peers.on('peerError', err => {
-      // some peers may fail to connect to, but thts okay as long as there enough peers in the network
-      logdebug('nspvConnect peerError', err);
+      // some peers may fail to connect to, but this okay as long as there enough peers in the network
+      logdebug("nspvConnect got 'peerError'", err.message);
+    });
+
+
+    peers.on('peerGroupError', err => {
+      // maybe let the GUI print the error  
+      //logdebug('nspvBrowserConnect error', err);
+      logdebug.log("nspvConnect got 'peerGroupError'", err.message, 'exiting...')
+      reject(err);
     });
 
     peers.on('error', err => {
       // maybe let the GUI print the error  
       //logdebug('nspvBrowserConnect error', err);
-      console.log('error')
-      reject(err);
+      logdebug.log("nspvConnect got 'error'", err.message)
     });
 
-    return peers.connect(() => {
+    peers.connect(() => {
       // maybe let the GUI print this:  
-      //logdebug('nspvBrowserConnect connected to peer');
+      //logdebug('nspvBrowserConnect connected to a peer');
       resolve(peers);
     });
   });
