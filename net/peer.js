@@ -91,7 +91,7 @@ class Peer extends EventEmitter {
     // TODO?: maybe this should error if we try to write after close?
     if (!this.socket.writable) return
     this._encoder.write({ command, payload })
-    logdebug("sent request cmd=", command, " to url=", utils.getSocketUrl(this.socket))
+    logdebug("sent request cmd", "'"+command+"'", "to url", utils.getSocketUrl(this.socket))
   }
 
   connect (socket) {
@@ -263,12 +263,10 @@ class Peer extends EventEmitter {
   }
 
   getAddr () {
-    logdebug(`getaddr requested`)
     this.send('getaddr', {})
   }
 
   getWsAddr () {
-    logdebug(`getwsaddr requested`)
     this.send('getwsaddr', {})
   }
 
