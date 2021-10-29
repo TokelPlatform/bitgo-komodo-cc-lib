@@ -14,11 +14,10 @@ Peer.prototype._registerListeners = function() {
   this._registerListenersPrev();
 
   this.on('verack', () => {
-    console.log('on verack')
+    logdebug("on 'verack' event fired")
     // after verack received we must send NSPV_INFO (sort of secondary nspv connect) to check versions
-    this.nspvGetInfo(0, {}, (err, nspvInfo, peer) => {
+    this.nspvGetInfo(0, {}, (err, nspvInfo) => {
       if (nspvInfo && nspvInfo.version === nspvVersion)  {
-        //cb(nspvInfo);
         this.gotNspvInfo = true;
         this._nspvReady();
       } else {
@@ -26,8 +25,6 @@ Peer.prototype._registerListeners = function() {
           logerror('could not parse nspv getinfo response', err);
         if (nspvInfo && nspvInfo.version !== nspvVersion)
           logerror('unsupported remote nspv node version', err);
-        peer.disconnect(new Error('Node disconnected because of invalid response or version '));
-        //cb();
       }
     });
   })
@@ -39,7 +36,7 @@ Peer.prototype._registerListeners = function() {
   })
 }
 
-
+// send 'ready' event
 Peer.prototype._nspvReady = function() {
   if (!this.verack || !this.version || !this.gotNspvInfo) return
   this.ready = true
