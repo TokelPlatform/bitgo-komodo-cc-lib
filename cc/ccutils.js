@@ -276,12 +276,15 @@ function getUtxos(peers, address, isCC, skipCount, maxrecords)
 }
 
 /**
- * returns txos (tx outputs bith spent and unspent) for an address
+ * returns array with txids relevant to an address: tx outputs (spent and unspent) and spending txids (from this address)
  * @param {*} peers PeerGroup object with NspvPeers additions
  * @param {*} address address to get txids from
  * @param {*} isCC get txids with normal (isCC is 0) or cc (isCC is 1) utxos on this address
  * @param {*} skipCount number of txos to skip 
  * @param {*} maxrecords max number of returned txos, if 0 will return max records set by the server
+ * @returns a promise returning object containing nspv params and a 'txids' array with txid, index and amount props. 
+ * Note that txids with negative amount denote spending transactions, and the 'index' property means input's index
+ * for txids with positive amounts those are tx outputs
  */
 function getTxids(peers, address, isCC, skipCount, maxrecords)
 {
