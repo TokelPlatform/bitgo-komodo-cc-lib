@@ -253,6 +253,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_REMOTERPC ${rpcMethod} timed out: ${opts.timeout} ms`)
+    this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new Error('NSPV request timed out')
     error.timeout = true
     cb(error)
@@ -305,6 +306,7 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_BROADCAST timed out: ${opts.timeout} ms`)
+    this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new Error('NSPV request timed out')
     error.timeout = true
     cb(error)
@@ -364,6 +366,7 @@ Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_TXPROOF timed out: ${opts.timeout} ms`)
+    this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new Error('NSPV request timed out')
     error.timeout = true
     cb(error)
@@ -409,6 +412,7 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_NTZS timed out: ${opts.timeout} ms`)
+    this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new Error('NSPV request timed out')
     error.timeout = true
     cb(error)
@@ -462,6 +466,7 @@ Peer.prototype.nspvNtzsProof = function(_prevTxid, _nextTxid, opts, cb) {
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_NTZSPROOF timed out: ${opts.timeout} ms`)
+    this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new Error('NSPV request timed out')
     error.timeout = true
     cb(error)
