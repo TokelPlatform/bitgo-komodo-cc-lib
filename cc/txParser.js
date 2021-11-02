@@ -20,8 +20,12 @@ const decodeTransactionData = (tx, header, network) => {
         asm: bscript.toASM(out.script),
       }
     } catch (e) {
-      console.log(e);
-      return null;
+      console.log(e); 
+      return {
+        ...out,
+        address: null,
+        asm: bscript.toASM(out.script),
+      }
     }
   })
   return {
