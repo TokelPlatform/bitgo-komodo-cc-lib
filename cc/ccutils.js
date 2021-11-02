@@ -1,8 +1,7 @@
 /**
  * cc utils to create cryptocondition tx in javascript
- * Note: max amount enforced in typeforce is SATOSHI_MAX == 21 * 1e14 
- * Also readUInt64 and typeforce(type.Satoshi) enforce yet another max 900719925474991 (0x001fffffffffffff) == 90 * 1e14. 
- * This is MAX_SAFE_INTEGER constant represents the maximum safe integer in JavaScript (2^53 - 1)
+ * Note: max amount enforced in typeforce SATOSHI_MAX changed from btc 21 * 1e14 to MAX_SAFE_INTEGER
+ * Also readUInt64 and typeforce(type.Satoshi) enforce same MAX_SAFE_INTEGER == 900719925474991 (0x001fffffffffffff) == 90 * 1e14. 
  */
 
 const Transaction = require('../src/transaction');
@@ -16,6 +15,7 @@ const types = require('../src/types');
 const { decodeTransactionData, parseTransactionData } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
+const OPS = require('bitcoin-ops');
 
 const Debug = require('debug')
 const logdebug = Debug('cc')
@@ -691,4 +691,28 @@ exports.castTxid = function(_txid) {
     return;
   }
   return txid;
+}
+
+/**
+ * returns if scriptPubKey has OP_RETURN
+ * @param {*} script 
+ * @returns 
+ */
+exports.isOpReturnSpk = function(script)
+{
+  let chunks = bscript.decompile(script);
+  if (Array.isArray(chunks) && chunks.length > 0) {
+    if (chunks[0] == OPS.OP_RETURN) {
+      if (chunks.length > 1)
+        return chunks[1];
+      else
+        Buffer.from([]);
+    }
+  }
+  return false;
+}
+
+exports.isError = function(o)
+{
+  return typeof(o) === 'object' && o.name === 'Error';
 }

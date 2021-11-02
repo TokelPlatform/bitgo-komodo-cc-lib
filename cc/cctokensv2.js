@@ -639,20 +639,6 @@ function decodeTokensV2VData(vdata)  {
   return undefined;
 }
 
-function isOpReturnSpk(script)
-{
-  let chunks = bscript.decompile(script);
-  if (Array.isArray(chunks) && chunks.length > 0) {
-    if (chunks[0] == OPS.OP_RETURN) {
-      if (chunks.length > 1)
-        return chunks[1];
-      else
-        Buffer.from([]);
-    }
-  }
-  return false;
-}
-
 /**
  * Validates if a transaction output is a valid token
  * @param {*} tx a token transaction object of Transaction type
@@ -675,7 +661,7 @@ function isTokenV2Output(tx, nvout)
         vdata = verusData.appdata;   // data in opdrop is the first priority
     }
     if (!vdata) 
-      vdata = isOpReturnSpk(tx.outs[tx.outs.length-1].script); // opreturn is the second priority
+      vdata = ccutils.isOpReturnSpk(tx.outs[tx.outs.length-1].script); // opreturn is the second priority
     if (!vdata) {
       logdebug("isTokenV2Output error: no token data in opreturn or opdrop");
       return false;
