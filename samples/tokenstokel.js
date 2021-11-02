@@ -184,7 +184,8 @@ async function testNspv() {
   catch(err) {
     console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
   }
-  peers.close();
+  if (peers)
+    peers.close();
   console.log('test finished, waiting for peers to close...');
 }
 
