@@ -103,13 +103,27 @@ try {
 
 `getNormalUtxos(peers, address, skipCount, maxrecords)` - get normal (non-CC) utxos from an address
 
+    const { ccutils, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const network = networks.tkltest;
+    const response = await ccutils.getNormalUtxos(peers, 'myaddress', 0, 0);
+
 `getCCUtxos(peers, address, skipCount, maxrecords)` - get CC utxos  from an address
+
+    const { ccutils, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const network = networks.tkltest;
+    const response = await ccutils.getCCUtxos(peers, 'myaddress', 0, 0);
 
 `getTxids(peers, address, isCC, skipCount, maxrecords)` - returns txos (tx outputs bith spent and unspent) for an address
 
-`createTxAndAddNormalInputs(peers, mypk, amount)` - create a tx and adds normal inputs for equal or more than the amount param 
+    const { ccutils, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const network = networks.tkltest;
+    const response = await ccutils.getTxids(peers, 'myaddress', 0, 0, 0);
 
-`pubkey2NormalAddressKmd(pk)` - makes komodo normal address from a pubkey
+`pubkey2NormalAddressKmd(mypk)` - makes komodo normal address from a pubkey. Mypk - my public key.
+
+    const { ccutils, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const network = networks.tkltest;
+    const mynormaladdress = ccutils.pubkey2NormalAddressKmd('mypublickey');
 
 `getRawTransaction(peers, mypk, txid)` - Get transaction both in hex and decoded 
 
