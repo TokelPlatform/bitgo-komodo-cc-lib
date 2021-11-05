@@ -76,9 +76,28 @@ try {
 
 `general.keyToWif(String)` - Receives any string(WIF/seed phrase) and returns WIF.
 
+    const { general, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const network = networks.tkltest;
+    const wif = general.keyToWif(seed, network);
+
+
 `general.getSeedPhrase(Number)` - Generates a bip39 mnemonic seed phrase, specify strength 128 or 256 as a parameter.
 
-`general.makeNormalTx(wif, destaddress, amount, network, peers)` - creates and signs transaction locally
+    const { general, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const network = networks.tkltest;
+    const seed = general.getSeedPhrase(256);
+
+`general.create_normaltx(wif, destaddress, amount, network, peers)` - creates and signs transaction locally, amount is in satoshi, peers parameter is returned from `nspvConnect`, see connection example above
+
+    const { general, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const network = networks.tkltest;
+    const txHex = await general.create_normaltx(
+      'MySecretWif',
+      'MyAddress',
+      10000000,
+      network,
+      peers
+    );
 
 ### CC Utils
 
