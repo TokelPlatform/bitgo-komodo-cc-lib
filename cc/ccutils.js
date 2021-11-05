@@ -36,6 +36,8 @@ exports.getTransactionsManyDecoded = getTransactionsManyDecoded;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 
+const EMPTY_TXID = '0000000000000000000000000000000000000000000000000000000000000000'
+
 exports.MYDUST = 200;
 
 /**
@@ -501,25 +503,32 @@ function getTransactionsMany(peers, mypk, ...args)
       if (!decoded) {
         return;
       }
-      decodedTxs.push(decoded)
-      inTransactionsIds.push(decoded.ins.map(one => one.txid))
+      decodedTxs.push(decoded);
+      // Empty ids are for transactions which are VINS for mining transactions
+      let txids = decoded.ins.filter(one => one.txid !== EMPTY_TXID  ? one.txid : false)
+      txids = txids.map(one => one.txid);
+      if (txids.length > 0) {
+        inTransactionsIds.push(txids)
+      }
     })
-    inTransactionsIds = inTransactionsIds.flat()
-    
-    let inTransactions = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
-
     const parsedInTransactions = {}
-    inTransactions.transactions.forEach(tx => {
-      const newTx = decodeTransactionData(tx.tx, tx.blockHeader, network)
-      parsedInTransactions[newTx.txid] = newTx
-    });
+
+    if (inTransactionsIds.length > 0) {
+      inTransactionsIds = inTransactionsIds.flat()
+      let inTransactions = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
+      inTransactions.transactions.forEach(tx => {
+        const newTx = decodeTransactionData(tx.tx, tx.blockHeader, network)
+        parsedInTransactions[newTx.txid] = newTx
+      });
+    }
+
     return decodedTxs.map(tx => {
       const parsedTx = {
         ...tx,
         ins: tx.ins.map(txin => {
           return {
             ...txin,
-            tx: parsedInTransactions[txin.txid].outs[txin.index]
+            tx: parsedInTransactions[txin.txid]?.outs[txin.index]
           }
         })
       }

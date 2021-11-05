@@ -44,31 +44,49 @@ const decodeTransactionData = (tx, header, network) => {
 
 const getRecipients = (tx) => tx.outs.map(out => out.address).flat();
 
-const getSenders = (tx) => [...new Set(tx.ins.map(v => v.tx.address).flat())];
+// sometimes there are no senders, for mining transactions
+const getSenders = (tx) => [...new Set(tx.ins.filter(v => v.tx ? v.tx.address : false).flat())];
 
 const parseTransactionData = (tx) => {
   try {
     const sumOuts = tx.outs.reduce((a, b) => a += b.value, 0);
-    const sumIns = tx.ins.reduce((a, b) => a += b.tx.value, 0);
+    
+    let sumIns = 0
+    // probably there is a better way to find the current fee
+    const FIXED_FEE = 10000;
+    let fees = 0;
+    
+    // special case - incoming mining transaction
+    // those dont have vins, hence they dont have vins values
+    if (tx.ins.length > 1 && tx.ins[0].tx) {
+      sumIns = tx.ins.reduce((a, b) => a += b.tx?.value, 0);
+      fees = sumIns - sumOuts
+    } else {
+      fees = FIXED_FEE;
+    }
+
     const senders = getSenders(tx);
     const recipients = getRecipients(tx);
   
+    // find the change receiving address
     let changeReceivingAddress = null;
     senders.forEach(addr => {
       if (!changeReceivingAddress) {
         changeReceivingAddress = senders.find(s => s === addr);
       }
     })
+
+    // calculate change
     let change = 0;
     if (changeReceivingAddress) {
-      const address = tx.outs.find(s => s.address === changeReceivingAddress)
-      if (address) {
-        change = address ? address.value : 0;
+      const txToAddress = tx.outs.find(s => s.address === changeReceivingAddress)
+      if (txToAddress) {
+        change = txToAddress ? txToAddress.value : 0;
       }
     }
   
     return {
-      fees: sumIns - sumOuts,
+      fees,
       value: sumOuts - change,
       senders,
       recipients
