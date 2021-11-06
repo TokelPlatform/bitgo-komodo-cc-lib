@@ -45,7 +45,7 @@ const decodeTransactionData = (tx, header, network) => {
 const getRecipients = (tx) => tx.outs.map(out => out.address).flat();
 
 // sometimes there are no senders, for mining transactions
-const getSenders = (tx) => [...new Set(tx.ins.filter(v => v.tx ? v.tx.address : false).flat())];
+const getSenders = (tx) => [...new Set(tx.ins.filter(v => v.tx).map(v => v.tx.address).flat())];
 
 const parseTransactionData = (tx) => {
   try {
