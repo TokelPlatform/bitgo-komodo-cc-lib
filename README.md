@@ -38,15 +38,16 @@ npm install
 
 You'll need a komodo test asset chain to run the ccfaucetpoc sample.
 Setup network parameters for your komodo chain:<br>
-Open `networks.js` and make a new entry for your chain. You need to fix the yourchainname and magic params for your chain, like:
+Open `networks.js` and make a new entry for your chain. You need to fix the 'YOURCHAINNAME' and 'magic' params for your chain, like:
 ```
 module.exports = {
-  yourchainname: {
+  YOURCHAINNAME: {
     messagePrefix: '\xYourChainName asset chain:\n',
     bech32: 'R',
     bip32: getDefaultBip32Mainnet(),   
     pubKeyHash: 0x3c,
     scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
     wif: 0xbc,
     consensusBranchId: {
       1: 0x00,
@@ -57,13 +58,24 @@ module.exports = {
     coin: coins.ZEC,
     komodoAssetNet: true,
     magic: 0x12345678  // komodo chain magic, obtain with getinfo rpc
+    // to connect over p2p:
+    dnsSeeds: [ 
+      'yourdomain.org:12345'
+    ],
+    staticPeers: [
+      '192.168.123.123:12345'
+    ],
+    // to connect over websockets:
+    webSeeds: [
+      //'ws://192.168.123.123:54321'
+    ],
   },
 };
 ```
 
 In ccfaucetpoc.js source change mynetwork var to some yourchainname:<br>
 ```
-var mynetwork=networks.yourchainname
+var mynetwork=networks.YOURCHAINNAME
 ```
 
 Set your funding faucet wif and address and a wif and address getting funds in ccfaucetpoc.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
