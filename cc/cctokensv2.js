@@ -37,12 +37,6 @@ const TKLPROPNAME_ARBITRARY = "arbitrary";
 const OPDROP_HAS_PKS_VER = 2;
 
 const ccbasic = require('./ccbasic');
-/* decided to init cryptoconditions at the user level
-let ccimp;
-if (process.browser)
-  ccimp = import('@tokel/cryptoconditions');
-else
-  ccimp = require('@tokel/cryptoconditions');  */
 
 const tokensv2GlobalPk = "032fd27f72591b02f13a7f9701246eb0296b2be7cfdad32c520e594844ec3d4801"
 const tokensv2GlobalPrivkey = Buffer.from([ 0xb5, 0xba, 0x92, 0x7f, 0x53, 0x45, 0x4f, 0xf8, 0xa4, 0xad, 0x0d, 0x38, 0x30, 0x4f, 0xd0, 0x97, 0xd1, 0xb7, 0x94, 0x1b, 0x1f, 0x52, 0xbd, 0xae, 0xa2, 0xe7, 0x49, 0x06, 0x2e, 0xd2, 0x2d, 0xa5 ])
@@ -63,11 +57,11 @@ function NspvAddTokensInputs(peers, tokenid, pk, amount)
 {
   assert(peers);
   assert(ccutils.isValidPubKey(pk));
-  assert(ccutils.isValidTxid(tokenid));
+  assert(ccutils.isValidHash(tokenid));
 
   return new Promise((resolve, reject) => {
 
-    peers.nspvRemoteRpc("tokenv2addccinputs", pk, [ccutils.txidToHex(tokenid), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("tokenv2addccinputs", pk, [ccutils.hashToHex(tokenid), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -82,11 +76,11 @@ function NspvTokenV2InfoTokel(peers, pk, tokenid)
 {
   assert(peers);
   assert(ccutils.isValidPubKey(pk));
-  assert(ccutils.isValidTxid(tokenid));
+  assert(ccutils.isValidHash(tokenid));
 
   return new Promise((resolve, reject) => {
 
-    peers.nspvRemoteRpc("tokenv2infotokel", pk, [ccutils.txidToHex(tokenid)], {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("tokenv2infotokel", pk, [ccutils.hashToHex(tokenid)], {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -151,7 +145,7 @@ async function tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, j
  * @returns promise to create transfer tx
  */
 async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, satoshi) {
-  let tokenid = ccutils.txidFromHex(tokenidhex);
+  let tokenid = ccutils.hashFromHex(tokenidhex);
   let destpk = Buffer.from(destpkhex, 'hex');
 
   let txpromise = makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, satoshi);
@@ -167,7 +161,7 @@ async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, sa
 async function tokensInfoV2Tokel(peers, mynetwork, wif, tokenidhex) {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
-  let tokenid = ccutils.txidFromHex(tokenidhex);
+  let tokenid = ccutils.hashFromHex(tokenidhex);
   let promiseinfo = NspvTokenV2InfoTokel(peers, mypk, tokenid);
   return promiseinfo;
 };

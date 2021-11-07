@@ -157,7 +157,7 @@ if (!process.browser)
       let nvout = 1;
       let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
       let tokendata = cctokens.isTokenV2Output(tx, nvout);
-      console.log(`IsTokenV2Output(tx,${nvout})=`, tokendata, "tokenid=", (tokendata ? ccutils.txidToHex(tokendata.tokenid) : null)); 
+      console.log(`IsTokenV2Output(tx,${nvout})=`, tokendata, "tokenid=", (tokendata ? ccutils.hashToHex(tokendata.tokenid) : null)); 
       */
 
       // validateTokensV2Many test
