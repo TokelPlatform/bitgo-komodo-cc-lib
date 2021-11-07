@@ -54,7 +54,7 @@ function getMainnet (network) {
       return networks.zcash
   }
   if (network.komodoAssetNet)
-    return networks.zcash
+    return networks.zcash // let use 'zcash' as komodo assets mainnet, we need this for correct sig hash calc, for isZcash() to return true for komodo
   throw new TypeError(`invalid network`)
 }
 
