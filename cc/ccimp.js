@@ -1,6 +1,6 @@
 var ccimp
 if (process.browser)
-  ccimp = import('@tokel/cryptoconditions');
+  ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');
 else
-  ccimp = require('@tokel/cryptoconditions');
+  ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');
 exports.ccimp = ccimp
