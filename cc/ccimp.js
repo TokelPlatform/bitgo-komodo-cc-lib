@@ -1,6 +1,4 @@
-var ccimp
 if (process.browser)
-  ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');
+  module.exports = import('cryptoconditions-js/pkg/cryptoconditions.js');
 else
-  ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');
-exports.ccimp = ccimp
+  module.exports = require('cryptoconditions-js/pkg/cryptoconditions.js');
