@@ -1,6 +1,6 @@
 {
-  "name": "@tokel/bitgo-komodo-cc-lib",
-  "version": "0.1.32",
+  "name": "@komodo/bitgo-komodo-cc-lib",
+  "version": "0.1.0",
   "description": "Client-side Bitcoin JavaScript library with Komodo cryptocondions support",
   "main": "./src/index.js",
   "engines": {
@@ -30,27 +30,23 @@
     "url": "https://github.com/dimxy/bitgo-komodo-cc-lib.git"
   },
   "files": [
-    "src",
-    "cc",
-    "net",
-    "config"
+    "src"
   ],
   "dependencies": {
-    "@tokel/cryptoconditions": "0.1.0",
     "bech32": "0.0.3",
-    "bigi": "1.4.2",
-    "bip39": "^2.3.0",
+    "bigi": "^1.4.0",
     "bip66": "^1.1.0",
     "bitcoin-merkle-proof": "^0.1.0",
     "bitcoin-ops": "^1.3.0",
     "bitcoin-protocol": "^4.1.3",
     "bitcoin-util": "^2.0.0",
     "bitcoind-rpc": "^0.8.1",
-    "blake2b": "git+https://github.com/BitGo/blake2b.git#6268e6dd678661e0acc4359e9171b97eb1ebf8ac",
-    "bs58check": "2.1.2",
+    "blake2b": "^2.1.3",
+    "bs58check": "^2.0.0",
     "bufferutil": "^4.0.3",
     "create-hash": "^1.1.0",
     "create-hmac": "^1.1.3",
+    "cryptoconditions-js": "git+https://github.com/dimxy/cryptoconditions-js.git#master",
     "debug": "~3.1.0",
     "ecurve": "^1.0.0",
     "envify": "^4.1.0",
@@ -65,16 +61,15 @@
     "safe-buffer": "^5.2.1",
     "secp256k1": "^3.5.2",
     "setimmediate": "^1.0.4",
-    "sha.js": "2.4.11",
     "through2": "^2.0.1",
     "typeforce": "^1.11.3",
     "utf-8-validate": "^5.0.5",
     "varuint-bitcoin": "^1.0.4",
-    "webassembly": "0.9.0",
     "websocket-stream": "^3.3.0",
     "wif": "^2.0.1"
   },
   "devDependencies": {
+    "bip39": "^2.3.0",
     "bip65": "^1.0.1",
     "bs58": "^4.0.0",
     "dhttp": "^2.4.2",
