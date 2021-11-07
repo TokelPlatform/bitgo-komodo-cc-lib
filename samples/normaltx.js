@@ -18,10 +18,10 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
-const mynetwork = networks.tkltest; 
+const mynetwork = networks.TKLTEST; 
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy24;
-//const mynetwork = networks.tokel; 
+//const mynetwork = networks.TOKEL; 
 
 // not used for plan websockets, only for PXP which is not supported
 //var defaultPort = 1111
