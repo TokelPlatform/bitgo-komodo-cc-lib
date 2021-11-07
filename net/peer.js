@@ -187,8 +187,7 @@ class Peer extends EventEmitter {
     this.on('verack', () => {
       if (this.ready) return this._error(new Error('Got duplicate verack'))
       this.verack = true
-      // Note: _maybeReady called from nspvPeer
-      //this._maybeReady()
+      this._maybeReady()
     })
 
     this.on('ping', (message) => this.send('pong', message))
@@ -226,7 +225,7 @@ class Peer extends EventEmitter {
       return this._error(new Error('Node does not provide NODE_BLOOM service'))
     }
     this.send('verack')
-    this._maybeReady()
+    this._maybeReady()  
   }
 
   _maybeReady () {
@@ -235,10 +234,11 @@ class Peer extends EventEmitter {
     this.emit('ready')
   }
 
+  /* not used
   _onceReady (cb) {
     if (this.ready) return cb()
     this.once('ready', cb)
-  }
+  } */
 
   _sendVersion () {
     this.send('version', {

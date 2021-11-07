@@ -50,9 +50,6 @@ class PeerGroup extends EventEmitter {
     this.accepting = false
     this.fConnectPlainWeb = opts.connectPlainWeb ? opts.connectPlainWeb : false
     this.retryInterval = 10000
-    this.getAddrInterval = 120 * 1000
-    this.getAddrTimer = null
-    this.hasMethods = false
 
     if (this.fConnectPlainWeb) {
       let wrtc = opts.wrtc || getBrowserRTC()
@@ -143,7 +140,7 @@ class PeerGroup extends EventEmitter {
         setTimeout(this._connectPeer.bind(this), this.retryInterval)
       }
       if (addrstates)
-          addrstates.setClear(addr, err)
+        addrstates.setClear(addr, err)
 
       return
     }
@@ -171,24 +168,13 @@ class PeerGroup extends EventEmitter {
       // remove once listeners to replace with new ones
       peer.removeListener('error', onPeerError)
       peer.removeListener('disconnect', onPeerError)
-      //this.addPeer(peer, cbUpdateAddrState)
       this.addPeer(peer, addrstates, addr)
-
-      // setup getaddr or getwsaddr loop
-      if (!this.getAddrTimer)
-      {
-        if (this.fConnectPlainWeb)  {
-          this.getWsAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
-          this.getAddrTimer = setInterval(this.getWsAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getwsaddr interval 120 sec
-        } else {
-          this.getAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
-          this.getAddrTimer = setInterval(this.getAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getaddr interval 120 sec
-        }
-      }
 
       // set conn time
       if (addrstates)
         addrstates.setConnected(addr)
+
+      //this.emit('newpeer', peer); // new event to notify external listeners
     }
 
     // wait for socket connection errors:
@@ -248,8 +234,6 @@ class PeerGroup extends EventEmitter {
       //logdebug(`No more methods available to get new peers for required ${this._numPeers} peers`);
       return false
     }
-    else
-      this.hasMethods = true; // let the caller know we are having at lest one method to find a peer
     let getPeerFunc = utils.getRandom(getPeerArray)
     logdebug(`_connectPeer: selected getPeerFunc is '${getPeerFunc.name}'`)
     getPeerFunc(onConnectionCb)
@@ -397,6 +381,14 @@ class PeerGroup extends EventEmitter {
         break;
   }
 
+  activeConnections()  {
+    let activeCount = 0;
+    if (this.resolvedAddrs) activeCount += this.resolvedAddrs.inUseCount();
+    if (this.tcpAddrs) activeCount += this.tcpAddrs.inUseCount();
+    if (this.webSeeds) activeCount += this.webSeeds.inUseCount();
+    return activeCount;
+  }
+
   // sends a message to all peers
   send (command, payload, assert) {
     assert = assert != null ? assert : true
@@ -410,7 +402,7 @@ class PeerGroup extends EventEmitter {
   connect (onConnect) {
     logdebug('connect called')
     this.connecting = true
-    if (onConnect) this.once('connect', onConnect)
+    if (onConnect) this.once('connect', onConnect)  // call user function here
 
     /* pxp not supported
     // first, try to connect to pxp web seeds so we can get web peers
@@ -431,7 +423,7 @@ class PeerGroup extends EventEmitter {
     if (cb) cb = once(cb)
     else cb = (err) => { if (err) this._error(err) }
 
-    if (this.getAddrTimer) clearInterval(this.getAddrTimer)
+    this.emit('PeerGroupClose')
 
     logdebug(`close called: peers.length = ${this.peers.length}`)
     this.closed = true

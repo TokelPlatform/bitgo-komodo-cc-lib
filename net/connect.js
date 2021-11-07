@@ -18,7 +18,7 @@ function nspvConnect(params, opts) {
 
     peers.on('connectError', (err, peer) => {
       // some peers may fail to connect to, but this okay as long as there enough peers in the network
-      if (!peers.hasMethods)  { // nothing to do
+      if (peers.activeConnections() == 0)  { // nothing to do
         logdebug("nspvConnect got 'connectError'", err.message, 'no connect methods, exiting...');
         peers.close();
         reject(err);
