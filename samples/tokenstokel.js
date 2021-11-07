@@ -16,19 +16,13 @@ const networks = require('../src/networks');
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy20;
 //const mynetwork = networks.dimxy24;
-const mynetwork = networks.tkltest;
-//const mynetwork = networks.tokel;
+const mynetwork = networks.TKLTEST;
+//const mynetwork = networks.TOKEL;
 
-// you will need to do a call like:
-// ccbasic.cryptoconditions = await ccimp;
-// to init the cryptoconditions wasm lib before cc usage
-// (this is due to wasm delayed loading specifics)
 const ccbasic = require('../cc/ccbasic');
-let ccimp;
-if (process.browser)
-  ccimp = import('@tokel/cryptoconditions');
-else
-  ccimp = require('@tokel/cryptoconditions');
+var ccimp = require('../cc/ccimp');   // you will need to do a call like:
+                                      // ccbasic.cryptoconditions = await ccimp;
+                                      // to init the cryptoconditions wasm lib before cc usage (this is due to wasm delayed loading specifics)
 
 
 // additional seeds:
