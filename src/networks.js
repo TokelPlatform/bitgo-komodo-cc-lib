@@ -375,7 +375,41 @@ module.exports = {
     ],
   },
 
-  tkltest: {
+  dimxy28: {
+    messagePrefix: '\x18DIMXY28 asset chain:\n',
+    bech32: 'R',
+    bip32: getDefaultBip32Mainnet(),
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
+    magic:  0xd866b57e,
+    //to connect over p2p:
+    dnsSeeds: [],
+    staticPeers: [
+    //  '3.136.47.223:14722'
+    //  'localhost:14722'
+      '18.189.25.123:14722'
+    ],
+    // to connect over websockets:
+    webSeeds: [
+      //'wss://localhost:8192'
+    ],
+  },
+
+  TKLTEST: {
     messagePrefix: '\x18TKLTEST asset chain:\n',
     bech32: 'R',
     bip32: getDefaultBip32Mainnet(),
@@ -397,11 +431,17 @@ module.exports = {
     messages: kmdmessages.kmdMessages,
     magic:  0xf6475548,
     // to connect over p2p:
-    dnsSeeds: [],
+    dnsSeeds: [ 
+      //'vpc1:22024' 
+      'ec2-18-189-25-123.us-east-2.compute.amazonaws.com:22024'
+    ],
     staticPeers: [
-      '167.99.114.240:22024',
-      //'18.190.86.67:22024'
+      //'167.99.114.240:22024',
+      //'18.190.86.67:22024',
       //'localhost:22024'
+      //'18.189.25.123:22024'
+      'tcp://164.132.225.134:22024',
+      '167.99.114.240:22024',
     ],
     // to connect over websockets:
     webSeeds: [
@@ -409,7 +449,7 @@ module.exports = {
     ],
   },
 
-  tokel: {
+  TOKEL: {
     messagePrefix: '\x18TOKEL chain:\n',
     bech32: 'R',
     bip32: getDefaultBip32Mainnet(),
@@ -434,11 +474,13 @@ module.exports = {
     //to connect over p2p:
     dnsSeeds: [],
     staticPeers: [
-      // '3.136.47.223:29404',
-      '135.125.204.169:29404',
-      '192.99.71.125:29404',
-      //'18.190.86.67:29404'
-      //'localhost:29404'
+      //// '3.136.47.223:29404',
+      // '135.125.204.169:29404',
+      // '192.99.71.125:29404',
+      ////'18.190.86.67:29404'
+      'localhost:29404',
+      //'18.189.25.123:29404'
+      //'51.38.124.215:29404'
     ],
 
     // to connect over websockets:

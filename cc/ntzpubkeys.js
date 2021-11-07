@@ -529,8 +529,7 @@ exports.NSPV_notarizationextract = function (isKmd, doVerify, tx, timestamp)
             return new Error(`could not verify required notaries signatures, verified sigs=${numsigs}`);
         }
         return parsed;
-      }
-      else 
+      } else 
         return new Error(`could not parse notarization opreturn`);
     } else 
       return new Error(`notarization opreturn output not found`);
@@ -540,6 +539,19 @@ exports.NSPV_notarizationextract = function (isKmd, doVerify, tx, timestamp)
 
 // get notarization data from ntz tx opreturn
 function NSPV_opretextract(isKmd, opret) {
+
+  let readSymbol = function(buffer, offset) {
+    let s = '';
+    while(offset < buffer.length)  {
+      if (buffer[offset] == 0)
+        return s;
+      s += String.fromCharCode(buffer[offset]);
+      offset ++;
+    }
+    return null;
+    //throw new Error('could not parse notarisation opreturn (symbol)')
+  }
+
   //offset = isKmd ? 2 : 3;
   if (opret && ccutils.isOpReturnSpk(opret)) {
     let chunks = bscript.decompile(opret);
@@ -548,13 +560,52 @@ function NSPV_opretextract(isKmd, opret) {
         let bufferReader = new bufferutils.BufferReader(chunks[1]);
         let blockhash = bufferReader.readSlice(32);
         let height = bufferReader.readInt32();
-        let desttxid = bufferReader.readSlice(32);
-        return { height, blockhash, desttxid };
+        let isBack = !isKmd;
+        if (!isBack)  {
+          let trySymbol = readSymbol(bufferReader.buffer, bufferReader.offset + 32);
+          if (trySymbol && (trySymbol == 'KMD' || trySymbol == 'BTC'))
+            isBack = true;
+        }
+        let desttxid;
+        if (isBack)
+          desttxid = bufferReader.readSlice(32);
+        let symbol = readSymbol(bufferReader.buffer, bufferReader.offset);
+        logdebug('notarization data symbol:', symbol);
+        if (!symbol)
+          throw new Error('symbol');
+
+        bufferReader.offset += symbol.length + 1; // including ending zero
+        let result = { height, blockhash, isBack, symbol };
+        if (isBack)
+          result = Object.assign(result, { desttxid });
+
+        if (bufferReader.offset < bufferReader.buffer.length) {
+          let MoM = bufferReader.readSlice(32);
+          let MoMDepthL = bufferReader.readUInt8();
+          let MoMDepthH = bufferReader.readUInt8();
+          let MoMDepth = MoMDepthL + (MoMDepthH << 8);
+          let ccidL = bufferReader.readUInt8();
+          let ccidH = bufferReader.readUInt8();
+          let ccid = ccidL + (ccidH << 8);
+
+          result = Object.assign(result, { MoM, MoMDepth, ccid });
+          if (bufferReader.offset < bufferReader.buffer.length) {
+            if (isBack)  {
+              let MoMoM = bufferReader.readSlice(32);
+              let MoMoMDepth = bufferReader.readUInt32();
+              result = Object.assign(result, { MoMoM, MoMoMDepth });
+            }
+          }
+        }
+        if (bufferReader.offset != bufferReader.buffer.length)
+          throw new Error('data left');
+        return result;
       }
       catch (err) {
-        logerror("cant parse notarization opreturn: ", err.message);
+        logerror("cannot parse notarization opreturn:", err.message);
       }
     }
   }
   return null;
 }
+exports.NSPV_opretextract = NSPV_opretextract;

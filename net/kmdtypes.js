@@ -489,7 +489,8 @@ let nspvTxProofResp = (function(){
     let respCode = bufferReader.readUInt8();
     let requestId = bufferReader.readUInt32();
     let txid = bufferReader.readSlice(32);
-    let unspentValue = bufferReader.readUInt64();
+    let unspentValue = struct.Int64LE.decode(bufferReader.buffer, bufferReader.offset);  // bufferReader.readUInt64();
+    bufferReader.offset += 8;
     let height = bufferReader.readUInt32();
     let vout = bufferReader.readUInt32();
     let txlen = bufferReader.readUInt32();
@@ -497,8 +498,12 @@ let nspvTxProofResp = (function(){
     let txprooflen = bufferReader.readUInt32();
     let txproofbuf = bufferReader.readSlice(txprooflen);
 
-    let tx = exports.kmdtransaction.decode(txbuf);
-    let pmt = exports.txProof.decode(txproofbuf);
+    let tx = null;
+    if (txlen > 0)  // maybe empty
+      tx = exports.kmdtransaction.decode(txbuf);
+    let pmt = null;
+    if (txprooflen > 0)
+      pmt = exports.txProof.decode(txproofbuf);
     bufferReader.offset += exports.txProof.decode.bytes;
 
     return { respCode, requestId, txid, unspentValue, height, vout, tx, partialMerkleTree: pmt };
