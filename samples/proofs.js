@@ -106,7 +106,7 @@ if (!process.browser)
   });
   peers.on('connectError', (err, peer) => {
     // some peers may fail to connect to, but this okay as long as there enough peers in the network
-    if (peers.activeConnections() == 0)  { // nothing to do
+    if (!peers.hasMethods())  { // nothing to do
       console.log("got 'connectError'", "'" + err.message + "'", "no connect methods, exiting...");
       peers.close();
     }
@@ -138,7 +138,7 @@ if (!process.browser)
       //let txid = 'fcaf0d4ca6c7392fe67474738da9f51acacd74bd31ae29260085ec9254020768'  // tokel h=10000
       //let ht = 10000;
 
-      //let txid = '118a95dd6aa92bedc13f223ad5f51a6d6c113313b0f2cc16107e2cac0ccf643c' // dimxy24
+      //let txid = '118a95dd6aa92bedc13f223ad5f51a6d6c113313b0f2cc16107e2cac0ccf643c' // DIMXY24
       //let txid = 'cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a' //tkltest
       
       /*
