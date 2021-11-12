@@ -7,8 +7,9 @@ const logerror = Debug('nspv:error');
 const old = require('old')
 const bufferutils = require("../src/bufferutils");
 const Peer = require('./peer')
-const { NSPVMSGS, nspvVersion, nspvReq, nspvResp } = require('./kmdtypes');
+const { NSPVMSGS, NSPV_VERSION, nspvReq, nspvResp, nspvMsgName } = require('./kmdtypes');
 const { hashFromHex, hashToHex, isValidHash, castHashBin } = require('../cc/ccutils');
+//const { kmdMessages  } = require('./kmdmessages');
 
 // NSPV extended Error with nspv request and rpc method (if the nspv request is 'remoteRpc')
 class NspvError extends Error {
@@ -45,13 +46,13 @@ Peer.prototype._registerListeners = function() {
     logdebug("on 'verack' event fired")
     // after verack received we must send NSPV_INFO (sort of secondary nspv connect) to check versions
     this.nspvGetInfo(0, {}, (err, nspvInfo) => {
-      if (nspvInfo && nspvInfo.version === nspvVersion)  {
+      if (nspvInfo && nspvInfo.version === NSPV_VERSION)  {
         this.gotNspvInfo = true;
         this._nspvReady();
       } else {
         if (!nspvInfo)
           logerror('could not parse nspv getinfo response', err);
-        if (nspvInfo && nspvInfo.version !== nspvVersion)
+        if (nspvInfo && nspvInfo.version !== NSPV_VERSION)
           logerror('unsupported remote nspv node version', err);
       }
     });
@@ -62,6 +63,10 @@ Peer.prototype._registerListeners = function() {
     //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp);
     this.emit(`nSPV:${resp.requestId}`, resp);
   })
+}
+
+Peer.prototype._formatCommand = function(command, payload) {
+  return "'" + command + "'" + ((command == 'getnSPV' || command == 'nSPV') ? ' (' + nspvMsgName(payload[0]) + ')' : '');
 }
 
 // send 'ready' event
@@ -111,7 +116,7 @@ Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
   let nspvInfoReq = {
     reqCode: NSPVMSGS.NSPV_INFO,
     requestId: requestId,
-    version: nspvVersion,
+    version: NSPV_VERSION,
     reqHeight: reqHeight,
   }
   let buf = nspvReq.encode(nspvInfoReq)
@@ -306,6 +311,8 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
     cb = opts
     opts = {}
   }
+  if (opts === undefined)
+    opts = {}
   if (opts.timeout == null) opts.timeout = this._getTimeout()
 
   let txid = castHashBin(_txid);
@@ -473,22 +480,16 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
 }
 
 // get ntz txns
-Peer.prototype.nspvNtzsProof = function(_prevTxid, _nextTxid, opts, cb) {
+Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
   if (typeof opts === 'function') {
     cb = opts
     opts = {}
   }
   if (!opts.timeout) opts.timeout = this._getTimeout()
 
-  let prevTxid = castHashBin(_prevTxid);
-  let nextTxid = castHashBin(_nextTxid);
-
-  if (!prevTxid) {
-    cb(new NspvError('prevTxid param invalid', NSPVMSGS.NSPV_NTZSPROOF));
-    return;
-  }
-  if (!nextTxid) {
-    cb(new NspvError('nextTxid param invalid', NSPVMSGS.NSPV_NTZSPROOF));
+  let ntzTxid = castHashBin(_ntzTxid);
+  if (!ntzTxid) {
+    cb(new NspvError('ntz txid param invalid', NSPVMSGS.NSPV_NTZSPROOF));
     return;
   }
 
@@ -512,8 +513,7 @@ Peer.prototype.nspvNtzsProof = function(_prevTxid, _nextTxid, opts, cb) {
   let nspvNtzsProofReq = {
     reqCode: NSPVMSGS.NSPV_NTZSPROOF,
     requestId: requestId,
-    prevTxid: prevTxid,
-    nextTxid: nextTxid,
+    ntzTxid: ntzTxid,
   }
   let buf = nspvReq.encode(nspvNtzsProofReq)
   this.send('getnSPV', buf)
