@@ -18,10 +18,10 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
-const mynetwork = networks.TKLTEST; 
+//const mynetwork = networks.TKLTEST; 
 //const mynetwork = networks.dimxy23;
-//const mynetwork = networks.dimxy24;
-//const mynetwork = networks.TOKEL; 
+//const mynetwork = networks.DIMXY24;
+const mynetwork = networks.TOKEL; 
 
 // not used for plan websockets, only for PXP which is not supported
 //var defaultPort = 1111
@@ -209,7 +209,8 @@ if (!process.browser)
       //result = await ccutils.getCCUtxos(peers, "RXnxmVxXXvxF8Fo9kstYeJFRbWvhsJV2u8", 0, 0);
       //result = await ccutils.getUtxos(peers, "RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu", 0, 0, 0);
       //result = await ccutils.getTxids(peers, "CeyfG2RJpA8CxPLNyTEM8HYFTNgXAdHc8w", 0, 0, 0);
-      result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
+      //result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
+      result = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
       console.log('result=', result);
 
       /* check addresses in the getTxids result
