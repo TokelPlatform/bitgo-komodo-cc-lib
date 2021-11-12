@@ -53,7 +53,7 @@ const EVAL_TOKELDATA = 0xf7;
 // nspv calls:
 
 // tokenv2addccinputs nspv caller
-function NspvAddTokensInputs(peers, tokenid, pk, amount)
+function nspvAddTokensInputs(peers, tokenid, pk, amount)
 {
   assert(peers);
   assert(ccutils.isValidPubKey(pk));
@@ -72,7 +72,7 @@ function NspvAddTokensInputs(peers, tokenid, pk, amount)
 }
 
 // tokenv2infotokel nspv caller
-function NspvTokenV2InfoTokel(peers, pk, tokenid)
+function nspvTokenV2InfoTokel(peers, pk, tokenid)
 {
   assert(peers);
   assert(ccutils.isValidPubKey(pk));
@@ -109,10 +109,8 @@ async function tokensv2Create(peers, mynetwork, wif, name, desc, satoshi, nftdat
   let nftdata;
   if (nftdatahex)
     nftdata = Buffer.from(nftdatahex, 'hex');
-    let txpromise = makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
-
-  return txpromise;
-};
+  return makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
+}
 
 /**
  * create token v2 transaction with tokel data.
@@ -130,9 +128,8 @@ async function tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, j
   let nftdata;
   if (jsondata)
     nftdata = makeTokelData(jsondata);
-  let txpromise = makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
-  return txpromise;
-};
+  return makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
+}
 
 /**
  * transfer token v2  
@@ -148,9 +145,8 @@ async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, sa
   let tokenid = ccutils.hashFromHex(tokenidhex);
   let destpk = Buffer.from(destpkhex, 'hex');
 
-  let txpromise = makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, satoshi);
-  return txpromise;
-};
+  return makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, satoshi);
+}
 
 /**
  * returns info about token
@@ -162,12 +158,12 @@ async function tokensInfoV2Tokel(peers, mynetwork, wif, tokenidhex) {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let tokenid = ccutils.hashFromHex(tokenidhex);
-  let promiseinfo = NspvTokenV2InfoTokel(peers, mypk, tokenid);
+  let promiseinfo = nspvTokenV2InfoTokel(peers, mypk, tokenid);
   return promiseinfo;
-};
+}
 
 // encode token OP_RETURN data
-function makeTokensCreateV2Opreturn(origpk, name, desc, nftdata)
+function encodeTokensCreateV2OpReturn(origpk, name, desc, nftdata)
 {
   let version = 1;
 
@@ -189,6 +185,15 @@ function makeTokensCreateV2Opreturn(origpk, name, desc, nftdata)
 
   return script.compile([OPS.OP_RETURN, buffer]);
 }
+
+function encodeTokensV2OpReturn(tokenid, extradata)
+{
+  let chunks = [OPS.OP_RETURN, encodeTokensV2Data(tokenid, undefined, extradata)];
+  //if (extradata)
+  //  chunks.push(extradata)
+  return script.compile(chunks);
+}
+
 
 // convert tokel data json to buffer
 function makeTokelData(jsondata)
@@ -258,13 +263,21 @@ function makeTokelData(jsondata)
   return buffer;
 }
 
-// encode token vdata to be added in OP_DROP
-function makeTokensV2VData(tokenid, destpks)
+// encode token vdata to be added in OP_DROP or OP_RETURN
+// (note for opreturn there is no)
+function encodeTokensV2Data(tokenid, destpks, extradata)
 {
-  let destpks_len = 0;
+  typeforce('Buffer', tokenid);
+  typeforce(typeforce.oneOf(types.arrayOf('Buffer'), undefined), destpks);
+  typeforce(typeforce.oneOf('Buffer', undefined), extradata);
+
+  let destpksLen = 0;
   if (destpks)
-    destpks_len = varuint.encodingLength(destpks.length) + destpks.length * (varuint.encodingLength(destpks[0].length) + destpks[0].length);
-  let buffer = Buffer.allocUnsafe(1+1+1 + tokenid.length + destpks_len);
+    destpksLen = varuint.encodingLength(destpks.length) + destpks.length * (varuint.encodingLength(destpks[0].length) + destpks[0].length);
+  let extradataLen = 0;
+  if (extradata)
+    extradataLen = varuint.encodingLength(extradata.length) + extradata.length; 
+  let buffer = Buffer.allocUnsafe(1+1+1 + tokenid.length + destpksLen + extradataLen);
   let bufferWriter = new bufferutils.BufferWriter(buffer);
   let version = 1;
   let funcid = 't';
@@ -272,12 +285,14 @@ function makeTokensV2VData(tokenid, destpks)
   bufferWriter.writeUInt8(EVAL_TOKENSV2);
   bufferWriter.writeUInt8(funcid.charCodeAt(0));
   bufferWriter.writeUInt8(version);
-  bufferWriter.writeSlice(ccutils.txidReverse(tokenid));  // tokenid is stored in opreturn reversed, for readability (historically) 
+  bufferWriter.writeSlice(ccutils.hashReverse(tokenid));  // tokenid is stored in opreturn reversed, for readability (historically) 
   if (destpks && destpks.length > 0) {
     bufferWriter.writeUInt8(destpks.length);
     for (let i = 0; i < destpks.length; i ++) 
       bufferWriter.writeVarSlice(destpks[i]);
   }
+  if (extradata)
+    bufferWriter.writeVarSlice(extradata);
   return buffer;
 }
 
@@ -290,66 +305,34 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
   const markerfee = 10000;
+  const normalAmount = txfee + markerfee + amount;
 
+  const tokensGlobalPk = Buffer.from(tokensv2GlobalPk, 'hex');
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.getPublicKeyBuffer(), amount + txfee + markerfee);
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
 
-  let tx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
+  let sourcetx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
   // zcash stuff:
-  txbuilder.setVersion(tx.version);
+  txbuilder.setVersion(sourcetx.version);
   if (txbuilder.tx.version >= 3)
-    txbuilder.setVersionGroupId(tx.versionGroupId);
+    txbuilder.setVersionGroupId(sourcetx.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, tx, txwutxos.previousTxns, mynetwork);
-  if (added < amount + txfee)
+  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx, txwutxos.previousTxns, mynetwork);
+  if (added < normalAmount)
     throw new Error("insufficient normal inputs (" + added + ")")
 
   // create tokens cc to my address
-  /*let subfulfillments = [];
-  let threshold = 2;
-  subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(EVAL_TOKENSV2) });  
-  /* no nft evalcode anymore:
-  if (Buffer.isBuffer(nftdata) && nftdata.length > 0 && nftdata[0]) {
-    subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(nftdata[0]) });  // add nft data evalcode to cond
-    threshold ++;
-  }*//*
-  subfulfillments.push({            
-    type:	"threshold-sha-256",
-    threshold:	1,
-    subfulfillments: [{ type:	"secp256k1-sha-256", publicKey:	mypk.toString('hex') }]
-  });
-
-  let mycond = {
-    type:	"threshold-sha-256",
-    threshold:	threshold,
-    subfulfillments:	subfulfillments
-  };*/
   let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1);
   if (myccSpk == null)  {
     throw new Error('could not create tokens cc spk');
   }
 
   // add search in chain marker
-  /*let markercond = {
-    type:	"threshold-sha-256",
-    threshold:	2,
-    subfulfillments:	[{
-        type:	"eval-sha-256",   
-        code:	ccutils.byte2Base64(EVAL_TOKENSV2)     
-      }, {            
-        type:	"threshold-sha-256",
-        threshold:	1,
-        subfulfillments:	[{  
-                type:	"secp256k1-sha-256",
-                publicKey:	tokensv2GlobalPk
-        }]  
-      }]   
-    }; */
-  let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [Buffer.from(tokensv2GlobalPk, 'hex')], 1);
+  let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [tokensGlobalPk], 1);
   if (markerccSpk == null)  {
     throw new Error('could not create tokens marker cc spk');
   }
@@ -357,12 +340,12 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
   txbuilder.addOutput(markerccSpk, markerfee);
   txbuilder.addOutput(myccSpk, amount);
 
-  if (added - amount - txfee - markerfee > ccutils.MYDUST)
-    txbuilder.addOutput(mynormaladdress, added - amount - txfee - markerfee);  // change
-  txbuilder.addOutput(makeTokensCreateV2Opreturn(mypk, name, desc, nftdata), 0); // make opreturn
+  if (added - normalAmount > ccutils.MYDUST)
+    txbuilder.addOutput(mynormaladdress, added - normalAmount);  // change
+  txbuilder.addOutput(encodeTokensCreateV2OpReturn(mypk, name, desc, nftdata), 0); // make opreturn
 
   if (txbuilder.tx.version >= 4)
-    txbuilder.setExpiryHeight(tx.expiryHeight);
+    txbuilder.setExpiryHeight(sourcetx.expiryHeight);
 
   ccutils.finalizeCCtx(mypair, txbuilder);
   return txbuilder.build();
@@ -376,7 +359,7 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
 // make token transfer tx
 async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, ccamount) 
 {
-  typeforce(typeforce.anyOf(types.Buffer, types.String), _destpk);
+  typeforce(typeforce.oneOf(types.Buffer, types.String), _destpk);
 
   // init lib cryptoconditions
   // ccbasic.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
@@ -391,73 +374,37 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, c
   if (!ccutils.isValidPubKey(destpk))
     throw new Error("invalid destination pubkey");
 
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.getPublicKeyBuffer(), txfee);
-  let bearertx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, txfee);
+  let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
   // set zcash stuff:
-  txbuilder.setVersion(bearertx1.version);
+  txbuilder.setVersion(sourcetx1.version);
   if (txbuilder.tx.version >= 3)
-    txbuilder.setVersionGroupId(bearertx1.versionGroupId);
+    txbuilder.setVersionGroupId(sourcetx1.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, bearertx1, txwutxos.previousTxns, mynetwork);
+  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
   if (added < txfee)
     throw new Error("insufficient normal inputs (" + added + ")");
 
   //await sleep(1100); // to bypass old server rate limiter
-  let ccutxos = await NspvAddTokensInputs(peers, tokenid, mypk, ccamount);
-  let bearertx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
-  let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, bearertx2, ccutxos.previousTxns, mynetwork);
+  let ccutxos = await nspvAddTokensInputs(peers, tokenid, mypk, ccamount);
+  let sourcetx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
+  let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork);
   if (ccadded < ccamount)
     throw new Error("insufficient token inputs (" + ccadded + ")");
 
   // create tokens cc to dest address
-  /*let subfulfillments = [];
-  let threshold = 2;
-  subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(EVAL_TOKENSV2) });  
-  /* we do not add nft evalcode anymore
-  if (ccutxos.evalcodeNFT)  {
-    subfulfillments.push({ type:	"eval-sha-256", code:	ccutils.byte2Base64(ccutxos.evalcodeNFT) });  // add nft data evalcode to cond
-    threshold ++;
-  }*//*
-  subfulfillments.push({            
-    type:	"threshold-sha-256",
-    threshold:	1,
-    subfulfillments: [{ type:	"secp256k1-sha-256", publicKey:	destpk.toString('hex') }]
-  });
-
-  let destcond = {
-    type:	"threshold-sha-256",
-    threshold:	threshold,
-    subfulfillments:	subfulfillments   
-  };*/
-
-  let destccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [destpk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [destpk], makeTokensV2VData(tokenid)));
+  let destccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [destpk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [destpk], encodeTokensV2Data(tokenid)));
   if (destccSpk == null)  
     throw new Error('could not create tokens cc spk for destination');
   
   txbuilder.addOutput(destccSpk, ccamount);
   
   // create tokens to my address for cc change and spending probe
-  /*let mycond = {
-    type:	"threshold-sha-256",
-    threshold:	2,
-    subfulfillments:	[{
-          type:	"eval-sha-256",   
-          code:	ccutils.byte2Base64(EVAL_TOKENSV2)     
-      }, {            
-          type:	"threshold-sha-256",
-          threshold:	1,
-          subfulfillments:	[{  
-                  type:	"secp256k1-sha-256",
-                  publicKey:	mypk.toString('hex')
-          }]  
-      }]   
-    };*/
-
   if (ccadded - ccamount > 0)
   {
-    let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [mypk], makeTokensV2VData(tokenid)));
+    let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [mypk], encodeTokensV2Data(tokenid)));
     if (myccSpk == null)  
       throw new Error('could not create tokens cc spk for mypk');
 
@@ -470,9 +417,9 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, c
   }
 
   if (txbuilder.tx.version >= 4)
-    txbuilder.setExpiryHeight(bearertx1.expiryHeight);
+    txbuilder.setExpiryHeight(sourcetx1.expiryHeight);
 
-  let probeCond = ccutils.makeCCCondMofN(EVAL_TOKENSV2, [mypk], 1);
+  let probeCond = ccutils.makeCCCondMofN([EVAL_TOKENSV2], [mypk], 1);
   ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeCond}]);
   return txbuilder.build();
 }
@@ -552,7 +499,7 @@ function decodeVerusCompatVData(vdata)  {
   return undefined;
 }
 
-function decodeTokensV2VData(vdata)  {
+function decodeTokensV2Data(vdata)  {
   
   try {
     let bufferReader = new bufferutils.BufferReader(vdata);
@@ -613,7 +560,7 @@ function decodeTokensV2VData(vdata)  {
     }
     else if (funcid == 't') {
       // parse as tokenv2transfer
-      let tokenid = ccutils.txidReverse(bufferReader.readSlice(32)); 
+      let tokenid = ccutils.hashReverse(bufferReader.readSlice(32)); 
       tokendata.tokenid = tokenid;
       let blobs = [];
       while(bufferReader.offset < bufferReader.buffer.length) {
@@ -628,9 +575,14 @@ function decodeTokensV2VData(vdata)  {
     }
     return tokendata;
   } catch(err) {
-    logdebug("decodeTokensV2VData error:", err);
+    logdebug("decodeTokensV2Data error:", err);
   }
   return undefined;
+}
+
+function decodeTokensV2OpReturn(spk) {
+  let vdata = ccutils.isOpReturnSpk(spk);
+  return decodeTokensV2Data(vdata);
 }
 
 /**
@@ -661,7 +613,7 @@ function isTokenV2Output(tx, nvout)
       return false;
     }
     
-    let tokenData = decodeTokensV2VData(vdata);
+    let tokenData = decodeTokensV2Data(vdata);
     if (!tokenData) {
       logdebug("isTokenV2Output error: invalid token data");
       return false;
@@ -731,6 +683,8 @@ async function getTokensForPubkey(mynetwork, peers, mypk, skipCount, maxrecords)
 module.exports = {
   tokensInfoV2Tokel, tokensv2Create, tokensv2CreateTokel, tokensv2Transfer, tokenV2Address,
   isTokenV2Output, validateTokensV2Many, getTokensForPubkey,
+  nspvAddTokensInputs, 
+  encodeTokensCreateV2OpReturn, encodeTokensV2Data, encodeTokensV2OpReturn, 
+  decodeTokensV2OpReturn, decodeTokensV2Data,
   tokensv2GlobalPk, tokensv2GlobalPrivkey, tokensv2GlobalAddress, EVAL_TOKENSV2,
-  assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
 }
