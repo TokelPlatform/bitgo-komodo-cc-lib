@@ -167,7 +167,7 @@ async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, sa
 async function tokensInfoV2Tokel(peers, mynetwork, wif, tokenidhex) {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
-  let tokenid = ccutils.txidFromHex(tokenidhex);
+  let tokenid = ccutils.hashFromHex(tokenidhex);
   return NspvTokenV2InfoTokel(peers, mypk, tokenid);;
 };
 
