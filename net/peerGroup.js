@@ -50,6 +50,7 @@ class PeerGroup extends EventEmitter {
     this.accepting = false
     this.fConnectPlainWeb = opts.connectPlainWeb ? opts.connectPlainWeb : false
     this.retryInterval = 10000
+    this.methods = 0
 
     if (this.fConnectPlainWeb) {
       let wrtc = opts.wrtc || getBrowserRTC()
@@ -230,7 +231,7 @@ class PeerGroup extends EventEmitter {
           setImmediate(this.connect.bind(this))
         }, this.connectTimeout)
       }
-      this._onConnection(Error(`No more methods available to get new peers for required ${this._numPeers} peers, current number ${this.peers.length}`))
+      this._onConnection(new Error(`No more methods available to get new peers for required ${this._numPeers} peers, current number ${this.peers.length}`))
       //logdebug(`No more methods available to get new peers for required ${this._numPeers} peers`);
       return false
     }
@@ -376,17 +377,21 @@ class PeerGroup extends EventEmitter {
     if (this._dnsSeeds)
       this.dnsSeeds = this._dnsSeeds.slice();  // copy dns seeds for connection
     logdebug(`_fillPeers: peers to add, n = ${n}, max numPeers = ${this._numPeers}, current peers.length = ${this.peers.length}`)
-    for (let i = 0; i < n; i++) 
+    this.methods = 0;
+    for (let i = 0; i < n; i++) {
       if (!this._connectPeer())
         break;
+      this.methods ++;
+    }
   }
 
-  activeConnections()  {
-    let activeCount = 0;
+  hasMethods()  {
+    /*let activeCount = 0;
     if (this.resolvedAddrs) activeCount += this.resolvedAddrs.inUseCount();
     if (this.tcpAddrs) activeCount += this.tcpAddrs.inUseCount();
     if (this.webSeeds) activeCount += this.webSeeds.inUseCount();
-    return activeCount;
+    return activeCount;*/
+    return this.methods > 0 || this.peers.length > 0;
   }
 
   // sends a message to all peers
