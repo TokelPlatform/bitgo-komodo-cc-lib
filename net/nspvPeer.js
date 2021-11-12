@@ -296,11 +296,21 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new Error("nspv broadcast remote error: " + resp.errDesc));
+      let err = new Error("nspv broadcast remote error: " + (resp.errDesc ? resp.errDesc : ''));
+      err.broadcast = true;
+      cb(err);
       return;
     }
     if (!resp || !resp.txid || !resp.retcode) {
-      cb(new Error("could not parse nspv broadcast response"));
+      let err = new Error("could not parse nspv broadcast response");
+      err.broadcast = true;
+      cb(err);
+      return;
+    }
+    if (resp.retcode < 0) {
+      let err = new Error(`nspv broadcast remote error ${resp.retcode}`);
+      err.broadcast = true;
+      cb(err);
       return;
     }
     cb(null, { retcode: resp.retcode, txid: hashToHex(resp.txid) }); 
@@ -324,6 +334,7 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new Error('NSPV request timed out')
     error.timeout = true
+    error.broadcast = true
     cb(error)
   }, opts.timeout)
 }
