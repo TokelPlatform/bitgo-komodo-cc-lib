@@ -87,11 +87,15 @@ class Peer extends EventEmitter {
     if (opts.socket) this.connect(opts.socket)
   }
 
+  _formatCommand(command, payload) {
+    return "'"+command+"'";
+  }
+
   send (command, payload) {
     // TODO?: maybe this should error if we try to write after close?
     if (!this.socket.writable) return
     this._encoder.write({ command, payload })
-    logdebug("sent request cmd", "'"+command+"'", "to url", utils.getSocketUrl(this.socket))
+    logdebug("sent cmd", this._formatCommand(command, payload), "to url", utils.getSocketUrl(this.socket))
   }
 
   connect (socket) {
@@ -175,6 +179,7 @@ class Peer extends EventEmitter {
   _registerListeners () {
     this._decoder.on('error', this._error.bind(this))
     this._decoder.on('data', (message) => {
+      logdebug("received cmd", this._formatCommand(message.command, message.payload), "from url", utils.getSocketUrl(this.socket))
       this.emit('message', message)                     // forward received messages to PeerGroup.OnMessage()
       this.emit(message.command, message.payload)       // forward messages to Peer processors
     })
