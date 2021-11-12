@@ -8,7 +8,7 @@ const kmdmessages = require('../net/kmdmessages');
 const ccutils = require('../cc/ccutils');
 const cctokens = require('../cc/cctokensv2');
 const ecpair = require('../src/ecpair');
-const addressutils = require('../src/address');
+const address = require('../src/address');
 
 // create peer group
 var NspvPeerGroup = require('../net/nspvPeerGroup');
@@ -18,10 +18,10 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
-const mynetwork = networks.tkltest; 
+const mynetwork = networks.TKLTEST; 
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy24;
-//const mynetwork = networks.tokel; 
+//const mynetwork = networks.TOKEL; 
 
 // not used for plan websockets, only for PXP which is not supported
 //var defaultPort = 1111
@@ -32,11 +32,9 @@ const mynetwork = networks.tkltest;
 // (this is due to wasm delayed loading specifics)
 const ccbasic = require('../cc/ccbasic');
 const { strict } = require('once');
-var ccimp;
-if (process.browser)
-  ccimp = import('@tokel/cryptoconditions'); 
-else
-  ccimp = require('@tokel/cryptoconditions'); 
+var ccimp = require('../cc/ccimp');   // you will need to do a call like:
+                                      // ccbasic.cryptoconditions = await ccimp;
+                                      // to init the cryptoconditions wasm lib before cc usage (this is due to wasm delayed loading specifics)
 
 /*
 to connect over p2p:
@@ -156,9 +154,26 @@ async function makeNormalTx(wif, destaddress, amount)
   return txbuilder.build();
 }
 
+/*
+const bigi = require('bigi');
+const bip39 = require('bip39');
+const sha = require('sha.js');
+
+const ECPair = require('../src/ecpair');
+let seed = bip39.mnemonicToSeed('produce hungry kingdom decrease kick popular door author stadium fence fringe unhappy favorite vintage wise')
+const hash = sha('sha256').update(seed);
+const bytes = hash.digest();
+let d = bigi.fromBuffer(bytes)
+let p = new ECPair(d)
+console.log("wif", p.toWIF());
+console.log("");
+*/
 
 // test key:
 const mywif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
+const mywif2 = 'UuKUSQHnRGk4CDbRnbLRrJHq5Dwx58qR9Q9K2VpJjn3APXLurNcu';
+const mywif3 = 'Usr24VoC3h4cSfSrFiGJkWLYwmkM1VnsBiMyWZvrF6QR5ZQ6Fbuu'; //  "address": "RXTUtWXgkepi8f2ohWLL9KhtGKRjBV48hT",
+const mywif4 = 'UvksaDo9CTFfmYNcc6ykmAB28k3dfgFcufRLFVcNuNJH4yJf2K9F'; // 03b1e5feb25fa411911d21310716249f14712cead2cdfce62dd66a0c3702262c60 RYPvTE2bECHz17W7k7NaVJFAhNSEFf2grb 
 
 if (!process.browser) 
 {
@@ -167,7 +182,7 @@ if (!process.browser)
     // console.log('in event: connected to peer', peer.socket.remoteAddress)
   });
   // create connections to peers
-  peers.connect(async () => {
+  peers.nspvConnect(async () => {
   
     try {
       ccbasic.cryptoconditions = await ccimp;  // init cryptoconditions var
@@ -177,8 +192,10 @@ if (!process.browser)
       // tests:
       
       // make a normal tx
-      //let txhex = await create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 5000);  // amount in satoshi
+      //let txhex = await create_normaltx(mywif2, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", (88+15.4+5)*100000000);  // amount in satoshi
       //let txhex = await create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 5000);
+      //let txhex = await create_normaltx(mywif3, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 30.9 * 100000000);  // amount in satoshi
+      //let txhex = await create_normaltx(mywif4, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0.9 * 100000000);  // amount in satoshi
       //console.log('txhex=', txhex);
 
       let result
@@ -187,14 +204,39 @@ if (!process.browser)
       //let result = await ccutils.getUtxos(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
       //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
       /////result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfA", 0, 0, 0); // bad addr (zfQ->zfA)
-      //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
+      //result = await ccutils.getUtxos(peers, "RKHhQYybJuAeu4aoc3hhu2nCzLFivBx2D4", 0, 0, 0);
       //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
       //result = await ccutils.getCCUtxos(peers, "RXnxmVxXXvxF8Fo9kstYeJFRbWvhsJV2u8", 0, 0);
+      //result = await ccutils.getUtxos(peers, "RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu", 0, 0, 0);
+      //result = await ccutils.getTxids(peers, "CeyfG2RJpA8CxPLNyTEM8HYFTNgXAdHc8w", 0, 0, 0);
+      result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
+      console.log('result=', result);
+
+      /* check addresses in the getTxids result
+       add txids in set (remove duplicates)
+      let params = [ peers, mypk ];
+      let set = new Set();
+      result.txids.forEach(async (txo) => {
+        params.push(ccutils.hashToHex(txo.txid));
+        set.add( ccutils.hashToHex(txo.txid) );
+      });
+      console.log('size=', set.size);
+      let gettxns = await ccutils.getTransactionsMany.apply(undefined, params);
+      if (gettxns.transactions && gettxns.transactions.length > 0) {
+        let i = 0;
+        gettxns.transactions.forEach((txh) => {
+          let tx = Transaction.fromHex(txh.tx, mynetwork);
+          console.log("address=", address.fromOutputScript(tx.outs[result.txids[i].vout].script, mynetwork));
+          i ++;
+        });
+      }  */
+
 
       // gettransactionsmany:
       //result = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad36577930b6", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad365779AAAA");
       //console.log('result=', result);
 
+      /*
       // gettransactionsmany:
       let result1 = ccutils.getTransactionsMany(peers, Buffer.from('02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e', 'hex'), 
         'e932fdacaa16906e1ad70c4bfe52779094c565cec52c69b3182cbe081cf9f94b',
@@ -216,14 +258,13 @@ if (!process.browser)
       '69b8d6eaaa2af8a952c5df329961ecec00a32e9e58eebb8bb831fb8e845e1c25');
 
       let results = await Promise.all([result1, result2]);
-
-      //console.log('result1=', result1);
-      //console.log('result2=', result2);
+    
       let i = 0;
       results.forEach(r => {
         i++;
         console.log("r" + new String(i) + "=", r);
       });
+      */
 
       // tokev2address:
       //let tokev2address = await cctokens.TokenV2Address(peers, mypk, mypk);

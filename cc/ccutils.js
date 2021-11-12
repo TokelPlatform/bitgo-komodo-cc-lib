@@ -1,8 +1,7 @@
 /**
  * cc utils to create cryptocondition tx in javascript
- * Note: max amount enforced in typeforce is SATOSHI_MAX == 21 * 1e14 
- * Also readUInt64 and typeforce(type.Satoshi) enforce yet another max 900719925474991 (0x001fffffffffffff) == 90 * 1e14. 
- * This is MAX_SAFE_INTEGER constant represents the maximum safe integer in JavaScript (2^53 - 1)
+ * Note: max amount enforced in typeforce SATOSHI_MAX changed from btc 21 * 1e14 to MAX_SAFE_INTEGER
+ * Also readUInt64 and typeforce(type.Satoshi) enforce same MAX_SAFE_INTEGER == 900719925474991 (0x001fffffffffffff) == 90 * 1e14. 
  */
 
 const Transaction = require('../src/transaction');
@@ -16,6 +15,7 @@ const types = require('../src/types');
 const { decodeTransactionData, parseTransactionData } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
+const OPS = require('bitcoin-ops');
 
 const Debug = require('debug')
 const logdebug = Debug('cc')
@@ -278,12 +278,15 @@ function getUtxos(peers, address, isCC, skipCount, maxrecords)
 }
 
 /**
- * returns txos (tx outputs bith spent and unspent) for an address
+ * returns array with txids relevant to an address: tx outputs (spent and unspent) and spending txids (from this address)
  * @param {*} peers PeerGroup object with NspvPeers additions
  * @param {*} address address to get txids from
  * @param {*} isCC get txids with normal (isCC is 0) or cc (isCC is 1) utxos on this address
  * @param {*} skipCount number of txos to skip 
  * @param {*} maxrecords max number of returned txos, if 0 will return max records set by the server
+ * @returns a promise returning object containing nspv params and a 'txids' array with txid, index and amount props. 
+ * Note that txids with negative amount denote spending transactions, and the 'index' property means input's index
+ * for txids with positive amounts those are tx outputs
  */
 function getTxids(peers, address, isCC, skipCount, maxrecords)
 {
@@ -435,7 +438,7 @@ function getRawTransaction(peers, mypk, txid)
   return new Promise((resolve, reject) => {
     let txidhex;
     if (Buffer.isBuffer(txid)) {
-      txidhex = txidToHex(txid);
+      txidhex = hashToHex(txid);
     }
     else
       txidhex = txid;
@@ -465,7 +468,7 @@ function getTransactionsMany(peers, mypk, ...args)
   let txids = [];
   for(let i = 0; i < args.length; i ++) {
     if (Buffer.isBuffer(args[i])) {
-      txidhex = txidToHex(args[i]);
+      txidhex = hashToHex(args[i]);
     }
     else
       txidhex = args[i];
@@ -584,28 +587,28 @@ function ccTxidPubkey_tweak(txid)
   return Buffer.from([]);
 }
 
-exports.isValidTxid = isValidTxid;
+exports.isValidHash = isValidHash;
 /**
  * valid txid means it is a buf of correct length and non empty
  * @param {*} txid 
  */
-function isValidTxid(txid)
+function isValidHash(hash)
 {
-  return typeforceNT(types.Hash256bit, txid);
-  //if (Buffer.isBuffer(txid) && txid.length == 32 /*&& !txid.equals(Buffer.allocUnsafe(32).fill('\0'))*/)
+  return typeforceNT(types.Hash256bit, hash);
+  //if (Buffer.isBuffer(hash) && hash.length == 32 /*&& !hash.equals(Buffer.allocUnsafe(32).fill('\0'))*/)
   //  return true;
   //else
   //  return false;
 }
 
-//exports.isValidTxidHex = isValidTxidHex;
+//exports.isValidHashHex = isValidHashHex;
 /**
  * valid txid means it is a string of correct length and has hex chars
- * @param {string} txid 
+ * @param {string} hash 
  */
-/*function isValidTxidHex(txid)
+/*function isValidHashHex(hash)
 {
-  if (typeof txid === 'string' && txid.length == 64 && txid.match(/[0-9a-f]/gi) /*&& (txid.match(/0/g) || '').length !== txid.length*//*)
+  if (typeof hash === 'string' && hash.length == 64 && hash.match(/[0-9a-f]/gi) /*&& (hash.match(/0/g) || '').length !== hash.length*//*)
     return true;
   else
     return false;
@@ -636,13 +639,13 @@ function isValidPubKey(pubkey)
     return false;
 }*/
 
-exports.txidToHex = txidToHex;
+exports.hashToHex = hashToHex;
 /**
  * converts txid as buffer into hex LE
  * @param {Buffer} buf 
  * @returns {string} hex string or empty string if txid is not valid
  */
-function txidToHex(txid)
+function hashToHex(txid)
 {
   if (typeforceNT(types.Hash256bit, txid))  {
     let reversed = Buffer.allocUnsafe(txid.length);
@@ -653,13 +656,13 @@ function txidToHex(txid)
   return ''; //'0'.repeat(32*2);
 }
 
-exports.txidFromHex = txidFromHex;
+exports.hashFromHex = hashFromHex;
 /**
  * converts from hex into buffer reversing from LE
  * @param {string} hex 
  * @returns {Buffer} converted txid as Buffer or empty Buffer
  */
-function txidFromHex(hex)
+function hashFromHex(hex)
 {
   if (typeof hex === 'string' && hex.length == 64 && hex.match(/[0-9a-f]/gi))  {
     let reversed = Buffer.from(hex, 'hex');
@@ -692,12 +695,36 @@ exports.toSatoshi = function (val) {
   return Math.round(val * 100000000);
 }
 
-exports.castTxid = function(_txid) {
+exports.castHashBin = function(_txid) {
   let txid = _txid;
   if (typeof _txid === 'string')
-    txid = txidFromHex(_txid);
-  if (!isValidTxid(txid)) {
+    txid = hashFromHex(_txid);
+  if (!isValidHash(txid)) {
     return;
   }
   return txid;
+}
+
+/**
+ * returns if scriptPubKey has OP_RETURN
+ * @param {*} script 
+ * @returns 
+ */
+exports.isOpReturnSpk = function(script)
+{
+  let chunks = bscript.decompile(script);
+  if (Array.isArray(chunks) && chunks.length > 0) {
+    if (chunks[0] == OPS.OP_RETURN) {
+      if (chunks.length > 1)
+        return chunks[1];
+      else
+        Buffer.from([]);
+    }
+  }
+  return false;
+}
+
+exports.isError = function(o)
+{
+  return typeof(o) === 'object' && o.name === 'Error';
 }

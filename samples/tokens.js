@@ -28,11 +28,9 @@ const mynetwork = networks.tkltest;
 // to init the cryptoconditions wasm lib before cc usage
 // (this is due to wasm delayed loading specifics)
 const ccbasic = require('../cc/ccbasic');
-let ccimp;
-if (process.browser)
-  ccimp = import('@tokel/cryptoconditions');
-else
-  ccimp = require('@tokel/cryptoconditions');
+var ccimp = require('../cc/ccimp');   // you will need to do a call like:
+                                      // ccbasic.cryptoconditions = await ccimp;
+                                      // to init the cryptoconditions wasm lib before cc usage (this is due to wasm delayed loading specifics)
 
 
 // additional seeds:
@@ -157,7 +155,7 @@ if (!process.browser)
       let nvout = 1;
       let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
       let tokendata = cctokens.isTokenV2Output(tx, nvout);
-      console.log(`IsTokenV2Output(tx,${nvout})=`, tokendata, "tokenid=", (tokendata ? ccutils.txidToHex(tokendata.tokenid) : null)); 
+      console.log(`IsTokenV2Output(tx,${nvout})=`, tokendata, "tokenid=", (tokendata ? ccutils.hashToHex(tokendata.tokenid) : null)); 
       */
 
       // validateTokensV2Many test

@@ -16,11 +16,9 @@ const ecpair = require('../src/ecpair');
 // (this is due to wasm delayed loading specifics)
 
 const ccbasic = require('../cc/ccbasic');
-var ccimp;
-if (process.browser)
-  ccimp = import('@tokel/cryptoconditions'); 
-else
-  ccimp = require('@tokel/cryptoconditions'); 
+var ccimp = require('../cc/ccimp');   // you will need to do a call like:
+                                      // ccbasic.cryptoconditions = await ccimp;
+                                      // to init the cryptoconditions wasm lib before cc usage (this is due to wasm delayed loading specifics)
 
 
 const FAUCETSIZE = 10000000;

@@ -6,8 +6,8 @@ const ip = require('ip')
 
 const bufferutils = require("../src/bufferutils");
 
-var typeforce = require('typeforce');
-const { varBuffer } = require('bitcoin-protocol/src/types');
+//var typeforce = require('typeforce');
+//const { varBuffer } = require('bitcoin-protocol/src/types');
 //var typeforceNT = require('typeforce/nothrow');
 
 exports.nspvVersion = 0x0005;
@@ -239,37 +239,6 @@ exports.kmdheader = struct([
   { name: 'solution', type: exports.varBuffer }
 ])
 
-/* this struct made compatible with kmdheader in nspv v5 
-
-// for some unknown reason in nspv protocol solution is sent not as varBuffer but simply as array of 1344 
-// (TODO: change it as this was a bad design)
-// so I made a nspv version of kmdheader
-let buffer1344 = struct.Buffer(1344)
-exports.kmdheaderNspv = struct([
-  { name: 'version', type: struct.Int32LE },
-  { name: 'prevHash', type: exports.buffer32 },
-  { name: 'merkleRoot', type: exports.buffer32 },
-  { name: 'hashFinalSaplingRoot', type: exports.buffer32 },
-  { name: 'timestamp', type: struct.UInt32LE },
-  { name: 'bits', type: struct.UInt32LE },
-  { name: 'nonce', type: exports.buffer32 },
-  { name: 'solution', type: buffer1344 }
-]) */
-
-
-/* yet another old kmd header version
-function decodeEquiHdr(bufferReader) {
-  let version = bufferReader.readUInt32();
-  let hashPrevBlock = bufferReader.readSlice(32);
-  let hashMerkleRoot = bufferReader.readSlice(32);
-  let hashFinalSaplingRoot = bufferReader.readSlice(32);
-  let nTime = bufferReader.readUInt32();
-  let nBits = bufferReader.readUInt32();
-  let nonce = bufferReader.readSlice(32);
-  let nSolution = bufferReader.readSlice(1344);
-  return { version, hashPrevBlock, hashMerkleRoot, hashFinalSaplingRoot, nTime, nBits, nonce, nSolution };
-}*/
-
 let vhashes = struct.VarArray(varint, exports.buffer32)
 
 const NSPVMSGS = {
@@ -297,13 +266,6 @@ exports.NSPVMSGS = NSPVMSGS;
 let bufferaddr = struct.Buffer(64);
 //let methodtype = struct.Buffer(64);
 
-/*
-struct NSPV_ntz {
-    bits256 blockhash, txid, othertxid;
-    int32_t height, txidheight;
-    uint32_t timestamp;
-}; */
-
 let nspvNtz = struct([
   { name: 'blockhash', type: exports.buffer32 },
   { name: 'txid', type: exports.buffer32 },
@@ -312,24 +274,6 @@ let nspvNtz = struct([
   { name: 'txidheight', type: struct.Int32LE },
   { name: 'timestamp', type: struct.UInt32LE },
 ]);
-
-/*
-struct NSPV_inforesp
-{
-    struct NSPV_ntz notarization;
-    uint256 blockhash;
-    int32_t height,hdrheight;
-    struct NSPV_equihdr H;
-    uint32_t version;
-};*/
-/*
-    len += NSPV_rwntz(rwflag,&serialized[len],&ptr->notarization);
-    len += iguana_rwbignum(rwflag,&serialized[len],sizeof(ptr->blockhash),(uint8_t *)&ptr->blockhash);
-    len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->height),&ptr->height);
-    len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->hdrheight),&ptr->hdrheight);
-    len += NSPV_rwequihdr(rwflag,&serialized[len],&ptr->H);
-    len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->version),&ptr->version);
-    */
 
 let nspvInfoReq = struct([
   { name: 'reqCode', type: struct.UInt8 },
@@ -545,7 +489,8 @@ let nspvTxProofResp = (function(){
     let respCode = bufferReader.readUInt8();
     let requestId = bufferReader.readUInt32();
     let txid = bufferReader.readSlice(32);
-    let unspentValue = bufferReader.readUInt64();
+    let unspentValue = struct.Int64LE.decode(bufferReader.buffer, bufferReader.offset);  // bufferReader.readUInt64();
+    bufferReader.offset += 8;
     let height = bufferReader.readUInt32();
     let vout = bufferReader.readUInt32();
     let txlen = bufferReader.readUInt32();
@@ -553,8 +498,12 @@ let nspvTxProofResp = (function(){
     let txprooflen = bufferReader.readUInt32();
     let txproofbuf = bufferReader.readSlice(txprooflen);
 
-    let tx = exports.kmdtransaction.decode(txbuf);
-    let pmt = exports.txProof.decode(txproofbuf);
+    let tx = null;
+    if (txlen > 0)  // maybe empty
+      tx = exports.kmdtransaction.decode(txbuf);
+    let pmt = null;
+    if (txprooflen > 0)
+      pmt = exports.txProof.decode(txproofbuf);
     bufferReader.offset += exports.txProof.decode.bytes;
 
     return { respCode, requestId, txid, unspentValue, height, vout, tx, partialMerkleTree: pmt };
@@ -596,23 +545,12 @@ let nspvNtzsResp = (function(){
   function encodingLength(value) {
     return 0; // not used, only decode
   }
-  /*
-  function decodeNtz(bufferReader) {
-    let blockHash = bufferReader.readSlice(32);
-    let txid = bufferReader.readSlice(32);
-    let otherTxid = bufferReader.readSlice(32);
-    let height = bufferReader.readUInt32();
-    let txidHeight = bufferReader.readUInt32();
-    let timestamp = bufferReader.readUInt32();
-    return { blockHash, txid, otherTxid, height, txidHeight, timestamp };
-  } */
+
   function decode(buffer, offset, end) {
     let slicedBuffer = buffer.slice(offset, end);
     let bufferReader = new bufferutils.BufferReader(slicedBuffer);
     let respCode = bufferReader.readUInt8();
     let requestId = bufferReader.readUInt32();
-    //let prevntz = decodeNtz(bufferReader);
-    //let nextntz = decodeNtz(bufferReader);
     let prevntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
     bufferReader.offset += nspvNtz.decode.bytes;
     let nextntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
@@ -623,48 +561,8 @@ let nspvNtzsResp = (function(){
   return { encode, decode, encodingLength };
 })();
 
-
-/*
-struct NSPV_equihdr {
-    int32_t nVersion;
-    bits256 hashPrevBlock;
-    bits256 hashMerkleRoot;
-    bits256 hashFinalSaplingRoot;
-    uint32_t nTime;
-    uint32_t nBits;
-    bits256 nNonce;
-    uint8_t nSolution[1344];
-};
-    len += iguana_rwnum(rwflag, &serialized[len], sizeof(ptr->nVersion), &ptr->nVersion);
-    len += iguana_rwbignum(rwflag, &serialized[len], sizeof(ptr->hashPrevBlock), (uint8_t*)&ptr->hashPrevBlock);
-    len += iguana_rwbignum(rwflag, &serialized[len], sizeof(ptr->hashMerkleRoot), (uint8_t*)&ptr->hashMerkleRoot);
-    len += iguana_rwbignum(rwflag, &serialized[len], sizeof(ptr->hashFinalSaplingRoot), (uint8_t*)&ptr->hashFinalSaplingRoot);
-    len += iguana_rwnum(rwflag, &serialized[len], sizeof(ptr->nTime), &ptr->nTime);
-    len += iguana_rwnum(rwflag, &serialized[len], sizeof(ptr->nBits), &ptr->nBits);
-    len += iguana_rwbignum(rwflag, &serialized[len], sizeof(ptr->nNonce), (uint8_t*)&ptr->nNonce);
-    if (addlenflag != 0 && rwflag == 1) {
-        serialized[len++] = 0xfd;
-        serialized[len++] = 1344 & 0xff;
-        serialized[len++] = (1344 >> 8) & 0xff;
-    }
-    len += iguana_rwbuf(rwflag, &serialized[len], sizeof(ptr->nSolution), ptr->nSolution);
-
-struct NSPV_ntzproofshared {
-    struct NSPV_equihdr* hdrs;
-    int32_t prevht, nextht, pad32;
-    uint16_t numhdrs, pad16;
-};
-
-struct NSPV_ntzsproofresp {
-    struct NSPV_ntzproofshared common;
-    bits256 prevtxid, nexttxid;
-    int32_t prevtxidht, nexttxidht, prevtxlen, nexttxlen;
-    uint8_t *prevntz, *nextntz;
-};
-*/
-
 // custom parser for req/resp nspv msgs to get notarisation txns :
-// req
+// req ntz txns and tx proofs
 let nspvNtzsProofReq = (function(){
   function encode(value, buffer, offset) {
     let bufferWriter = new bufferutils.BufferWriter(buffer, offset);
@@ -683,7 +581,7 @@ let nspvNtzsProofReq = (function(){
   return { encode, decode, encodingLength }
 })();
 
-// resp, returns ntz txns 
+// resp with ntz txns 
 let nspvNtzsProofResp = (function(){
   function encode(value, buffer, offset) {
     // not used, only decode
@@ -724,10 +622,10 @@ let nspvNtzsProofResp = (function(){
     let prevtxidht = bufferReader.readUInt32();  // prev ntz tx height
     let nexttxidht = bufferReader.readUInt32();  // next ntz tx height
     let prevtxlen = bufferReader.readUInt32();
-    let prevntz = bufferReader.readSlice(prevtxlen);
+    let prevtxbuf = bufferReader.readSlice(prevtxlen);
     let nexttxlen = bufferReader.readUInt32();
-    let nextntz = bufferReader.readSlice(nexttxlen);
-    return { respCode, requestId, common, prevtxid, nexttxid, prevtxidht, nexttxidht, prevtxlen, nexttxlen, prevntz, nextntz };
+    let nexttxbuf = bufferReader.readSlice(nexttxlen);
+    return { respCode, requestId, common, prevtxid, nexttxid, prevtxidht, nexttxidht, prevtxlen, nexttxlen, prevtxbuf, nexttxbuf };
   }
   return { encode, decode, encodingLength };
 })();

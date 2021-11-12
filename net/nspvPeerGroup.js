@@ -11,12 +11,33 @@ try { net = require('net') } catch (err) {}
 const old = require('old')
 const PeerGroup = require('./peerGroup')
 require('./nspvPeer'); // init peer.js too
+const kmdblockindex = require('../src/kmdblockindex');
 
 const { nspvResp, nspvVersion } = require('./kmdtypes');
 
 class NspvPeerGroup extends PeerGroup {
   constructor (params, opts) {
     super(params, opts)
+
+    this.periodicInterval = 120 * 1000;
+    this.periodicTimer = null;
+    this.headersSynced = false;
+
+
+    this.blockIndex = kmdblockindex.createInstance(this.network);
+
+    this.on('peer', (peer) => {
+
+      peer.on('nspvReady', ()=>{
+        //this._startDownloadHeaders();
+        //this.emit('downloadHeaders');
+        //setImmediate(this._downloadHeaders.bind(this));
+        if (!this.periodicTimer)
+          this.periodicTimer = setInterval(this._periodic.bind(this), this.periodicInterval);
+        this.emit('nspvConnect');
+      });  // redirect to nspvGroup listener
+
+    })
 
     this.on('nSPV', (buf) => {
       let resp = nspvResp.decode(buf);
@@ -25,25 +46,51 @@ class NspvPeerGroup extends PeerGroup {
       //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp)
       this.emit(`nSPV:${resp.requestId}`, resp)
     })
+
+    this.on('PeerGroupClose', () => {
+      if (this.periodicTimer) clearInterval(this.periodicTimer);
+    });
+
+    //this.on('downloadHeaders', this._downloadHeaders.bind(this));
   }
+
+
+
 }
+
+PeerGroup.prototype._downloadHeaders = function()   {
+  if (!this.blockIndex)
+    throw(new Error('block index not set'));
+  let loc = this.blockIndex.createLocator();
+  if (!loc)
+    throw(new Error('could not create locator. Block index genesis or tip invalid'));
+  this.getHeaders(loc, {}, (error, headers) => {
+    if (headers) {
+      headers.forEach(e => this.blockIndex.add(e.header));
+      logdebug(`got ${headers.length} height is ${this.blockIndex.tip.height} `);
+      //this.emit('downloadHeaders');
+      setImmediate(this._downloadHeaders.bind(this))
+    }
+  });
+}
+
+PeerGroup.prototype._periodic = function()  {
+
+  if (this.fConnectPlainWeb)  {
+    this.getWsAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
+    //this.getAddrTimer = setInterval(this.getWsAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getwsaddr interval 120 sec
+  } else {
+    this.getAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
+    //this.getAddrTimer = setInterval(this.getAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getaddr interval 120 sec
+  }
+
+}
+
 
 PeerGroup.prototype.nspvConnect = function(cb) {
   this.connect(() => {
-    cb();
-    // after verack received we must send NSPV_INFO (sort of secondary nspv connect) to check versions
-    /*this.nspvGetInfo(0, {}, (err, nspvInfo, peer) => {
-      if (nspvInfo && nspvInfo.version === nspvVersion)
-        cb(nspvInfo);
-      else {
-        if (!nspvInfo)
-          logerror('could not parse nspv getinfo response');
-        if (nspvInfo && nspvInfo.version !== nspvVersion)
-          logerror('unsupported remote nspv node version');
-        peer.disconnect(new Error('Node disconnected because of invalid response or version'));
-        cb();
-      }
-    }); */
+    if (cb)
+      this.once('nspvConnect', cb);
   });
 }
 

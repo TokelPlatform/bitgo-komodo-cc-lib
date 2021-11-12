@@ -17,6 +17,7 @@ const assign = require('object-assign')
 const old = require('old')
 const Peer = require('./peer.js')
 const utils = require('./utils.js')
+const { URL } = require('url')
 //const { time } = require('console')
 const { AddrStates } = require('./addrstates')
 
@@ -49,8 +50,6 @@ class PeerGroup extends EventEmitter {
     this.accepting = false
     this.fConnectPlainWeb = opts.connectPlainWeb ? opts.connectPlainWeb : false
     this.retryInterval = 10000
-    this.getAddrInterval = 120 * 1000
-    this.getAddrTimer = null
 
     if (this.fConnectPlainWeb) {
       let wrtc = opts.wrtc || getBrowserRTC()
@@ -63,7 +62,6 @@ class PeerGroup extends EventEmitter {
       // if lastConnectTime == 0 (never connected) && retries count > 10 then this address is not used (to prevent spam addresses overusing)
       // after 3h retry count is cleared and the address is again available
       // when addresses are selected it first checked that lastConnectTime != 0 but it is least recently connected
-
       
       let webSeeds = [];
       if (this._params.webSeeds)  
@@ -75,7 +73,7 @@ class PeerGroup extends EventEmitter {
 
       this.webAddrs = new AddrStates(webSeeds);
 
-      /* do not use pxp:
+      /* do not use pxp (save for possible use):
       if (this._connectPxpWeb)  {
         try {
           this._exchange = Exchange(params.magic.toString(16),
@@ -93,16 +91,14 @@ class PeerGroup extends EventEmitter {
       }*/
     }
     else {
-      this.resolvedAddrs = new AddrStates([]);
-
+      this.resolvedAddrs = new AddrStates([]); // init empty resolved
       this._dnsSeeds = [];
       if (this._params.dnsSeeds)
         this._dnsSeeds = this._dnsSeeds.concat(this._params.dnsSeeds) // add seeds from params
       if (this._params.network && this._params.network.dnsSeeds)
         this._dnsSeeds = this._dnsSeeds.concat(this._params.network.dnsSeeds)  // add seeds from network config
 
-      let staticPeers = [];
-              
+      let staticPeers = [];        
       if (this._params.staticPeers) 
         staticPeers = staticPeers.concat(this._params.staticPeers) // add static peers from params
       if (this._params.network && this._params.network.staticPeers)
@@ -129,7 +125,7 @@ class PeerGroup extends EventEmitter {
   }
 
   _error (err) {
-    this.emit('error', err)
+    this.emit('peerGroupError', err)
   }
 
   // callback for peer discovery methods
@@ -144,8 +140,7 @@ class PeerGroup extends EventEmitter {
         setTimeout(this._connectPeer.bind(this), this.retryInterval)
       }
       if (addrstates)
-      //  addrstates(ADDRSTATEOP.CLEAR, err)
-          addrstates.setClear(addr, err)
+        addrstates.setClear(addr, err)
 
       return
     }
@@ -161,8 +156,6 @@ class PeerGroup extends EventEmitter {
       this.emit('connectError', err, peer)  // emit user's event
 
       // clear inuse state:
-      //if (cbUpdateAddrState)
-        //cbUpdateAddrState(ADDRSTATEOP.CLEAR, err)
       if (addrstates)
         addrstates.setClear(addr, err)
 
@@ -175,27 +168,13 @@ class PeerGroup extends EventEmitter {
       // remove once listeners to replace with new ones
       peer.removeListener('error', onPeerError)
       peer.removeListener('disconnect', onPeerError)
-      //this.addPeer(peer, cbUpdateAddrState)
       this.addPeer(peer, addrstates, addr)
 
-
-      // setup getaddr or getwsaddr loop
-      if (!this.getAddrTimer)
-      {
-        if (this.fConnectPlainWeb)  {
-          this.getWsAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
-          this.getAddrTimer = setInterval(this.getWsAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getwsaddr interval 120 sec
-        } else {
-          this.getAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
-          this.getAddrTimer = setInterval(this.getAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getaddr interval 120 sec
-        }
-      }
-
       // set conn time
-      //if (cbUpdateAddrState)
-      //  cbUpdateAddrState(ADDRSTATEOP.SETCONNTIME, null)  // update okay
       if (addrstates)
         addrstates.setConnected(addr)
+
+      //this.emit('newpeer', peer); // new event to notify external listeners
     }
 
     // wait for socket connection errors:
@@ -216,7 +195,7 @@ class PeerGroup extends EventEmitter {
 
     if (!process.browser) {
       // non-browser dns resolved connections: 
-      if (this._params.dnsSeeds && this.params.dnsSeeds.length > 0) {
+      if (Array.isArray(this.dnsSeeds) && this.dnsSeeds.length > 0) {
         getPeerArray.push(this._connectDNSPeer.bind(this))
       }
       // non-browser static peers connections
@@ -230,7 +209,7 @@ class PeerGroup extends EventEmitter {
       getPeerArray.push(this._exchange.getNewPeerCustom.bind(this._exchange))
     } */
     if (this.fConnectPlainWeb)  {
-      if (this._webAddrs && this._freeAddrCount(this._webAddrs) > 0) {
+      if (this.webAddrs && this.webAddrs.freeCount() > 0) {
         getPeerArray.push(this._getNewPlainWebPeer.bind(this))
       }
     }
@@ -245,14 +224,14 @@ class PeerGroup extends EventEmitter {
       if (this.connectTimeout) {
         logdebug(`scheduling reconnection to peers in ${this.connectTimeout} ms`)
         setTimeout(() => {
-          if (this.close) return
+          if (this.closed) return
           this.connecting = true
           logdebug(`resuming connecting to peers`)
           setImmediate(this.connect.bind(this))
         }, this.connectTimeout)
       }
-      //this._onConnection(Error(`No more methods available to get new peers for required ${this._numPeers} peers, current number ${this.peers.length}`))
-      logdebug(`No more methods available to get new peers for required ${this._numPeers} peers`);
+      this._onConnection(Error(`No more methods available to get new peers for required ${this._numPeers} peers, current number ${this.peers.length}`))
+      //logdebug(`No more methods available to get new peers for required ${this._numPeers} peers`);
       return false
     }
     let getPeerFunc = utils.getRandom(getPeerArray)
@@ -264,43 +243,40 @@ class PeerGroup extends EventEmitter {
   // connects to a random TCP peer via a random DNS seed
   // (selected from `dnsSeeds` in the params)
   _connectDNSPeer (onConnectionCb) {
-    let seeds = this._dnsSeeds
     // let seed = utils.getRandom(seeds)  // cant get random as we should track addresses in use 
-
-    seeds.forEach(seed => {
-      dns.resolve(seed, (err, addresses) => {
+    while(this.dnsSeeds.length > 0) 
+    {
+      let seed = this.dnsSeeds.pop();
+    //this.dnsSeeds.forEach(seed => {
+      let seedUrl = utils.parseAddress(seed);
+      logdebug('_connectDNSPeer resolving seed', seedUrl.hostname);
+      dns.resolve(seedUrl.hostname, (err, ips) => {  // we should use resolve() here (as supposed for dns seeds)
         if (err) return onConnectionCb(err)
         //let addr = utils.getRandom(addresses)  // we cant get random as we need track addresses in use
-        addresses.forEach(resolved => {
-          let addrState = this.resolvedAddrs.find(resolved);
-          if (!addrState)
-            addrState = this.resolvedAddrs.add(resolved);
-
-          if (addrState === ADDRSTATE.FREE) {  // check if dns resoled not in use
-            this.resolvedAddrs.setInUse(resolved);  
-            let url = utils.parseAddress(resolved)
-
-            this._connectTCP(url.host, url.port /*|| this._params.defaultPort*/, (err, socket)=>{
-              // callback to update addr state for dns peers
-              onConnectionCb(err, socket, this.resolvedAddrs, resolved);
+        ips.forEach(ip => {
+          let resolvedUrl = new URL(seedUrl.protocol + '//' + ip  +':' + seedUrl.port);
+          let addrState = this.resolvedAddrs.add(resolvedUrl.href);  // returns new or existing addr state
+          if (AddrStates.canUse(addrState)) {  // check if resolved addr not in use
+            this.resolvedAddrs.setInUse(resolvedUrl.href);  
+            this._connectTCP(resolvedUrl.hostname, resolvedUrl.port /*|| this._params.defaultPort*/, (err, socket)=>{
+              // callback to update addr state for dns resolved addresses
+              onConnectionCb(err, socket, this.resolvedAddrs, resolvedUrl.href);
             });
           }
-        })
-      })
-    })
+        });
+      });
+    }
   }
 
   // connects to a random TCP peer from `staticPeers` in the params
   _connectStaticPeer (onConnectionCb) {
     //let staticPeers = this._params.staticPeers
     //let address = utils.getRandom(staticPeers)
-    //let address = this._findBestAddr(this._tcpAddrs);
-    let address = this.tcpAddrs.findBestAddr();
-    if (address !== undefined) {
-      //this._updateAddrState(this._tcpAddrs, { addr: address, state: ADDRSTATE.INUSE }); 
+    let address = this.tcpAddrs.findBestAddr();  // getting random not supported
+    if (address) {
       this.tcpAddrs.setInUse(address);   
-      let peer = utils.parseAddress(address)
-      this._connectTCP(peer.hostname, peer.port /*|| this._params.defaultPort*/, (err, socket)=>{
+      let peerUrl = utils.parseAddress(address)
+      this._connectTCP(peerUrl.hostname, peerUrl.port /*|| this._params.defaultPort*/, (err, socket)=>{
         onConnectionCb(err, socket, this.tcpAddrs, address);
       });
     }
@@ -310,17 +286,17 @@ class PeerGroup extends EventEmitter {
 
   // connects to a standard protocol TCP peer
   _connectTCP (host, port, cb) {
-    logdebug(`_connectTCP: tcp://${host}:${port}`)
+    logdebug(`_connectTCP: ${host}:${port}`)
     let socket = net.connect(port, host)
     let timeout
     if (this.connectTimeout) {
       timeout = setTimeout(() => {
         socket.destroy()
-        cb(Error(`Connection timed out tcp://${host}:${port}`))
+        cb(Error(`Connection timed out ${host}:${port}`))
       }, this.connectTimeout)
     }
     socket.once('error', (err) => {
-      clearTimeout(timeout) //added to clear timeout to prevent reconnection duplication (both on error and timeout)
+      clearTimeout(timeout) // clear timeout to prevent reconnection twice (both on error and timeout)
       cb(err, socket)
     })    
     socket.once('connect', () => {
@@ -332,7 +308,7 @@ class PeerGroup extends EventEmitter {
     socket.unref()
   }
 
-  // not supported
+  // pxp not supported (code saved for possible use)
   // connects to the peer-exchange peers provided by the params
   /*_connectPxpWebSeeds () {
     this._webAddrs.forEach((elem) => {
@@ -361,7 +337,6 @@ class PeerGroup extends EventEmitter {
       timeout = setTimeout(() => {
         socket.destroy();
         onConnectionCb(Error(`Connection timed out, peer ${addr}`), undefined, this.webAddrs, addr);
-        //this._updateAddrState(this._webAddrs, { addr: addr, state: ADDRSTATE.FREE, failed: true} )   // clear inuse state if connect timeout
       }, this.connectTimeout);
     }
     socket.once('error', (err) => {
@@ -375,96 +350,12 @@ class PeerGroup extends EventEmitter {
     })
   }
 
-  /*
-  _addWebAddr(host, port)  {
-    let addr = `ws://${host}:${port}`;
-    if (this._webAddrs.find((elem)=>{ return elem.addr===addr }) === undefined) {
-      this._webAddrs.push({ addr: addr, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 });
-    }
-  }
-
-  _addTcpAddr(host, port)  {
-    let addr = `${host}:${port}`;
-    if (this._tcpAddrs.find((elem)=>{ return elem.addr===addr }) === undefined) {
-      this._tcpAddrs.push({ addr: addr, lastConnectTime: 0, state: ADDRSTATE.FREE, retries: 0 });
-    }
-  }
-
-  _freeAddrCount(addrs)  {
-    let freeCount = 0
-    addrs.forEach((elem)=>{
-      if (elem.state === ADDRSTATE.FREE) {
-        freeCount++;
-      }
-    })
-    return freeCount;
-  }
-
-  _findAddrState(addrs, addr)  {
-    if (addrs.find((a)=>{ return a.addr===addr }) !== undefined)
-      return a.state;
-    else
-      return ADDRSTATE.FREE;
-  }
-
-  _findBestAddr(addrs)  {
-    let selected;
-    let currentTime = Date.now();
-    let maxTimeAfter = 0;
-
-    // first try ones successfully connected ever, less recently
-    addrs.forEach((a)=>{      
-      if (a.state === ADDRSTATE.FREE && a.lastConnectTime) {
-        if (maxTimeAfter < currentTime - a.lastConnectTime)  {
-          maxTimeAfter = currentTime - a.lastConnectTime;
-          selected = a.addr;
-        }
-      }
-    })
-    if (selected === undefined) {
-      // now try ones which were never connected (possibly fake ones)
-      let minRetries = -1;
-      addrs.forEach((a)=>{
-        // pick one with min retries count
-        if (a.state === ADDRSTATE.FREE) {
-          if (minRetries < 0 || a.retries < minRetries)  {  
-            selected = a.addr;
-            minRetries = a.retries;
-          }
-        }
-      })
-    }
-    return selected;
-  }
-
-  _updateAddrState(addrs, o) {
-    if (o.addr === undefined)
-      return;
-    let index = addrs.findIndex((a)=>{ return a.addr === o.addr; })
-    if (index >= 0) {
-      if (o.timestamp !== undefined) {
-        addrs[index].lastConnectTime = o.timestamp;
-        addrs[index].retries = 0; // clear retries
-        logdebug(`for addr ${addrs[index].addr} lastConnectTime set to ${addrs[index].lastConnectTime}`);
-      }
-      if (o.state !== undefined) {
-        addrs[index].state = o.state;
-        logdebug(`for addr ${addrs[index].addr} state set to ${addrs[index].state}`);
-      }
-      if (o.failed) {
-        addrs[index].retries ++;
-        logdebug(`for addr ${addrs[index].addr} retries set to ${addrs[index].retries}`);
-      }
-    }
-  }
-  */
-
   // connects to a random plain (non-pxp) web peer from `webAddrs` in the params
   _getNewPlainWebPeer (cb) {
     //let wspeers = this._params.webSeeds
     //let wsaddr = utils.getRandom(this._webAddrs)
     let wsaddr = this.webAddrs.findBestAddr();
-    if (wsaddr !== undefined) {
+    if (wsaddr) {
       this.webAddrs.setInUse(wsaddr);
       this._connectPlainWebPeer(wsaddr, cb)
     }
@@ -482,16 +373,20 @@ class PeerGroup extends EventEmitter {
     // TODO: smarter peer logic (ensure we don't have too many peers from the
     // same seed, or the same IP block)
     let n = this._numPeers - this.peers.length  // try hold up to 8 (by default) connections
-    /*let freeWebAddrCount = 0;
-    if (this.fConnectPlainWeb)  {
-      freeWebAddrCount = this._freeAddrCount();
-      if (n > freeWebAddrCount)
-        n = freeWebAddrCount;
-    }*/
-    logdebug(`_fillPeers: n = ${n}, numPeers = ${this._numPeers}, peers.length = ${this.peers.length}`)
+    if (this._dnsSeeds)
+      this.dnsSeeds = this._dnsSeeds.slice();  // copy dns seeds for connection
+    logdebug(`_fillPeers: peers to add, n = ${n}, max numPeers = ${this._numPeers}, current peers.length = ${this.peers.length}`)
     for (let i = 0; i < n; i++) 
       if (!this._connectPeer())
         break;
+  }
+
+  activeConnections()  {
+    let activeCount = 0;
+    if (this.resolvedAddrs) activeCount += this.resolvedAddrs.inUseCount();
+    if (this.tcpAddrs) activeCount += this.tcpAddrs.inUseCount();
+    if (this.webSeeds) activeCount += this.webSeeds.inUseCount();
+    return activeCount;
   }
 
   // sends a message to all peers
@@ -507,7 +402,7 @@ class PeerGroup extends EventEmitter {
   connect (onConnect) {
     logdebug('connect called')
     this.connecting = true
-    if (onConnect) this.once('connect', onConnect)
+    if (onConnect) this.once('connect', onConnect)  // call user function here
 
     /* pxp not supported
     // first, try to connect to pxp web seeds so we can get web peers
@@ -528,7 +423,7 @@ class PeerGroup extends EventEmitter {
     if (cb) cb = once(cb)
     else cb = (err) => { if (err) this._error(err) }
 
-    if (this.getAddrTimer) clearInterval(this.getAddrTimer)
+    this.emit('PeerGroupClose')
 
     logdebug(`close called: peers.length = ${this.peers.length}`)
     this.closed = true
@@ -541,7 +436,6 @@ class PeerGroup extends EventEmitter {
       peer.disconnect(Error('PeerGroup closing'))
     }
     logdebug('finished:', this.peers.length)
-    //if (this.getAddrTimer) clearInterval(this.getAddrTimer)
   }
 
   /* pxp not supported
@@ -608,8 +502,6 @@ class PeerGroup extends EventEmitter {
       peer.removeListener('message', onMessage)
 
       // clear in-use state: 
-      //if (cbUpdateAddrState)
-      //  cbUpdateAddrState(ADDRSTATEOP.CLEAR, err);
       if (addrstates)
         addrstates.setClear(addr, err)
 
@@ -623,8 +515,6 @@ class PeerGroup extends EventEmitter {
       peer.disconnect(err)
 
       // clear in-use state: 
-      //if (cbUpdateAddrState)
-      //  cbUpdateAddrState(ADDRSTATEOP.CLEAR, err);
       if (addrstates)
         addrstates.setClear(addr, err)
     })

@@ -63,11 +63,11 @@ function NspvAddTokensInputs(peers, tokenid, pk, amount)
 {
   assert(peers);
   assert(ccutils.isValidPubKey(pk));
-  assert(ccutils.isValidTxid(tokenid));
+  assert(ccutils.isValidHash(tokenid));
 
   return new Promise((resolve, reject) => {
 
-    peers.nspvRemoteRpc("tokenv2addccinputs", pk, [ccutils.txidToHex(tokenid), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("tokenv2addccinputs", pk, [ccutils.hashToHex(tokenid), pk.toString('hex'), amount.toString() ], {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -82,11 +82,11 @@ function NspvTokenV2InfoTokel(peers, pk, tokenid)
 {
   assert(peers);
   assert(ccutils.isValidPubKey(pk));
-  assert(ccutils.isValidTxid(tokenid));
+  assert(ccutils.isValidHash(tokenid));
 
   return new Promise((resolve, reject) => {
 
-    peers.nspvRemoteRpc("tokenv2infotokel", pk, [ccutils.txidToHex(tokenid)], {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("tokenv2infotokel", pk, [ccutils.hashToHex(tokenid)], {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -151,7 +151,7 @@ async function tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, j
  * @returns promise to create transfer tx
  */
 async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, satoshi) {
-  let tokenid = ccutils.txidFromHex(tokenidhex);
+  let tokenid = ccutils.hashFromHex(tokenidhex);
   let destpk = Buffer.from(destpkhex, 'hex');
 
   let txpromise = makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, satoshi);
@@ -638,20 +638,6 @@ function decodeTokensV2VData(vdata)  {
   return undefined;
 }
 
-function isOpReturnSpk(script)
-{
-  let chunks = bscript.decompile(script);
-  if (Array.isArray(chunks) && chunks.length > 0) {
-    if (chunks[0] == OPS.OP_RETURN) {
-      if (chunks.length > 1)
-        return chunks[1];
-      else
-        Buffer.from([]);
-    }
-  }
-  return false;
-}
-
 /**
  * Validates if a transaction output is a valid token
  * @param {*} tx a token transaction object of Transaction type
@@ -674,7 +660,7 @@ function isTokenV2Output(tx, nvout)
         vdata = verusData.appdata;   // data in opdrop is the first priority
     }
     if (!vdata) 
-      vdata = isOpReturnSpk(tx.outs[tx.outs.length-1].script); // opreturn is the second priority
+      vdata = ccutils.isOpReturnSpk(tx.outs[tx.outs.length-1].script); // opreturn is the second priority
     if (!vdata) {
       logdebug("isTokenV2Output error: no token data in opreturn or opdrop");
       return false;
