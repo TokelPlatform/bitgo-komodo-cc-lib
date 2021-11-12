@@ -156,20 +156,22 @@ if (!process.browser)
       console.log('ntzsproofresp=', ntzsproofresp);
       */
       
-      /*
       let txid1 = '22eca5965bc69361183653aa69fdcdc4f90a3b4a7b39c96e36d042478ff54e34'; 
       let ht1 = 120000;
       let ntzvalid1 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid1, ht1);
       console.log("ntzvalid1=", ntzvalid1);
-      */
 
-      /*
-      let txid2 = '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'; 
-      let ht2 = 0;
-      let ntzvalid2 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid2, ht2);
-      console.log("ntzvalid2=", ntzvalid2);
-      */
-       
+      try {
+        let txid2 = '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'; 
+        let ht2 = 0;  //bad height
+        let ntzvalid2 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid2, ht2);
+        console.log("ntzvalid2=", ntzvalid2);
+        throw new Error('bad height valid');
+      }
+      catch(e)  {
+        console.log("bad height=", e.message);
+      }
+
       // ht = notarised ht, +/-1
       let txid3 = '5ab764cfd72ecdebf5bb817d02713d48fc103be91ae8fdf7ce56386ada73d1ab'; 
       let ht3 = 119998;
@@ -186,14 +188,17 @@ if (!process.browser)
       let ntzvalid5 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid5, ht5);
       console.log("ntzvalid5=", ntzvalid5);
 
-      /*
-      let txid6 = 'f448568a2002a1583c8d6414d2ddf1c91fdbff01d4c0e0f66d3a505cede62ccd';
-      let ht6 = 1;
-      let ntzvalid6 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid6, ht6);
-      console.log("ntzvalid6=", ntzvalid6);
-      */
+      try {
+        let txid6 = 'f448568a2002a1583c8d6414d2ddf1c91fdbff01d4c0e0f66d3a505cede62ccd';
+        let ht6 = 1;
+        let ntzvalid6 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid6, ht6);
+        console.log("ntzvalid6=", ntzvalid6);
+        throw new Error('bad height valid');
+      }
+      catch(e)  {
+        console.log("bad height=", e.message);
+      }
 
-      /*
       // ht == notary txid ht, +/-1
       let txid7 = '1c24496526f92113f1bec8b0c76bdd66a55bee41f63bbc20f11dd9a324e49435'; 
       let ht7 = 119994;
@@ -209,7 +214,6 @@ if (!process.browser)
       let ht9 = 119995;
       let ntzvalid9 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid9, ht9);
       console.log("ntzvalid9=", ntzvalid9);
-      */
 
       //let txproofvalid = await ntzsproofs.validateTxUsingTxProof(peers, txid);
       //console.log("txproof valid=", txproofvalid);
