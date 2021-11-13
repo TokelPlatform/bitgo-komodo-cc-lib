@@ -102,6 +102,7 @@ npm install
 ```
 
 
+## [nSPV API Documentation](./API.md)
 ## Samples
 
 In the samples folder are included a several examples of CC usage.
