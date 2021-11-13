@@ -23,6 +23,18 @@ SPV clients are very useful for wallets that dont want the entire blockchain loc
 
 If we are willing to use the notarizations as a verified blockhash, we can reduce the number of headers required to just the headers that are in the blocks near the utxo in a specific wallet. As little as 10 headers would be needed to get full confirmation on a specific utxo. [Continue reading...](https://medium.com/@jameslee777/nspv-a-simple-approach-to-superlight-clients-leveraging-notarizations-75d7ef5a37a9)
 
+## What can you do with nspv-js?
+
+- Communicate with any chain which supports notarizations to get information on addresses, tokens, transactions, trades, etc.
+- Create tokens and nfts
+- Send tokens and nfts
+- Trade tokens and nfts
+
+## What are use cases for nSPV?
+
+- You are a ticket selling business and want to tokenize your tickets
+- You are a game developer and want to have fast seamless and inexpensive transactions within your game where users trade tokenized items. 
+
 ### SPV technology
 
 [SPV technology](https://hackernoon.com/spv-proofs-explained-qd1p3r1q)
