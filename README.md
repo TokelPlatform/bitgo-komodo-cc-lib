@@ -1,11 +1,43 @@
-# BitGo-utxo with Komodo Antara (Cryptoconditions) Support
+# Client-side nSPV JavaScript library with Komodo CryptoConditions
 
-A javascript Bitcoin library for node.js and browsers. Written in javascript with the cryptoconditions (cc) library written in rust and built as a wasm module.
+A javascript nSPV library for node.js and browsers. Written in javascript with the cryptoconditions (cc) library written in rust and built as a wasm module.
 
 This javascript library allows to develop nSPV clients using Antara (CC) technology.<br>
 More info: [Antara Development Docs](http://developers.komodoplatform.com/basic-docs/antara/introduction-to-antara.html)<br>
 
 Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-komodo-cc-lib/blob/master/LICENSE).
+
+## Why nSPV? 
+
+- It allows easy and quick communication with notarized blockchains. 
+
+- nSPV does not require downloading the whole blockchain in order for it to work.
+
+- It is secure and all transactions are created and signed locally
+
+- There is no 3d party involved. You run an nSPV node, you communicate with the blockchain, you receive data. No one else is involved.
+
+## What is nSPV?
+
+SPV clients are very useful for wallets that dont want the entire blockchain locally, however as the blockchains grow in length, the number of headers required grows linearly. With equihash coins, the header size is 2kb, so this effect becomes quite a large overhead, ie. 2GB per million blocks. Just for the headers!
+
+If we are willing to use the notarizations as a verified blockhash, we can reduce the number of headers required to just the headers that are in the blocks near the utxo in a specific wallet. As little as 10 headers would be needed to get full confirmation on a specific utxo. [Continue reading...](https://medium.com/@jameslee777/nspv-a-simple-approach-to-superlight-clients-leveraging-notarizations-75d7ef5a37a9)
+
+### SPV technology
+
+[SPV technology](https://hackernoon.com/spv-proofs-explained-qd1p3r1q)
+[Bitcoin Wiki - SPV](https://en.bitcoin.it/wiki/Scalability#Simplified_payment_verification)
+
+### Articles by Jl777 on nSPV
+
+[nSPV a simple approach to superlight clients leveraging notarizations](https://medium.com/@jameslee777/nspv-a-simple-approach-to-superlight-clients-leveraging-notarizations-75d7ef5a37a9)
+
+[nSPV reference cli client](https://medium.com/@jameslee777/nspv-reference-cli-client-cf1ffdc03631)
+
+[libnspv: evolution of nSPV](https://medium.com/@jameslee777/libnspv-evolution-of-nspv-ed157f8b159d)
+
+Komodo docs
+[nSPV](https://developers.komodoplatform.com/basic-docs/smart-chains/smart-chain-setup/nspv.html)
 
 ## Prerequisites
 
@@ -16,10 +48,10 @@ You can use the library in your node server or in the browser only application.
 1. You need installed:
   - nodejs v.12+<br>
 
-2. You'll need a komodo asset chain to run bitgo lib against. Or you can use one of the pre-defined chains in the network file in the library. 
+2. You'll need a komodo asset chain to run nspv-js against. Or you can use one of the pre-defined chains in the [networks file](https://github.com/TokelPlatform/nspv-js/blob/development/src/networks.js) of the library. 
 
   ```
-  const { networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const { networks } = require('@tokel/nspv-js');  
   const network = networks.tkltest;
   ```
 
