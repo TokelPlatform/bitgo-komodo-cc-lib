@@ -67,7 +67,7 @@ You can use the library in your node server or in the browser only application.
 2. You'll need a komodo asset chain to run bitgo lib against. Or you can use one of the pre-defined chains in the network file in the library. 
 
   ```
-  const { networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const { networks } = require('@tokel/nspv-js');  
   const network = networks.tkltest;
   ```
 
@@ -76,14 +76,14 @@ You can use the library in your node server or in the browser only application.
 ### Using npm
 
 ```
-npm i @tokel/bitgo-komodo-cc-lib
+npm i @tokel/nspv-js
 ```
 
 ### Manual installation
 
 Clone this git repository go to the new dir and checkout `development` branch.
 
-Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
+Install the nspv-js dependency packages.
 
 ```
 npm install
@@ -96,7 +96,7 @@ First you need to connect to peers to start making requests.
 
 ```
 try {
-  const { nspvConnect, networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const { nspvConnect, networks } = require('@tokel/nspv-js');  
   const network = networks.tkltest;
   const peers = await nspvConnect({ network }, {});
 } catch (e) {
@@ -108,20 +108,20 @@ try {
 
 `general.keyToWif(String)` - Receives any string(WIF/seed phrase) and returns WIF.
 
-    const { general, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const { general, networks } = require('@tokel/nspv-js');
     const network = networks.tkltest;
     const wif = general.keyToWif(seed, network);
 
 
 `general.getSeedPhrase(Number)` - Generates a bip39 mnemonic seed phrase, specify strength 128 or 256 as a parameter.
 
-    const { general, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const { general, networks } = require('@tokel/nspv-js');
     const network = networks.tkltest;
     const seed = general.getSeedPhrase(256);
 
 `general.create_normaltx(wif, destaddress, amount, network, peers)` - creates and signs transaction locally, amount is in satoshi, peers parameter is returned from `nspvConnect`, see connection example above
 
-    const { general, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const { general, networks } = require('@tokel/nspv-js');
     const network = networks.tkltest;
     const txHex = await general.create_normaltx(
       'MySecretWif',
@@ -135,25 +135,25 @@ try {
 
 `getNormalUtxos(peers, address, skipCount, maxrecords)` - get normal (non-CC) utxos from an address
 
-    const { ccutils, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const { ccutils, networks } = require('@tokel/nspv-js');
     const network = networks.tkltest;
     const response = await ccutils.getNormalUtxos(peers, 'myaddress', 0, 0);
 
 `getCCUtxos(peers, address, skipCount, maxrecords)` - get CC utxos  from an address
 
-    const { ccutils, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const { ccutils, networks } = require('@tokel/nspv-js');
     const network = networks.tkltest;
     const response = await ccutils.getCCUtxos(peers, 'myaddress', 0, 0);
 
 `getTxids(peers, address, isCC, skipCount, maxrecords)` - returns txos (tx outputs bith spent and unspent) for an address
 
-    const { ccutils, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const { ccutils, networks } = require('@tokel/nspv-js');
     const network = networks.tkltest;
     const response = await ccutils.getTxids(peers, 'myaddress', 0, 0, 0);
 
 `pubkey2NormalAddressKmd(mypk)` - makes komodo normal address from a pubkey. Mypk - my public key.
 
-    const { ccutils, networks } = require('@tokel/bitgo-komodo-cc-lib');
+    const { ccutils, networks } = require('@tokel/nspv-js');
     const network = networks.tkltest;
     const mynormaladdress = ccutils.pubkey2NormalAddressKmd('mypublickey');
 
@@ -167,7 +167,7 @@ try {
 e.g. 
 
 ```
-const { ccutils } = require('@tokel/bitgo-komodo-cc-lib');
+const { ccutils } = require('@tokel/nspv-js');
 const uniqueIds = [
   "69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9",
   "76b63ddd43419320d24662294a154bb5fde96b5b1c8ac6d148e47e72ba9165f8"
@@ -267,26 +267,6 @@ In the samples folder are included a several examples of CC usage.
 
 To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
 
-### Build test app to run in nodejs
-
-Build the cryptoconditions wasm module:<br>
-Setup the rust nightly build to build cryptoconditions:
-```
-rustup toolchain install nightly
-rustup default nightly
-```
-
-Change to cryptoconditions-js directory and build the cryptoconditions wasm module for nodejs target:
-```
-cd ./node_modules/cryptoconditions-js
-wasm-pack build -t nodejs
-```
-
-Run the testapp in nodejs:
-```
-node ./ccfaucetpoc.js
-```
-
 ## How to use the test app in the browser:
 
 To run the test app in the browser you will need a webserver to host an html sample page and the test app ccfaucetpocbr.js.
@@ -304,7 +284,7 @@ package.json:
     "serve": "webpack-dev-server"
   },
   "dependencies": {
-    "cryptoconditions-js": "git+https://github.com/dimxy/cryptoconditions-js.git#master"
+    "cryptoconditions-js": "@tokel/cryptoconditions"
   },
   "devDependencies": {
     "webpack": "^4.44.2",
@@ -344,13 +324,7 @@ Set again the nightly rust version for this repo:
 rustup default nightly
 ```
 
-Change to ./node_modules/cryptoconditions-js subdir and run the following command to build cryptconditions lib wasm for browserify.
-```
-cd ./node_modules/cryptoconditions-js
-wasm-pack build
-```
-
-Now go to bitgo-komodo-cc-lib repo dir.<br>
+Now go to nspv-js repo dir.<br>
 Rebuild sources and build the test app for browser:
 ```
 npm run build
@@ -368,8 +342,7 @@ The web server should be available at http://localhost:8080 url (if you installe
 ### Use the correct komodod version
 
 The last thing is to make sure you run a komodod version with an extension to nSPV getutxos call (it should additionally return script for each utxo).<br>
-Use this komodod branch for this:
-https://github.com/dimxy/komodo/tree/nspv-utxo-ext
+https://github.com/TokelPlatform/komodo tokel branch
 
 I recommed to run komodod with -debug=net to easily discover wrong magic errors and observe communication dynamic. Basically komodod should print ver/verack and ping/pong exchanges in the debug.log, if connection is okay
 
