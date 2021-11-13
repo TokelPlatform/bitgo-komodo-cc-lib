@@ -33,6 +33,7 @@ const EVAL_ASSETSV2 = 0xF6;
 
 const TKLROYALTY_DIVISOR = 1000;
 const ASSETS_NORMAL_DUST = 500;
+const ASSETS_EXPIRY_DEFAULT = 4 * 7 * 24 * 60;
 
 function encodeAssetsV2Data(funcid, unitPrice, origpk, expiryHeight)
 {
@@ -198,7 +199,6 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, units, tokenid, unitPrice
   // init lib cryptoconditions
   //ccbasic.cryptoconditions = await ccimp;  // lets load it in the topmost call
 
-  const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
   const markerfee = 10000;
   const normalAmount = txfee + markerfee;
@@ -211,28 +211,39 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, units, tokenid, unitPrice
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
+  
+  let pps = [];
+  if (!orderExpiryHeight) 
+      pps.push(ccutils.nspvGetInfo(peers, 0));  // NSPV_GETINFO to get current height
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
+  pps.push(cctokens.nspvAddTokensInputs(peers, tokenid, mypk, units)); 
+  let results = await Promise.all(pps);
+  if (!results || !Array.isArray(results) || results.length != pps.length) 
+    throw new Error('could not get info or tx inputs from nspv node');
+
+  const txbuilder = new TransactionBuilder(mynetwork);
+
+  let txwutxos = results[results.length-2];
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
+  
+  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork); // add normal vins to the created tx
+  if (added < normalAmount)
+    throw new Error("insufficient normal inputs (" + added + ")");
 
   // zcash stuff:
   txbuilder.setVersion(sourcetx1.version);
   if (txbuilder.tx.version >= 3)
     txbuilder.setVersionGroupId(sourcetx1.versionGroupId);
 
-  // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
-  if (added < normalAmount)
-    throw new Error("insufficient normal inputs (" + added + ")")
-
-  let ccutxos = await cctokens.nspvAddTokensInputs(peers, tokenid, mypk, units); // TODO promise all
+  let ccutxos = results[results.length-1];
   let sourcetx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
-  let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork);
+  let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork); // add token inputs to the new tx
   if (ccadded < units)
     throw new Error("insufficient token inputs (" + ccadded + ")");
 
   if (!orderExpiryHeight) {
-    let getinfo = await ccutils.nspvGetInfo(peers, 0);
-    orderExpiryHeight = getinfo.height + 4 * 7 * 24 * 60;
+    let getinfo = results[0];
+    orderExpiryHeight = getinfo.height + ASSETS_EXPIRY_DEFAULT;
   }
 
   let globalccSpk = ccutils.makeCCSpkV2MofN([cctokens.EVAL_TOKENSV2, EVAL_ASSETSV2], [assetsGlobalPk], 1);
@@ -281,8 +292,16 @@ async function makeTokenV2BidTx(peers, mynetwork, wif, units, tokenid, unitPrice
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
 
+  let pps = [];
+  if (!orderExpiryHeight) 
+    pps.push(ccutils.nspvGetInfo(peers, 0));
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
+  let results = await Promise.all(pps);
+  if (!results || !Array.isArray(results) || results.length != pps.length) 
+    throw new Error('could not get info or tx inputs from nspv node');
+
+  let txwutxos = results[results.length-1];
   let sourcetx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
   // zcash stuff:
@@ -296,8 +315,8 @@ async function makeTokenV2BidTx(peers, mynetwork, wif, units, tokenid, unitPrice
     throw new Error("insufficient normal inputs (" + added + ")")
 
   if (!orderExpiryHeight) {
-    let getinfo = await ccutils.nspvGetInfo(peers, 0);
-    orderExpiryHeight = getinfo.height + 4 * 7 * 24 * 60;
+    let getinfo = results[0];
+    orderExpiryHeight = getinfo.height + ASSETS_EXPIRY_DEFAULT;
   }
 
   let globalccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [assetsGlobalPk], 1);
@@ -350,10 +369,6 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, fillU
 
   const askVout = 0;
   const askTokens = asktx.outs[askVout].value;
-  const royaltyFract = tokenData.tokeldata && tokenData.tokeldata.royalty ? tokenData.tokeldata.royalty : 0;
-  let royaltyValue = royaltyFract > 0 ? paidAmount / TKLROYALTY_DIVISOR * royaltyFract : 0;
-  if (royaltyFract > 0 && paidAmount - royaltyValue <= ASSETS_NORMAL_DUST / royaltyFract * TKLROYALTY_DIVISOR - ASSETS_NORMAL_DUST)  // if value paid to seller less than when the royalty is minimum
-      royaltyValue = 0;
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
@@ -361,6 +376,12 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, fillU
   const paidAmount = unitPrice * fillUnits;
   const normalAmount = txfee + paidAmount + (askTokens - fillUnits > 0 ? markerfee : 0);
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
+
+  // tokel royalty if exists
+  const royaltyFract = tokenData.tokeldata && tokenData.tokeldata.royalty ? tokenData.tokeldata.royalty : 0;
+  let royaltyValue = royaltyFract > 0 ? paidAmount / TKLROYALTY_DIVISOR * royaltyFract : 0;
+  if (royaltyFract > 0 && paidAmount - royaltyValue <= ASSETS_NORMAL_DUST / royaltyFract * TKLROYALTY_DIVISOR - ASSETS_NORMAL_DUST)  // if value paid to seller less than when the royalty is minimum
+      royaltyValue = 0;
 
   let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
@@ -377,7 +398,6 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, fillU
 
   txbuilder.addInput(asktx, askVout);
 
-  
 /*
  // vout.0 tokens remainder to unspendable cc addr:
  mtx.vout.push_back(T::MakeTokensCC1vout(A::EvalCode(), orig_assetoshis - fillunits, GetUnspendable(cpAssets, NULL)));  // token remainder on cc global addr
@@ -476,7 +496,14 @@ async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, fillU
 
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
 
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
+  let pps = [];
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
+  pps.push(cctokens.nspvAddTokensInputs(peers, tokenid, mypk, fillUnits));
+  let results = await Promise.all(pps);
+  if (!results || !Array.isArray(results) || results.length != pps.length) 
+    throw new Error('could not get tx inputs from nspv node');
+
+  let txwutxos = results[0];
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
   // zcash stuff:
@@ -491,7 +518,7 @@ async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, fillU
 
   txbuilder.addInput(bidtx, bidVout);
   
-  let ccutxos = await cctokens.nspvAddTokensInputs(peers, tokenid, mypk, fillUnits);
+  let ccutxos = results[1];
   let sourcetx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
   let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork);
   if (ccadded < fillUnits)
@@ -564,18 +591,26 @@ if (tokensChange != 0LL)
   return txbuilder.build();
 }
 
-
-
 // make cancel ask tx
 async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 {
+  const txfee = 10000;
+  const normalAmount = txfee;
+
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
 
-  let txns = await ccutils.getTransactionsMany(peers, mypk, tokenid, askid);
+  let pps = [];
+  pps.push(ccutils.getTransactionsMany(peers, mypk, tokenid, askid));
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
+  let results = await Promise.all(pps);
+  if (!results || !Array.isArray(results) || results.length != pps.length) 
+    throw new Error('could not get tx inputs or token or ask tx');
+
+  let txns = results[0];
   if (!txns || !Array.isArray(txns.transactions) || txns.transactions.length != 2)
-    throw new Error("could not load token or ask tx");
+    throw new Error("could not load token or ask tx or add inputs");
   let tokenbasetx = Transaction.fromHex(txns.transactions[0].tx, mynetwork);
   let asktx = Transaction.fromHex(txns.transactions[1].tx, mynetwork);
   if (tokenbasetx.outs.length < 2)
@@ -593,14 +628,10 @@ async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 
   const askVout = 0;
   const askTokens = asktx.outs[askVout].value;
-
-  const txbuilder = new TransactionBuilder(mynetwork);
-  const txfee = 10000;
-  const normalAmount = txfee;
-
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
+  const txbuilder = new TransactionBuilder(mynetwork);
 
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
+  let txwutxos = results[1];
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
   // zcash stuff:
@@ -654,11 +685,21 @@ async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 // make cancel bid tx
 async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
 {
+  const txfee = 10000;
+  const normalAmount = txfee;
+
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
   
-  let txns = await ccutils.getTransactionsMany(peers, mypk, tokenid, bidid);
+  let pps = [];
+  pps.push(ccutils.getTransactionsMany(peers, mypk, tokenid, bidid));
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
+  let results = await Promise.all(pps);
+  if (!results || !Array.isArray(results) || results.length != pps.length) 
+    throw new Error('could not get tx inputs or token or bid tx');
+
+  let txns = results[0];
   if (!txns || !Array.isArray(txns.transactions) || txns.transactions.length != 2)
     throw new Error("could not load token or bid tx");
   let tokenbasetx = Transaction.fromHex(txns.transactions[0].tx, mynetwork);
@@ -680,12 +721,9 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
   const bidAmount = bidtx.outs[bidVout].value;
 
   const txbuilder = new TransactionBuilder(mynetwork);
-  const txfee = 10000;
-  const normalAmount = txfee;
-
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
 
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
+  let txwutxos = results[1];
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
   // zcash stuff:
