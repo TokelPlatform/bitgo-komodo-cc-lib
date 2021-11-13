@@ -181,7 +181,9 @@ ccutils.getTransactionsManyDecoded(
   );
 ```
 
-Response sample
+
+<details>
+  <summary>Response sample</summary>
 
 ```
 {
@@ -250,6 +252,7 @@ Response sample
     ]
 }
 ```
+</details>
 
 ### CC Tokens
 
