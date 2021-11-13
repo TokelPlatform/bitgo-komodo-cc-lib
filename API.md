@@ -60,9 +60,12 @@ Get unspent coin transactions (utxos) for the given address.
 
 This will return transactions of the assets chain, e.g. TKLTEST transactions if you connect to `networks.tkltest`
 
-    const { ccutils, networks } = require('@tokel/nspv-js');
-    const network = networks.tkltest;
-    const response = await ccutils.getNormalUtxos(peers, 'myaddress', 0, 0);
+```
+const { nspvConnect, ccutils, networks } = require('@tokel/nspv-js');
+const network = networks.tkltest;
+const peers = await nspvConnect({ network }, {});
+const response = await ccutils.getNormalUtxos(peers, 'myaddress', 0, 0);
+```
 
 <details>
   <summary>Response sample</summary>
@@ -132,11 +135,12 @@ Returns txos (tx outputs both spent and unspent) for the given address
 - **skipCount**: number, utxos are sorted descending, how many utxos you want to skip from the start
 - **maxrecords**: number
 
-
-    const { ccutils, networks } = require('@tokel/nspv-js');
-    const network = networks.tkltest;
-    const response = await ccutils.getTxids(peers, 'myaddress', 0, 0, 0);
-
+```
+const { nspvConnect, ccutils, networks } = require('@tokel/nspv-js');
+const network = networks.tkltest;
+const peers = await nspvConnect({ network }, {});
+const response = await ccutils.getTxids(peers, 'myaddress', 0, 0, 0);
+```
 
 <details>
   <summary>Response sample</summary>
@@ -147,8 +151,7 @@ Returns txos (tx outputs both spent and unspent) for the given address
 
 Makes komodo normal address from a pubkey. Mypk - my public key.
 
-    const { ccutils, networks } = require('@tokel/nspv-js');
-    const network = networks.tkltest;
+    const { ccutils } = require('@tokel/nspv-js');
     const mynormaladdress = ccutils.pubkey2NormalAddressKmd('mypublickey');
 
 ### `getRawTransaction(peers, mypk, txid)` 
