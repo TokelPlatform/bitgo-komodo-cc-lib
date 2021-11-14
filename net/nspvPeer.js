@@ -28,7 +28,7 @@ class NspvError extends Error {
     else if (typeof req === 'object')  {
       if (req.nspvReq !== undefined)
         this.nspvReq = req.nspvReq;      
-      if (req.code !== undefined)
+      if (req.rpcMethod !== undefined)
         this.rpcMethod = req.rpcMethod;
     }
     if (ban !== undefined)
