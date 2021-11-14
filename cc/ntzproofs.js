@@ -187,13 +187,11 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
   //console.log(ntzparsed)
 
   // check mom
-  /* this won't work until nspv 6
   let leaves = [];
   ntzsProof.common.hdrs.slice().reverse().forEach(h => leaves.push(h.merkleRoot));
   let mom = fastMerkleRoot(leaves, bcrypto.hash256);
   if (Buffer.compare(mom, ntzparsed.MoM) !== 0)
     throw new Error('notarisation MoM invalid'); 
-  */
 
   // check chain name
   if (coins.getNetworkName(network) !== ntzparsed.symbol)
