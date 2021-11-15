@@ -276,8 +276,15 @@ function getUtxos(peers, address, isCC, skipCount, maxrecords)
   return new Promise((resolve, reject) => {
     peers.nspvGetUtxos(address, isCC, skipCount, maxrecords, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
-      if (!err)
+      if (!err) {
+        res.utxos = res.utxos.map(utxo => {
+          utxo.txid = utxo.txid.reverse().toString('hex')
+          utxo.asm = bscript.toASM(utxo.script)
+          return utxo
+        })
+
         resolve(res);
+      }
       else
         reject(err);
     });
@@ -348,7 +355,7 @@ function createTxAndAddNormalInputs(peers, mypk, amount)
  * @param {*} maxrecords max number of returned utxos, if 0 max records limit set by the server will be used
  * @returns utxo list
  */
-function getNormalUtxos(peers, address, skipCount, maxrecords)
+function getNormalUtxos(peers, address, skipCount = 0, maxrecords = 0)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
