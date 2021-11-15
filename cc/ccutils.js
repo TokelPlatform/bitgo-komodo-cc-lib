@@ -8,7 +8,7 @@ const Transaction = require('../src/transaction');
 const ccbasic = require('./ccbasic');
 const ecc = require('secp256k1');
 const crypto = require('../src/crypto');
-const addresslib = require('../src/address');
+const address = require('../src/address');
 const bufferutils = require("../src/bufferutils");
 const bscript = require('../src/script')
 const types = require('../src/types');
@@ -19,6 +19,8 @@ const OPS = require('bitcoin-ops');
 
 const Debug = require('debug')
 const logdebug = Debug('cc')
+
+const networks = require('../src/networks');
 
 exports.finalizeCCtx = finalizeCCtx;
 exports.createTxAndAddNormalInputs = createTxAndAddNormalInputs;
@@ -131,10 +133,12 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
  * @param {*} M M-value
  * @param {*} opdrop optional opdrop data to be added with OP_DROP
  */
- function makeCCCondMofN(evalcode, pubkeys, M) {
-  typeforce(types.UInt8, evalcode);
-  typeforce(typeforce.anyOf(types.arrayOf('Buffer'), types.arrayOf('String')), pubkeys);
+ function makeCCCondMofN(evalcodes, pubkeys, M) {
+  typeforce(typeforce.oneOf(types.arrayOf(types.UInt8),types.UInt8), evalcodes);
+  typeforce(typeforce.oneOf(types.arrayOf('Buffer'), types.arrayOf('String')), pubkeys);
   typeforce(types.UInt32, M);
+
+  let _evalcodes = Array.isArray(evalcodes) ? evalcodes : [evalcodes];
 
   let subconds = [];
   for (let i = 0; i < pubkeys.length; i ++)  {
@@ -145,18 +149,21 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
       subconds.push(secpcond);
   }
 
+  let subfulfillments = [];
+  _evalcodes.forEach(evalcode => subfulfillments.push( {
+    type:	"eval-sha-256",   
+    code:	byte2Base64(evalcode)     
+  }));
+  subfulfillments.push({            
+    type:	"threshold-sha-256",
+    threshold:	M,
+    subfulfillments:	subconds  
+  });
   let cond = {
-      type:	"threshold-sha-256",
-      threshold:	2,
-      subfulfillments:	[{
-          type:	"eval-sha-256",   
-          code:	byte2Base64(evalcode)     
-      }, {            
-          type:	"threshold-sha-256",
-          threshold:	M,
-          subfulfillments:	subconds  
-      }]   
-    };
+    type:	"threshold-sha-256",
+    threshold:	subfulfillments.length,
+    subfulfillments: subfulfillments
+  };
   return cond;
 }
 exports.makeCCCondMofN = makeCCCondMofN;
@@ -169,8 +176,8 @@ exports.makeCCCondMofN = makeCCCondMofN;
  * @param {*} M M-value
  * @param {*} opdrop optional opdrop data to be added with OP_DROP
  */
- function makeCCSpkV2MofN(evalcode, pubkeys, M, opdrop) {
-  let cond = makeCCCondMofN(evalcode, pubkeys, M);
+ function makeCCSpkV2MofN(evalcodes, pubkeys, M, opdrop) {
+  let cond = makeCCCondMofN(evalcodes, pubkeys, M);
   return ccbasic.makeCCSpkV2(cond, opdrop);
 }
 exports.makeCCSpkV2MofN = makeCCSpkV2MofN;
@@ -419,7 +426,9 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
  * @returns komodo normal address
  */
 function pubkey2NormalAddressKmd(pk) {
-  return addresslib.toBase58Check(crypto.hash160(pk), 0x3c);
+  //return address.toBase58Check(crypto.hash160(pk), 0x3c);
+  let _pk = (typeof pk == 'string') ? Buffer.from(pk, 'hex') : pk
+  return address.toBase58Check(crypto.hash160(_pk), networks.KMD.pubKeyHash);
 }
 
 /**
@@ -550,6 +559,53 @@ function getTransactionsMany(peers, mypk, ...args)
   }
 }
 
+exports.nspvGetInfo = nspvGetInfo;
+/**
+ * calls getinfo from a nspv peer
+ * @param {*} peers 
+ * @param {*} reqHeight, if 0 current height returned
+ * @returns 
+ */
+function nspvGetInfo(peers, reqHeight)
+{
+  typeforce('PeerGroup', peers);
+  typeforce('Number', reqHeight);
+
+  return new Promise((resolve, reject) => {
+    peers.nspvGetInfo(reqHeight, {}, (err, res, peer) => {
+    if (!err) 
+        resolve(res);
+    else
+        reject(err);
+    });
+  });
+}
+
+exports.nspvBroadcast = nspvBroadcast;
+/**
+ * broadcast a tx
+ * @param {*} peers 
+ * @param {*} txid 
+ * @param {*} txhex tx encoded as hex
+ * @returns 
+ */
+function nspvBroadcast(peers, txid, txhex)
+{
+  typeforce('PeerGroup', peers);
+  typeforce(typeforce.oneOf('String', 'Buffer'), txid);
+  typeforce('String', txhex);
+
+  return new Promise((resolve, reject) => {
+    peers.nspvBroadcast(txid, txhex, {}, (err, res, peer) => {
+    if (!err) 
+        resolve(res);
+    else
+        reject(err);
+    });
+  });
+}
+
+
 /**
  * helper to test if object is empty
  * @param {*} obj 
@@ -672,13 +728,13 @@ function hashFromHex(hex)
   return Buffer.from([]); //Buffer.allocUnsafe(32).fill('\0');
 }
 
-exports.txidReverse = txidReverse;
+exports.hashReverse = hashReverse;
 /**
  * reverse txid, this is used by cc modules to write txid in opreturn (for readability)
  * @param {string} txid 
  * @returns {Buffer} reversed txid as Buffer or empty Buffer
  */
-function txidReverse(txid)
+function hashReverse(txid)
 {
   if (txid.length > 0)  {
     let reversed = Buffer.allocUnsafe(txid.length);

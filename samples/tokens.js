@@ -11,16 +11,18 @@ const address = require('../src/address');
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
-const PeerGroup = require('../net/peerGroup');
+//const PeerGroup = require('../net/peerGroup');
 require('../net/nspvPeer');  // init peer.js too
 
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.tok6;
 //const mynetwork = networks.dimxy23;
-//const mynetwork = networks.dimxy24;
+//const mynetwork = networks.DIMXY24;
 // const mynetwork = networks.dimxy25;
-const mynetwork = networks.tkltest;
+const mynetwork = networks.TKLTEST;
+//const mynetwork = networks.TOKEL;
+
 
 
 // you will need to do a call like:
@@ -165,7 +167,11 @@ if (!process.browser)
       //let ccoutputs = await ccutils.getCCUtxos(peers, ccindexkey, 0, 0);
       //let ccoutputs = await ccutils.getCCUtxos(peers, "RJkivfMQjLxfHyVHs1EY43Lr71YvLbZPL9", 0, 0);  // empty address
       //let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
-      let ccoutputs_validated = await cctokens.getTokensForPubkey(mynetwork, peers, Buffer.from("02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e", 'hex'), 0 ,0);
+      //let ccoutputs_validated = await cctokens.getTokensForPubkey(mynetwork, peers, Buffer.from("02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e", 'hex'), 0 ,0);
+      //console.log("ccoutputs_validated=", ccoutputs_validated);
+
+      let ccoutputs = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
+      let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
       console.log("ccoutputs_validated=", ccoutputs_validated);
 
     }

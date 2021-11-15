@@ -23,7 +23,7 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
-const mynetwork = networks.dimxy24; 
+const mynetwork = networks.DIMXY24; 
 //const mynetwork = networks.tkltest; 
 
 // you will need to do a call like:

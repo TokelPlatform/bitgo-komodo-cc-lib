@@ -124,7 +124,7 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
     return null;
   }
   
-  let hdrOffset = height - (ntzs.prevntz.height + 1);  // first height in the bracket is prevntz.height + 1
+  let hdrOffset = height - ntzs.prevntz.height;  // first height in the bracket is prevntz.height + 1
   if (hdrOffset < 0 || hdrOffset > ntzs.nextntz.height)  {
     logerror(`invalid notarization bracket found: [${ntzs.prevntz.height}, ${ntzs.nextntz.height}] for tx height: ${height}`);
     return null;
@@ -179,14 +179,17 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
   if (Buffer.compare(nextNtzData.blockhash, kmdblockindex.kmdHdrHash(ntzsProof.common.hdrs[ntzsProof.common.hdrs.length-1])) != 0)
     throw new Error('notarisation data invalid (next blockhash)');
 
-  // check mom
   let ntzparsed = ntzpubkeys.NSPV_opretextract(false, nexttx.outs[1].script);
   //console.log(ntzparsed)
+
+  // check mom
+  /* this won't work until nspv 6
   let leaves = [];
   ntzsProof.common.hdrs.slice().reverse().forEach(h => leaves.push(h.merkleRoot));
   let mom = fastMerkleRoot(leaves, bcrypto.hash256);
   if (Buffer.compare(mom, ntzparsed.MoM) !== 0)
-    throw new Error('notarisation MoM invalid');
+    throw new Error('notarisation MoM invalid'); 
+  */
 
   // check chain name
   if (coins.getNetworkName(network) !== ntzparsed.symbol)

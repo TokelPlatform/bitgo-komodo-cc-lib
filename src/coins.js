@@ -52,9 +52,11 @@ function getMainnet (network) {
     case networks.zcash:
     case networks.zcashTest:
       return networks.zcash
+    case networks.KMD:
+      return networks.KMD
   }
   if (network.komodoAssetNet)
-    return networks.zcash // let use 'zcash' as komodo assets mainnet, we need this for correct sig hash calc, for isZcash() to return true for komodo
+    return network // networks.zcash // let use 'zcash' as komodo assets mainnet, we need this for correct sig hash calc, for isZcash() to return true for komodo
   throw new TypeError(`invalid network`)
 }
 
@@ -63,7 +65,9 @@ function getMainnet (network) {
  * @returns {boolean} true iff network is a mainnet
  */
 function isMainnet (network) {
-  return getMainnet(network) === network
+  return getMainnet(network) === network ||
+         network === networks.KMD  ||
+         network.komodoAssetNet
 }
 
 /**
@@ -71,7 +75,7 @@ function isMainnet (network) {
  * @returns {boolean} true iff network is a testnet
  */
 function isTestnet (network) {
-  return getMainnet(network) !== network
+  return getMainnet(network) !== network && !(network === networks.KMD || network.komodoAssetNet)
 }
 
 /**
@@ -170,7 +174,7 @@ function isLitecoin (network) {
  * @returns {boolean} true iff network is zcash or zcashTest
  */
 function isZcash (network) {
-  return getMainnet(network) === networks.zcash
+  return getMainnet(network) === networks.zcash || getMainnet(network) === networks.KMD || network.komodoAssetNet
 }
 
 /**

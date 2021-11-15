@@ -159,7 +159,6 @@ module.exports = {
     wif: 0xef,
     coin: coins.LTC,
   },
-
   // https://github.com/zcash/zcash/blob/master/src/validation.cpp
   // https://github.com/zcash/zcash/blob/master/src/chainparams.cpp
   zcash: {
@@ -197,7 +196,28 @@ module.exports = {
     coin: coins.ZEC,
   },
 
-  // komodo chains:
+  // komodo main chains:
+  KMD: {
+    messagePrefix: '\x18KMD main chain:\n',
+    bech32: 'R',
+    bip32: getDefaultBip32Mainnet(),
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb, // (old Sapling branch id, used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: false,
+  },
+
+  // komodo asset chains:
   dimxy19: {
     messagePrefix: '\x18DIMXY19 asset chain:\n',
     bech32: 'R',
@@ -309,7 +329,7 @@ module.exports = {
     magic: 0x902f7aae,
   },
 
-  dimxy24: {
+  DIMXY24: {
     messagePrefix: '\x18DIMXY24 asset chain:\n',
     bech32: 'R',
     bip32: getDefaultBip32Mainnet(),
@@ -473,7 +493,9 @@ module.exports = {
     magic:  0x86c2fdd0,
   
     //to connect over p2p:
-    dnsSeeds: [],
+    dnsSeeds: [
+      //'ec2-18-189-25-123.us-east-2.compute.amazonaws.com:29404'
+    ],
     staticPeers: [
       '192.99.71.125:29404',
       '135.125.204.169:29404',
@@ -488,5 +510,5 @@ module.exports = {
       // 'wss://localhost:8192'
       // TODO: add more
     ],
-  },
+  }, 
 };

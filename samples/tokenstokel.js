@@ -15,7 +15,7 @@ const networks = require('../src/networks');
 //const mynetwork = networks.tok6;
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.dimxy20;
-//const mynetwork = networks.dimxy24;
+//const mynetwork = networks.DIMXY24;
 const mynetwork = networks.TKLTEST;
 //const mynetwork = networks.TOKEL;
 
