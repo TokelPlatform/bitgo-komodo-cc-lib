@@ -277,12 +277,6 @@ function getUtxos(peers, address, isCC, skipCount, maxrecords)
     peers.nspvGetUtxos(address, isCC, skipCount, maxrecords, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) {
-        res.utxos = res.utxos.map(utxo => {
-          utxo.txid = utxo.txid.reverse().toString('hex')
-          utxo.asm = bscript.toASM(utxo.script)
-          return utxo
-        })
-
         resolve(res);
       }
       else

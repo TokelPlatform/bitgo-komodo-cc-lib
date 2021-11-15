@@ -164,7 +164,7 @@ async function tokensInfoV2Tokel(peers, mynetwork, wif, tokenidhex) {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let tokenid = ccutils.hashFromHex(tokenidhex);
-  return NspvTokenV2InfoTokel(peers, mypk, tokenid);;
+  return nspvTokenV2InfoTokel(peers, mypk, tokenid);
 };
 
 // encode token OP_RETURN data
