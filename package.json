@@ -36,7 +36,7 @@
     "config"
   ],
   "dependencies": {
-    "@tokel/cryptoconditions": "0.1.0",
+    "@tokel/cryptoconditions-js": "0.1.1",
     "bech32": "0.0.3",
     "bigi": "1.4.2",
     "bip39": "^2.3.0",
