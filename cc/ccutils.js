@@ -535,7 +535,7 @@ function getTransactionsMany(peers, mypk, ...args)
       });
     }
 
-    return decodedTxs.map(tx => {
+    decodedTxs = decodedTxs.map(tx => {
       const parsedTx = {
         ...tx,
         ins: tx.ins.map(txin => {
@@ -546,6 +546,9 @@ function getTransactionsMany(peers, mypk, ...args)
         })
       }
       const { recipients, senders, fees, value } = parseTransactionData(parsedTx);
+      if (!value) {
+        return null;
+      }
       return {
         recipients,
         senders,
@@ -554,6 +557,7 @@ function getTransactionsMany(peers, mypk, ...args)
         ...parsedTx
       }
     });
+    return decodedTxs.filter(a => a);
    } catch (e) {
     // logdebug(e)
     throw new Error(e);

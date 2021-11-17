@@ -126,8 +126,7 @@ const parseTransactionData = (tx) => {
     
     return {
       fees,
-      // if the value of transaction is 0, you have probably performed a CC transaction and paid the fee
-      value:  sumOuts - change || fees,
+      value:  sumOuts - change,
       senders,
       recipients
     }
