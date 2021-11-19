@@ -46,14 +46,13 @@ function nspvNtzs(peers, height)
 /**
  * get notarization txns with their proofs
  * @param {*} peers 
- * @param {*} prevTxid 
- * @param {*} nextTxid 
+ * @param {*} ntzTxid 
  * @returns 
  */
-function nspvNtzsProof(peers, prevTxid, nextTxid)
+function nspvNtzsProof(peers, ntzTxid)
 {
   return new Promise((resolve, reject) => {
-    peers.nspvNtzsProof(prevTxid, nextTxid, {}, (err, res, peer) => {
+    peers.nspvNtzsProof(ntzTxid, {}, (err, res, peer) => {
     //console.log('err=', err, 'res=', res);
     if (!err) 
         resolve(res);
@@ -151,21 +150,6 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
     logerror("merkle root does not match notarization data for txid:",  ccutils.hashToHex(txid));
     throw new Error("could not check merkle root against notarization data!");
   }
-
-  // validate prev notarization transaction and its notary sigs: 
-  // (actually we do not need to do this - prev ntz is not used for tx validation at all)
-  /*let prextx = Transaction.fromBuffer(ntzsProof.prevtxbuf, network);
-  let prevNtzData = ntzpubkeys.NSPV_notarizationextract(false, true, prextx, ntzs.prevntz.timestamp);
-  if (ccutils.isError(prevNtzData))
-    throw prevNtzData;
-
-  // check prev ntz data
-  if (Buffer.compare(prevNtzData.destTxid, ntzs.prevntz.destTxid) != 0)
-    throw new Error('notarisation data invalid (prev txid in ntzs)');
-  if (prevNtzData.height !== ntzs.prevntz.height)
-    throw new Error('notarisation data invalid (prev height in ntzs)');
-  if (prevNtzData.height !== ntzsProof.common.prevht)
-    throw new Error('notarisation data invalid (prev height in ntzsproof)');*/
 
   // validate next notarization transaction and its notary sigs:
   let ntzTx = Transaction.fromBuffer(ntzsProof.ntzTxBuf, network);
