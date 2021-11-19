@@ -8,6 +8,7 @@ var btemplates = require('../src/templates')
 var ops = require('bitcoin-ops')
 
 var BigInteger = require('bigi')
+var BN = require('bn.js')
 var ECPair = require('../src/ecpair')
 var Transaction = require('../src/transaction')
 var TransactionBuilder = require('../src/transaction_builder')
@@ -15,8 +16,13 @@ var NETWORKS = require('../src/networks')
 
 var fixtures = require('./fixtures').combine('transaction_builder', ['dash', 'zcash'])
 
+//const ccbasic = require('../cc/ccbasic');
+//var ccimp = require('../cc/ccimp'); 
+
 function construct (f, dontSign) {
   var network = NETWORKS[f.network]
+  // init lib cryptoconditions
+  //ccbasic.cryptoconditions = await ccimp; 
   var txb = new TransactionBuilder(network)
 
   if (f.version !== undefined) txb.setVersion(f.version)
@@ -241,7 +247,7 @@ describe('TransactionBuilder', function () {
 
         var txout = txb.tx.outs[0]
         assert.deepEqual(txout.script, scripts[0])
-        assert.strictEqual(txout.value, 1000)
+        assert.ok(txout.value.eq(new BN(1000)))
       })
 
       it('accepts a ScriptPubKey and value', function () {
@@ -250,7 +256,7 @@ describe('TransactionBuilder', function () {
 
         var txout = txb.tx.outs[0]
         assert.deepEqual(txout.script, scripts[0])
-        assert.strictEqual(txout.value, 1000)
+        assert.ok(txout.value.eq(new BN(1000)))
       })
 
       it('throws if address is of the wrong network', function () {
@@ -523,10 +529,10 @@ describe('TransactionBuilder', function () {
       '194a565cd6aa4cc38b8eaffa343402201c5b4b61d73fa38e49c1ee68cc0e6dfd2f5dae453dd86eb142e87a' +
       '0bafb1bc8401210283409659355b6d1cc3c32decd5d561abaac86c37a353b52895a5e6c196d6f44800000000'
       var txb = TransactionBuilder.fromTransaction(Transaction.fromHex(rawtx))
-      txb.inputs[0].value = 241530
-      txb.inputs[1].value = 241530
-      txb.inputs[2].value = 241530
-      txb.inputs[3].value = 241530
+      txb.inputs[0].value = new BN(241530)
+      txb.inputs[1].value = new BN(241530)
+      txb.inputs[2].value = new BN(241530)
+      txb.inputs[3].value = new BN(241530)
 
       assert.throws(function () {
         txb.build()
