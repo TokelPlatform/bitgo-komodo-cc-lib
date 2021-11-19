@@ -5,6 +5,15 @@ const varint = require('varuint-bitcoin')
 const ip = require('ip')
 
 const bufferutils = require("../src/bufferutils");
+const typeforce = require('typeforce');
+//const { types } = require('bitcoin-protocol');
+const types = require('../src/types');
+//const bigi = require('bigi');
+const { assert } = require('sinon');
+const bn64 = require('../src/bn64');
+
+//const { validateTxUsingNtzsProof } = require('../cc/ntzproofs');
+
 
 //var typeforce = require('typeforce');
 //const { varBuffer } = require('bitcoin-protocol/src/types');
@@ -59,6 +68,28 @@ exports.ipAddress = (function () {
 
   encode.bytes = decode.bytes = 16
   return { encode, decode, encodingLength: () => 16 }
+})()
+
+
+// big integer ser/dser as int64
+exports.bigInt64LE = (function () {
+
+  function encode (value, buffer, offset) {
+    typeforce(types.BN, value);
+    if (!buffer) buffer = Buffer.alloc(8);
+    if (!offset) offset = 0;
+    bn64.writeInt64LE(value, buffer, offset);
+  }
+
+  function decode (buffer, offset, end) {
+    if (!offset) offset = 0
+    if (!end) end = buffer.length
+    let slicedBuffer = buffer.slice(offset, end);
+    return bn64.readInt64LE(slicedBuffer);
+  }
+
+  encode.bytes = decode.bytes = 8
+  return { encode, decode, encodingLength: function () { return 8 } }
 })()
 
 exports.peerAddress = struct([
@@ -135,13 +166,13 @@ let kmdtransaction = struct([
   {
     name: 'outs',
     type: struct.VarArray(varint, struct([
-      { name: 'value', type: struct.UInt64LE },
+      { name: 'value', type: exports.bigInt64LE },
       { name: 'script', type: exports.varBuffer }
     ]))
   },
   { name: 'locktime', type: struct.UInt32LE },
   { name: 'expiryHeight', type: struct.UInt32LE },
-  { name: 'valueBalance', type: struct.UInt64LE },
+  { name: 'valueBalance', type: exports.bigInt64LE },
 
   { name: 'vShieldedSpendSize', type: struct.VarArray(varint, struct([ { name: 'hash', type: exports.buffer32 } ])) },
   { name: 'vShieldedOutputSize', type: struct.VarArray(varint, struct([ { name: 'hash', type: exports.buffer32 } ])) },
@@ -334,15 +365,15 @@ let nspvUtxosResp = struct([
     name: 'utxos',
     type: struct.VarArray(struct.UInt16LE, struct([
       { name: 'txid', type: exports.buffer32 },
-      { name: 'satoshis', type: struct.Int64LE },
-      { name: 'extradata', type: struct.Int64LE },
+      { name: 'satoshis', type: exports.bigInt64LE },
+      { name: 'extradata', type: exports.bigInt64LE },
       { name: 'vout', type: struct.UInt32LE },
       { name: 'height', type: struct.UInt32LE },
       { name: 'script', type: exports.varBuffer }
     ]))
   },
-  { name: 'total', type: struct.UInt64LE },
-  { name: 'interest', type: struct.UInt64LE },
+  { name: 'total', type: exports.bigInt64LE },
+  { name: 'interest', type: exports.bigInt64LE },
   { name: 'nodeheight', type: struct.UInt32LE },
   { name: 'filter', type: struct.UInt32LE },
   { name: 'CCflag', type: struct.UInt16LE },
@@ -443,8 +474,8 @@ let nspvTxidsResp = struct([
     name: 'txids',
     type: struct.VarArray(struct.UInt16LE, struct([
       { name: 'txid', type: exports.buffer32 },
-      { name: 'satoshis', type: struct.Int64LE },
-      { name: 'vout', type: struct.UInt32LE },
+      { name: 'satoshis', type: exports.bigInt64LE },
+      { name: 'index', type: struct.UInt32LE },
       { name: 'height', type: struct.UInt32LE },
     ]))
   },

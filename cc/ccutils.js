@@ -16,6 +16,7 @@ const { decodeTransactionData, parseTransactionData } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 const OPS = require('bitcoin-ops');
+const BN = require('bn.js');
 
 const Debug = require('debug')
 const logdebug = Debug('cc')
@@ -38,7 +39,7 @@ exports.getTransactionsManyDecoded = getTransactionsManyDecoded;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 
-exports.MYDUST = 200;
+exports.BN_MYDUST = new BN(200);
 
 /**
  * sign c cc transaction in the txbuilder, checks inputs and calls either standard signing function or cc signing function
@@ -310,15 +311,16 @@ function getTxids(peers, address, isCC, skipCount, maxrecords)
  * create a tx and adds normal inputs for equal or more than the amount param 
  * @param {*} peers PeerGroup object with NspvPeers ext
  * @param {*} mypk pk to add normal inputs from
- * @param {*} amount that will be added (not less than)
+ * @param {*} bnAmount that will be added (not less than)
  * @returns tx with added inputs along with the added transactions in hex
  */
 function createTxAndAddNormalInputs(peers, mypk, amount)
 {
   typeforce('PeerGroup', peers);
   typeforce('Buffer', mypk);
-  typeforce(types.Satoshi, amount);
+  typeforce(typeforce.oneOf(types.Satoshi, types.BN), amount);
 
+  let bnAmount = typeof amount == 'number' ? new BN(amount) : amount;
   return new Promise((resolve, reject) => {
     /*let request = `{
       "method": "createtxwithnormalinputs",
@@ -328,7 +330,7 @@ function createTxAndAddNormalInputs(peers, mypk, amount)
       ]
     }`;*/
 
-    peers.nspvRemoteRpc("createtxwithnormalinputs", mypk, amount, {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("createtxwithnormalinputs", mypk, bnAmount.toString(), {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -402,7 +404,7 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
   typeforce(typeforce.arrayOf('String'), prevTxnsHex);
   typeforce(types.Network, network);
 
-  let added = 0;
+  let bnAdded = new BN(0);
   for(let i = 0; i < tx.ins.length; i ++) {
     let prevTxHex = prevTxnsHex.find((txHex) => {
         // let r = Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
@@ -411,11 +413,11 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
     });
     if (prevTxHex !== undefined) {
       let prevTx = Transaction.fromBuffer(Buffer.from(prevTxHex, 'hex'), network);
-      added += prevTx.outs[tx.ins[i].index].value;
+      bnAdded.iadd(prevTx.outs[tx.ins[i].index].value);
       txbuilder.addInput(prevTx, tx.ins[i].index, tx.ins[i].sequence, prevTx.outs[tx.ins[i].index].script);
     }
   }
-  return added;
+  return bnAdded;
 }
 
 /**
@@ -474,12 +476,9 @@ function getTransactionsMany(peers, mypk, ...args)
 
   let txids = [];
   for(let i = 0; i < args.length; i ++) {
-    if (Buffer.isBuffer(args[i])) {
-      txidhex = hashToHex(args[i]);
-    }
-    else
-      txidhex = args[i];
-    txids.push(txidhex);
+    let txid = exports.castHashBin(args[i]);
+    typeforce(types.Hash256bit, txid);
+    txids.push(exports.hashToHex(txid));
   }
 
   return new Promise((resolve, reject) => {
@@ -733,18 +732,26 @@ function hashReverse(txid)
   return Buffer.from([]);
 }
 
-exports.toSatoshi = function (val) {
-  if (typeof val !== 'number')
-    throw new Error('amount not a number');
-  return Math.round(val * 100000000);
+
+// TODO lets change to string representation
+exports.toBNSatoshi = function (val) {
+  typeforce(types.Satoshi, val)
+  //if (types.Satoshi(val))
+  //  throw new Error('value not a number');
+  let coins = Math.trunc(val);
+  let fract = ((val - coins) * 100000000) >>> 0;
+  let r = new BN(coins);
+  r.imul(new BN(100000000));
+  r.iadd(new BN(fract));
+  return r;
 }
 
 exports.castHashBin = function(_txid) {
   let txid = _txid;
   if (typeof _txid === 'string')
     txid = hashFromHex(_txid);
-  if (!isValidHash(txid)) {
-    return;
+  if (!types.Hash256bit(txid)) {
+    return null;
   }
   return txid;
 }

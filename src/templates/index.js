@@ -42,14 +42,14 @@ function classifyOutput (script) {
   if (pubKey.output.check(chunks)) return types.P2PK
   if (witnessCommitment.output.check(chunks)) return types.WITNESS_COMMITMENT
 
-  if (cryptoconditions.output.check(script)) return types.CRYPTOCONDITIONS
-  if (cryptoconditionsv2.output.check(script)) return types.CRYPTOCONDITIONS // does the same but for readability
-
   if (pubKeyCLTV.output.check(chunks)) return types.P2PK_CLTV
   if (pubKeyHashCLTV.output.check(chunks)) return types.P2PKH_CLTV
 
   if (nullData.output.check(chunks)) return types.NULLDATA
 
+  // moved to the end for tests to pass (without cc lib loaded asynchronously)
+  if (cryptoconditions.output.check(script)) return types.CRYPTOCONDITIONS
+  if (cryptoconditionsv2.output.check(script)) return types.CRYPTOCONDITIONS // does the same but for readability
   return types.NONSTANDARD
 }
 

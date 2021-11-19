@@ -15,6 +15,7 @@ var P2SH = SIGNABLE.concat([btemplates.types.P2WPKH, btemplates.types.P2WSH])
 var ECPair = require('./ecpair')
 var ECSignature = require('./ecsignature')
 var Transaction = require('./transaction')
+const BN = require('bn.js');
 
 var debug = require('debug')('bitgo:utxolib:txbuilder')
 
@@ -699,7 +700,8 @@ TransactionBuilder.prototype.__addInputUnsafe = function (txHash, vout, options)
 
   // if an input value was given, retain it
   if (options.value !== undefined) {
-    input.value = options.value
+    input.value = types.Satoshi(options.value) ? new BN(options.value) : options.value
+    typeforce(types.BN, input.value)
   }
 
   // derive what we can from the previous transactions output script
@@ -794,8 +796,10 @@ function canSign (input) {
     )
 }
 
-TransactionBuilder.prototype.sign = function (vin, keyPair, redeemScript, hashType, witnessValue, witnessScript) {
-  debug('Signing transaction: (input: %d, hashType: %d, witnessVal: %s, witnessScript: %j)', vin, hashType, witnessValue, witnessScript)
+TransactionBuilder.prototype.sign = function (vin, keyPair, redeemScript, hashType, _witnessValue, witnessScript) {
+  let witnessValue
+  if (_witnessValue !== undefined) witnessValue = types.Satoshi(_witnessValue) ? new BN(_witnessValue) : _witnessValue
+  debug('Signing transaction: (input: %d, hashType: %d, witnessVal: %s, witnessScript: %j)', vin, hashType, types.BN(witnessValue) ? witnessValue.toString() : witnessValue, witnessScript)
   debug('Transaction Builder network: %j', this.network)
 
   // TODO: remove keyPair.network matching in 4.0.0
@@ -815,8 +819,8 @@ TransactionBuilder.prototype.sign = function (vin, keyPair, redeemScript, hashTy
   var kpPubKey = keyPair.publicKey || keyPair.getPublicKeyBuffer()
   if (!canSign(input)) {
     if (witnessValue !== undefined) {
-      if (input.value !== undefined && input.value !== witnessValue) throw new Error('Input didn\'t match witnessValue')
-      typeforce(types.Satoshi, witnessValue)
+      typeforce(types.BN, witnessValue)
+      if (input.value !== undefined && (!types.BN(input.value) || !input.value.eq(witnessValue))) throw new Error('Input didn\'t match witnessValue')
       input.value = witnessValue
     }
 
@@ -911,15 +915,18 @@ TransactionBuilder.prototype.__canModifyOutputs = function () {
 
 TransactionBuilder.prototype.__overMaximumFees = function (bytes) {
   // not all inputs will have .value defined
-  var incoming = this.inputs.reduce(function (a, x) { return a + (x.value >>> 0) }, 0)
+  var incoming = this.inputs.reduce(function (a, x) { if (x.value !== undefined) return a.iadd(x.value) }, new BN(0))
+  if (incoming === undefined) incoming = new BN(0)
 
   // but all outputs do, and if we have any input value
   // we can immediately determine if the outputs are too small
-  var outgoing = this.tx.outs.reduce(function (a, x) { return a + x.value }, 0)
-  var fee = incoming - outgoing
-  var feeRate = fee / bytes
+  var outgoing = this.tx.outs.reduce(function (a, x) { return a.iadd(x.value) }, new BN(0))
+  if (outgoing === undefined) outgoing = new BN(0)
 
-  return feeRate > this.maximumFeeRate
+  var fee = incoming.sub(outgoing)
+  var feeRate = fee.div(new BN(bytes))
+
+  return feeRate.gt(new BN(this.maximumFeeRate))
 }
 
 module.exports = TransactionBuilder

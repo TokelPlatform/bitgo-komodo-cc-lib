@@ -3,6 +3,7 @@ var bcrypto = require('./crypto')
 var bscript = require('./script')
 var { BufferReader, BufferWriter } = require('./bufferutils')
 var { ZcashBufferReader, ZcashBufferWriter } = require('./forks/zcash/bufferutils')
+var { BNBufferReader, BNBufferWriter } = require('./bnbufferutils')
 var coins = require('./coins')
 var opcodes = require('bitcoin-ops')
 var networks = require('./networks')
@@ -12,6 +13,7 @@ var varuint = require('varuint-bitcoin')
 var blake2b = require('blake2b')
 
 var zcashVersion = require('./forks/zcash/version')
+const BN = require('bn.js');
 
 function varSliceSize (someScript) {
   var length = someScript.length
@@ -44,7 +46,7 @@ function Transaction (network = networks.bitcoin) {
     this.versionGroupId = 0  // 0x03C48270 (63210096) for overwinter and 0x892F2085 (2301567109) for sapling
     this.expiryHeight = 0  // Block height after which this transactions will expire, or 0 to disable expiry
     // ZCash version >= 4
-    this.valueBalance = 0
+    this.valueBalance = new BN(0)
     this.vShieldedSpend = []
     this.vShieldedOutput = []
     this.bindingSig = 0
@@ -85,7 +87,7 @@ Transaction.DASH_COINBASE = 5
 Transaction.DASH_QUORUM_COMMITMENT = 6
 
 Transaction.fromBuffer = function (buffer, network = networks.bitcoin, __noStrict) {
-  let bufferReader = new BufferReader(buffer)
+  let bufferReader = new BNBufferReader(buffer)
 
   let tx = new Transaction(network)
   tx.version = bufferReader.readInt32()
@@ -142,7 +144,7 @@ Transaction.fromBuffer = function (buffer, network = networks.bitcoin, __noStric
   var voutLen = bufferReader.readVarInt()
   for (i = 0; i < voutLen; ++i) {
     tx.outs.push({
-      value: bufferReader.readUInt64(),
+      value: bufferReader.readBigInt64(),
       script: bufferReader.readVarSlice()
     })
   }
@@ -164,7 +166,7 @@ Transaction.fromBuffer = function (buffer, network = networks.bitcoin, __noStric
     }
 
     if (tx.isSaplingCompatible()) {
-      tx.valueBalance = bufferReader.readInt64()
+      tx.valueBalance = bufferReader.readBigInt64()
       var nShieldedSpend = bufferReader.readVarInt()
       for (i = 0; i < nShieldedSpend; ++i) {
         tx.vShieldedSpend.push(bufferReader.readShieldedSpend())
@@ -264,12 +266,12 @@ Transaction.prototype.addInput = function (hash, index, sequence, scriptSig) {
 }
 
 Transaction.prototype.addOutput = function (scriptPubKey, value) {
-  typeforce(types.tuple(types.Buffer, types.Satoshi), arguments)
+  typeforce(types.tuple(types.Buffer, typeforce.oneOf(types.Satoshi, types.BN)), arguments)
 
   // Add the output and return the output's index
   return (this.outs.push({
     script: scriptPubKey,
-    value: value
+    value: types.Satoshi(value) ? new BN(value) : value 
   }) - 1)
 }
 
@@ -576,7 +578,7 @@ Transaction.prototype.getBlake2bHash = function (bufferToHash, personalization) 
  */
 Transaction.prototype.getPrevoutHash = function (hashType) {
   if (!(hashType & Transaction.SIGHASH_ANYONECANPAY)) {
-    var bufferWriter = new BufferWriter(Buffer.allocUnsafe(36 * this.ins.length))
+    var bufferWriter = new BNBufferWriter(Buffer.allocUnsafe(36 * this.ins.length))
 
     this.ins.forEach(function (txIn) {
       bufferWriter.writeSlice(txIn.hash)
@@ -600,7 +602,7 @@ Transaction.prototype.getSequenceHash = function (hashType) {
   if (!(hashType & Transaction.SIGHASH_ANYONECANPAY) &&
     (hashType & 0x1f) !== Transaction.SIGHASH_SINGLE &&
     (hashType & 0x1f) !== Transaction.SIGHASH_NONE) {
-    var bufferWriter = new BufferWriter(Buffer.allocUnsafe(4 * this.ins.length))
+    var bufferWriter = new BNBufferWriter(Buffer.allocUnsafe(4 * this.ins.length))
 
     this.ins.forEach(function (txIn) {
       bufferWriter.writeUInt32(txIn.sequence)
@@ -628,10 +630,10 @@ Transaction.prototype.getOutputsHash = function (hashType, inIndex) {
       return sum + 8 + varSliceSize(output.script)
     }, 0)
 
-    bufferWriter = new BufferWriter(Buffer.allocUnsafe(txOutsSize))
+    bufferWriter = new BNBufferWriter(Buffer.allocUnsafe(txOutsSize))
 
     this.outs.forEach(function (out) {
-      bufferWriter.writeUInt64(out.value)
+      bufferWriter.writeBigInt64(out.value)
       bufferWriter.writeVarSlice(out.script)
     })
 
@@ -643,8 +645,8 @@ Transaction.prototype.getOutputsHash = function (hashType, inIndex) {
     // Write only the output specified in inIndex
     var output = this.outs[inIndex]
 
-    bufferWriter = new BufferWriter(Buffer.allocUnsafe(8 + varSliceSize(output.script)))
-    bufferWriter.writeUInt64(output.value)
+    bufferWriter = new BNBufferWriter(Buffer.allocUnsafe(8 + varSliceSize(output.script)))
+    bufferWriter.writeBigInt64(output.value)
     bufferWriter.writeVarSlice(output.script)
 
     if (coins.isZcash(this.network)) {
@@ -663,8 +665,8 @@ Transaction.prototype.getOutputsHash = function (hashType, inIndex) {
  * @param hashType
  * @returns double SHA-256 or 256-bit BLAKE2b hash
  */
-Transaction.prototype.hashForZcashSignature = function (inIndex, prevOutScript, value, hashType) {
-  typeforce(types.tuple(types.UInt32, types.Buffer, types.Satoshi, types.UInt32), arguments)
+Transaction.prototype.hashForZcashSignature = function (inIndex, prevOutScript, _value, hashType) {
+  typeforce(types.tuple(types.UInt32, types.Buffer, typeforce.oneOf(types.Satoshi, types.BN), types.UInt32), arguments)
   if (!coins.isZcash(this.network)) {
     throw new Error('hashForZcashSignature can only be called when using Zcash network')
   }
@@ -675,6 +677,8 @@ Transaction.prototype.hashForZcashSignature = function (inIndex, prevOutScript, 
   if (inIndex >= this.ins.length && inIndex !== VALUE_UINT64_MAX) {
     throw new Error('Input index is out of range')
   }
+  let value
+  if (_value != undefined) value = types.Satoshi(_value) ? new BN(_value) : _value
 
   if (this.isOverwinterCompatible()) {
     var hashPrevouts = this.getPrevoutHash(hashType)
@@ -699,7 +703,7 @@ Transaction.prototype.hashForZcashSignature = function (inIndex, prevOutScript, 
       baseBufferSize += 32 * 2  // hashShieldedSpends and hashShieldedOutputs
       baseBufferSize += 8  // valueBalance
     }
-    bufferWriter = new BufferWriter(Buffer.alloc(baseBufferSize))
+    bufferWriter = new BNBufferWriter(Buffer.alloc(baseBufferSize))
 
     bufferWriter.writeInt32(this.getHeader())
     bufferWriter.writeUInt32(this.versionGroupId)
@@ -714,7 +718,7 @@ Transaction.prototype.hashForZcashSignature = function (inIndex, prevOutScript, 
     bufferWriter.writeUInt32(this.locktime)
     bufferWriter.writeUInt32(this.expiryHeight)
     if (this.isSaplingCompatible()) {
-      bufferWriter.writeUInt64(this.valueBalance)
+      bufferWriter.writeBigInt64(this.valueBalance)
     }
     bufferWriter.writeUInt32(hashType)
 
@@ -727,7 +731,7 @@ Transaction.prototype.hashForZcashSignature = function (inIndex, prevOutScript, 
       bufferWriter.writeSlice(input.hash)
       bufferWriter.writeUInt32(input.index)
       bufferWriter.writeVarSlice(prevOutScript)
-      bufferWriter.writeUInt64(value)
+      bufferWriter.writeBigInt64(value)
       bufferWriter.writeUInt32(input.sequence)
     }
 
@@ -741,14 +745,18 @@ Transaction.prototype.hashForZcashSignature = function (inIndex, prevOutScript, 
   // TODO: support non overwinter transactions
 }
 
-Transaction.prototype.hashForWitnessV0 = function (inIndex, prevOutScript, value, hashType) {
-  typeforce(types.tuple(types.UInt32, types.Buffer, types.Satoshi, types.UInt32), arguments)
+Transaction.prototype.hashForWitnessV0 = function (inIndex, prevOutScript, _value, hashType) {
+  typeforce(types.tuple(types.UInt32, types.Buffer, typeforce.oneOf(types.Satoshi, types.BN), types.UInt32), arguments)
 
   var hashPrevouts = this.getPrevoutHash(hashType)
   var hashSequence = this.getSequenceHash(hashType)
   var hashOutputs = this.getOutputsHash(hashType, inIndex)
 
-  var bufferWriter = new BufferWriter(Buffer.allocUnsafe(156 + varSliceSize(prevOutScript)))
+  let value
+  if (_value !== undefined)
+    value = types.Satoshi(_value) ? new BN(_value) : _value
+
+  var bufferWriter = new BNBufferWriter(Buffer.allocUnsafe(156 + varSliceSize(prevOutScript)))
   var input = this.ins[inIndex]
   bufferWriter.writeUInt32(this.version)
   bufferWriter.writeSlice(hashPrevouts)
@@ -756,7 +764,7 @@ Transaction.prototype.hashForWitnessV0 = function (inIndex, prevOutScript, value
   bufferWriter.writeSlice(input.hash)
   bufferWriter.writeUInt32(input.index)
   bufferWriter.writeVarSlice(prevOutScript)
-  bufferWriter.writeUInt64(value)
+  bufferWriter.writeBigInt64(value)
   bufferWriter.writeUInt32(input.sequence)
   bufferWriter.writeSlice(hashOutputs)
   bufferWriter.writeUInt32(this.locktime)
@@ -767,8 +775,8 @@ Transaction.prototype.hashForWitnessV0 = function (inIndex, prevOutScript, value
 /**
  * Hash transaction for signing a specific input for Bitcoin Cash.
  */
-Transaction.prototype.hashForCashSignature = function (inIndex, prevOutScript, inAmount, hashType) {
-  typeforce(types.tuple(types.UInt32, types.Buffer, /* types.UInt8 */ types.Number, types.maybe(types.UInt53)), arguments)
+Transaction.prototype.hashForCashSignature = function (inIndex, prevOutScript, _inAmount, hashType) {
+  typeforce(types.tuple(types.UInt32, types.Buffer, /* types.UInt8 */typeforce.oneOf(types.Number, types.BN), types.maybe(types.UInt53)), arguments)
 
   // This function works the way it does because Bitcoin Cash
   // uses BIP143 as their replay protection, AND their algo
@@ -777,6 +785,9 @@ Transaction.prototype.hashForCashSignature = function (inIndex, prevOutScript, i
   // other forks, another parameter is required, and a new parameter
   // would be required in the hashForWitnessV0 function, or
   // it could be broken into two..
+
+  let inAmount
+  if (_inAmount != undefined) inAmount = types.Number(_inAmount) ? new BN(_inAmount) : _inAmount
 
   // BIP143 sighash activated in BitcoinCash via 0x40 bit
   if (hashType & Transaction.SIGHASH_BITCOINCASHBIP143) {
@@ -793,7 +804,7 @@ Transaction.prototype.hashForCashSignature = function (inIndex, prevOutScript, i
  * Hash transaction for signing a specific input for Bitcoin Gold.
  */
 Transaction.prototype.hashForGoldSignature = function (inIndex, prevOutScript, inAmount, hashType, sigVersion) {
-  typeforce(types.tuple(types.UInt32, types.Buffer, /* types.UInt8 */ types.Number, types.maybe(types.UInt53)), arguments)
+  typeforce(types.tuple(types.UInt32, types.Buffer, /* types.UInt8 */ typeforce.oneOf(types.Number, types.BN), types.maybe(types.UInt53)), arguments)
 
   // Bitcoin Gold also implements segregated witness
   // therefore we can pull out the setting of nForkHashType
@@ -834,7 +845,7 @@ Transaction.prototype.__toBuffer = function (buffer, initialOffset, __allowWitne
 
   const bufferWriter = coins.isZcash(this.network)
     ? new ZcashBufferWriter(buffer, initialOffset || 0)
-    : new BufferWriter(buffer, initialOffset || 0)
+    : new BNBufferWriter(buffer, initialOffset || 0)
 
   function writeUInt16 (i) {
     bufferWriter.offset = bufferWriter.buffer.writeUInt16LE(i, bufferWriter.offset)
@@ -870,7 +881,7 @@ Transaction.prototype.__toBuffer = function (buffer, initialOffset, __allowWitne
   bufferWriter.writeVarInt(this.outs.length)
   this.outs.forEach(function (txOut) {
     if (!txOut.valueBuffer) {
-      bufferWriter.writeUInt64(txOut.value)
+      bufferWriter.writeBigInt64(txOut.value)
     } else {
       bufferWriter.writeSlice(txOut.valueBuffer)
     }
@@ -891,7 +902,7 @@ Transaction.prototype.__toBuffer = function (buffer, initialOffset, __allowWitne
   }
 
   if (this.isSaplingCompatible()) {
-    bufferWriter.writeUInt64(this.valueBalance)
+    bufferWriter.writeBigInt64(this.valueBalance)
 
     bufferWriter.writeVarInt(this.vShieldedSpend.length)
     this.vShieldedSpend.forEach(function (shieldedSpend) {
