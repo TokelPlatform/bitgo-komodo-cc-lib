@@ -139,10 +139,13 @@ const parseTransactionData = (tx) => {
 const isCindexAddress = (addr) => addr && addr.indexOf('C') === 0;
 
 const isRAddress = (addr) => addr && addr.indexOf('R') === 0;
-  
+
+const isCcTransaction = (tx) => !!tx.ins.find(intx => isCindexAddress(intx.tx?.address))
+
 module.exports = {
   decodeTransactionData,
   getRecipients,
   getSenders,
-  parseTransactionData
+  parseTransactionData,
+  isCcTransaction
 }

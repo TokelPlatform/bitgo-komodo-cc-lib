@@ -12,7 +12,7 @@ const address = require('../src/address');
 const bufferutils = require("../src/bufferutils");
 const bscript = require('../src/script')
 const types = require('../src/types');
-const { decodeTransactionData, parseTransactionData } = require('./txParser')
+const { decodeTransactionData, parseTransactionData, isCcTransaction } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 const OPS = require('bitcoin-ops');
@@ -545,10 +545,10 @@ function getTransactionsMany(peers, mypk, ...args)
           }
         })
       }
-      const { recipients, senders, fees, value } = parseTransactionData(parsedTx);
-      if (!value) {
+      if (isCcTransaction(parsedTx)) {
         return null;
       }
+      const { recipients, senders, fees, value } = parseTransactionData(parsedTx);
       return {
         recipients,
         senders,
