@@ -38,13 +38,7 @@ function nspvConnect(params, opts) {
       reject(err);
     });
 
-    peers.on('error', err => {
-      // maybe let the GUI print the error  
-      //logdebug('nspvBrowserConnect error', err);
-      logdebug.log("nspvConnect got 'error'", err.message)
-    });
-
-    peers.connect(() => {
+    return peers.nspvConnect(() => {
       // maybe let the GUI print this:  
       //logdebug('nspvBrowserConnect connected to a peer');
       resolve(peers);

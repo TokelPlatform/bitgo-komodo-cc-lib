@@ -12,7 +12,7 @@ const address = require('../src/address');
 const bufferutils = require("../src/bufferutils");
 const bscript = require('../src/script')
 const types = require('../src/types');
-const { decodeTransactionData, parseTransactionData } = require('./txParser')
+const { decodeTransactionData, parseTransactionData, isCcTransaction } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 const OPS = require('bitcoin-ops');
@@ -37,6 +37,8 @@ exports.getTransactionsMany = getTransactionsMany;
 exports.getTransactionsManyDecoded = getTransactionsManyDecoded;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
+
+const EMPTY_TXID = '0000000000000000000000000000000000000000000000000000000000000000'
 
 exports.MYDUST = 200;
 
@@ -274,8 +276,9 @@ function getUtxos(peers, address, isCC, skipCount, maxrecords)
   return new Promise((resolve, reject) => {
     peers.nspvGetUtxos(address, isCC, skipCount, maxrecords, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
-      if (!err)
+      if (!err) {
         resolve(res);
+      }
       else
         reject(err);
     });
@@ -346,7 +349,7 @@ function createTxAndAddNormalInputs(peers, mypk, amount)
  * @param {*} maxrecords max number of returned utxos, if 0 max records limit set by the server will be used
  * @returns utxo list
  */
-function getNormalUtxos(peers, address, skipCount, maxrecords)
+function getNormalUtxos(peers, address, skipCount = 0, maxrecords = 0)
 {
   typeforce('PeerGroup', peers);
   typeforce('String', address);
@@ -510,27 +513,40 @@ function getTransactionsMany(peers, mypk, ...args)
     const txs = await getTransactionsMany(peers, mypk, ...args);
     txs.transactions.forEach( tx => {
       const decoded = decodeTransactionData(tx.tx, tx.blockHeader, network)
-      decodedTxs.push(decoded)
-      inTransactionsIds.push(decoded.ins.map(one => one.txid))
+      if (!decoded) {
+        return;
+      }
+      decodedTxs.push(decoded);
+      // Empty ids are for transactions which are VINS for mining transactions
+      let txids = decoded.ins.filter(one => one.txid !== EMPTY_TXID  ? one.txid : false)
+      txids = txids.map(one => one.txid);
+      if (txids.length > 0) {
+        inTransactionsIds.push(txids)
+      }
     })
-    inTransactionsIds = inTransactionsIds.flat()
-    
-    let inTransactions = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
-
     const parsedInTransactions = {}
-    inTransactions.transactions.forEach(tx => {
-      const newTx = decodeTransactionData(tx.tx, tx.blockHeader, network)
-      parsedInTransactions[newTx.txid] = newTx
-    });
-    return decodedTxs.map(tx => {
+
+    if (inTransactionsIds.length > 0) {
+      inTransactionsIds = inTransactionsIds.flat()
+      let inTransactions = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
+      inTransactions.transactions.forEach(tx => {
+        const newTx = decodeTransactionData(tx.tx, tx.blockHeader, network)
+        parsedInTransactions[newTx.txid] = newTx
+      });
+    }
+
+    decodedTxs = decodedTxs.map(tx => {
       const parsedTx = {
         ...tx,
         ins: tx.ins.map(txin => {
           return {
             ...txin,
-            tx: parsedInTransactions[txin.txid].outs[txin.index]
+            tx: parsedInTransactions[txin.txid]?.outs[txin.index]
           }
         })
+      }
+      if (isCcTransaction(parsedTx)) {
+        return null;
       }
       const { recipients, senders, fees, value } = parseTransactionData(parsedTx);
       return {
@@ -541,6 +557,7 @@ function getTransactionsMany(peers, mypk, ...args)
         ...parsedTx
       }
     });
+    return decodedTxs.filter(a => a);
    } catch (e) {
     // logdebug(e)
     throw new Error(e);

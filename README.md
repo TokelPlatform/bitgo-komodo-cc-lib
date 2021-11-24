@@ -1,11 +1,55 @@
-# BitGo-utxo with Komodo Antara (Cryptoconditions) Support
+# Client-side nSPV JavaScript library with Komodo CryptoConditions
 
-A javascript Bitcoin library for node.js and browsers. Written in javascript with the cryptoconditions (cc) library written in rust and built as a wasm module.
+A javascript nSPV library for node.js and browsers. Written in javascript with the cryptoconditions (cc) library written in rust and built as a wasm module.
 
 This javascript library allows to develop nSPV clients using Antara (CC) technology.<br>
 More info: [Antara Development Docs](http://developers.komodoplatform.com/basic-docs/antara/introduction-to-antara.html)<br>
 
 Released under the terms of the [MIT LICENSE](https://github.com/dimxy/bitgo-komodo-cc-lib/blob/master/LICENSE).
+
+## Why nSPV? 
+
+- It allows easy and quick communication with notarized blockchains. 
+
+- nSPV does not require downloading the whole blockchain in order for it to work.
+
+- It is secure and all transactions are created and signed locally
+
+- There is no 3d party involved. You run an nSPV node, you communicate with the blockchain, you receive data. No one else is involved.
+
+## What is nSPV?
+
+SPV clients are very useful for wallets that dont want the entire blockchain locally, however as the blockchains grow in length, the number of headers required grows linearly. With equihash coins, the header size is 2kb, so this effect becomes quite a large overhead, ie. 2GB per million blocks. Just for the headers!
+
+If we are willing to use the notarizations as a verified blockhash, we can reduce the number of headers required to just the headers that are in the blocks near the utxo in a specific wallet. As little as 10 headers would be needed to get full confirmation on a specific utxo. [Continue reading...](https://medium.com/@jameslee777/nspv-a-simple-approach-to-superlight-clients-leveraging-notarizations-75d7ef5a37a9)
+
+## What can you do with nspv-js?
+
+- Communicate with any chain which supports notarizations to get information on addresses, tokens, transactions, trades, etc.
+- Create tokens and nfts
+- Send tokens and nfts
+- Trade tokens and nfts
+
+## What are use cases for nSPV?
+
+- You are a ticket selling business and want to tokenize your tickets
+- You are a game developer and want to have fast seamless and inexpensive transactions within your game where users trade tokenized items. 
+
+### SPV technology
+
+[SPV technology](https://hackernoon.com/spv-proofs-explained-qd1p3r1q)
+[Bitcoin Wiki - SPV](https://en.bitcoin.it/wiki/Scalability#Simplified_payment_verification)
+
+### Articles by Jl777 on nSPV
+
+[nSPV a simple approach to superlight clients leveraging notarizations](https://medium.com/@jameslee777/nspv-a-simple-approach-to-superlight-clients-leveraging-notarizations-75d7ef5a37a9)
+
+[nSPV reference cli client](https://medium.com/@jameslee777/nspv-reference-cli-client-cf1ffdc03631)
+
+[libnspv: evolution of nSPV](https://medium.com/@jameslee777/libnspv-evolution-of-nspv-ed157f8b159d)
+
+Komodo docs
+[nSPV](https://developers.komodoplatform.com/basic-docs/smart-chains/smart-chain-setup/nspv.html)
 
 ## Prerequisites
 
@@ -16,10 +60,10 @@ You can use the library in your node server or in the browser only application.
 1. You need installed:
   - nodejs v.12+<br>
 
-2. You'll need a komodo asset chain to run bitgo lib against. Or you can use one of the pre-defined chains in the network file in the library. 
+2. You'll need a komodo asset chain to run nspv-js against. Or you can use one of the pre-defined chains in the [networks file](https://github.com/TokelPlatform/nspv-js/blob/development/src/networks.js) of the library. 
 
   ```
-  const { networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const { networks } = require('@tokel/nspv-js');  
   const network = networks.tkltest;
   ```
 
@@ -35,7 +79,7 @@ You can use the library in your node server or in the browser only application.
 2. You'll need a komodo asset chain to run bitgo lib against. Or you can use one of the pre-defined chains in the network file in the library. 
 
   ```
-  const { networks } = require('@tokel/bitgo-komodo-cc-lib');  
+  const { networks } = require('@tokel/nspv-js');  
   const network = networks.tkltest;
   ```
 
@@ -44,154 +88,21 @@ You can use the library in your node server or in the browser only application.
 ### Using npm
 
 ```
-npm i @tokel/bitgo-komodo-cc-lib
+npm i @tokel/nspv-js
 ```
 
 ### Manual installation
 
 Clone this git repository go to the new dir and checkout `development` branch.
 
-Install the bitgo-komodo-cc-lib dependency packages, inside the repo dir run:
+Install the nspv-js dependency packages.
 
 ```
 npm install
 ```
 
 
-## Basic API  (WIP)
-
-First you need to connect to peers to start making requests.
-
-```
-try {
-  const { nspvConnect, networks } = require('@tokel/bitgo-komodo-cc-lib');  
-  const network = networks.tkltest;
-  const peers = await nspvConnect({ network }, {});
-} catch (e) {
-  // do something
-}
-
-```
-### General
-
-`general.keyToWif(String)` - Receives any string(WIF/seed phrase) and returns WIF.
-
-`general.getSeedPhrase(Number)` - Generates a bip39 mnemonic seed phrase, specify strength 128 or 256 as a parameter.
-
-`general.makeNormalTx(wif, destaddress, amount, network, peers)` - creates and signs transaction locally
-
-### CC Utils
-
-`getNormalUtxos(peers, address, skipCount, maxrecords)` - get normal (non-CC) utxos from an address
-
-`getCCUtxos(peers, address, skipCount, maxrecords)` - get CC utxos  from an address
-
-`getTxids(peers, address, isCC, skipCount, maxrecords)` - returns txos (tx outputs bith spent and unspent) for an address
-
-`createTxAndAddNormalInputs(peers, mypk, amount)` - create a tx and adds normal inputs for equal or more than the amount param 
-
-`pubkey2NormalAddressKmd(pk)` - makes komodo normal address from a pubkey
-
-`getRawTransaction(peers, mypk, txid)` - Get transaction both in hex and decoded 
-
-`getTransactionsMany(peers, mypk, args)` - Get many transactions (in hex), args - JSON array of txids
-
-#### getTransactionsManyDecoded
-`getTransactionsManyDecoded(peers, mypk, args)` - Get many transactions decoded with extra info on inputs and outputs, args - JSON array of txids
- 
-e.g. 
-
-```
-const { ccutils } = require('@tokel/bitgo-komodo-cc-lib');
-const uniqueIds = [
-  "69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9",
-  "76b63ddd43419320d24662294a154bb5fde96b5b1c8ac6d148e47e72ba9165f8"
-];
-
-ccutils.getTransactionsManyDecoded(
-    peers,
-    network,
-    pubkeyBuffer,
-    uniqueIds
-  );
-```
-
-Response sample
-
-```
-{
-    "txid": "69449770e102a1e1fd907900034f47146cbbf3a682a24fa7b088b9e408e951b9",
-    "recipients": ["RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK"],
-    "senders": ["RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK"],
-    "value": 1000000000,
-    "fees": "10000",
-    "ins": [
-        {
-            "hash": Buffer,
-            "index": 0,
-            "script": Buffer,
-            "sequence": 4294967295,
-            "witness": [],
-            "txid": "e932fdacaa16906e1ad70c4bfe52779094c565cec52c69b3182cbe081cf9f94b",
-            "tx": {
-                "value": 600000000,
-                "script": Buffer,
-                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
-                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
-            }
-        },
-        {
-            "hash": Buffer,
-            "index": 0,
-            "script": Buffer,
-            "sequence": 4294967295,
-            "witness": [],
-            "txid": "19f0ec147502bdd012d89f471d8a175ea7e689611faaefe26a9eba3d4375b70f",
-            "tx": {
-                "value": 300000000,
-                "script": Buffer,
-                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
-                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
-            }
-        },
-        {
-            "hash": Buffer,
-            "index": 0,
-            "script": Buffer,
-            "sequence": 4294967295,
-            "witness": [],
-            "txid": "2a145529738c82be0516b3dd6c4229d1a98b946dd6b80f0152da7dcbed0d9f21",
-            "tx": {
-                "value": 150000000,
-                "script": Buffer,
-                "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
-                "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
-            }
-        }
-    ],
-    "outs": [
-        {
-            "value": 1000000000,
-            "script": Buffer,
-            "address": "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE",
-            "asm": "OP_DUP OP_HASH160 09a7c48f0db7e8b54bf4494c01ed66b99f3216a6 OP_EQUALVERIFY OP_CHECKSIG"
-        },
-        {
-            "value": 49990000,
-            "script": Buffer,
-            "address": "RH6VbDu9kzndwZBWR6PHAfntkBM3crKvKK",
-            "asm": "OP_DUP OP_HASH160 55bb0c93f279e815f9b792861e2a21ad18a23fde OP_EQUALVERIFY OP_CHECKSIG"
-        }
-    ]
-}
-```
-
-### CC Tokens
-
-### CC Tokens Tokel
-
-## Advanced API 
-
+## [nSPV API Documentation](./API.md)
 ## Samples
 
 In the samples folder are included a several examples of CC usage.
@@ -201,26 +112,6 @@ In the samples folder are included a several examples of CC usage.
 4. tokenstokel.js  - example of how to run tokensv2tokel cc functions
 
 To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
-
-### Build test app to run in nodejs
-
-Build the cryptoconditions wasm module:<br>
-Setup the rust nightly build to build cryptoconditions:
-```
-rustup toolchain install nightly
-rustup default nightly
-```
-
-Change to cryptoconditions-js directory and build the cryptoconditions wasm module for nodejs target:
-```
-cd ./node_modules/cryptoconditions-js
-wasm-pack build -t nodejs
-```
-
-Run the testapp in nodejs:
-```
-node ./ccfaucetpoc.js
-```
 
 ## How to use the test app in the browser:
 
@@ -239,7 +130,7 @@ package.json:
     "serve": "webpack-dev-server"
   },
   "dependencies": {
-    "cryptoconditions-js": "git+https://github.com/dimxy/cryptoconditions-js.git#master"
+    "cryptoconditions-js": "@tokel/cryptoconditions"
   },
   "devDependencies": {
     "webpack": "^4.44.2",
@@ -279,13 +170,7 @@ Set again the nightly rust version for this repo:
 rustup default nightly
 ```
 
-Change to ./node_modules/cryptoconditions-js subdir and run the following command to build cryptconditions lib wasm for browserify.
-```
-cd ./node_modules/cryptoconditions-js
-wasm-pack build
-```
-
-Now go to bitgo-komodo-cc-lib repo dir.<br>
+Now go to nspv-js repo dir.<br>
 Rebuild sources and build the test app for browser:
 ```
 npm run build
@@ -303,8 +188,7 @@ The web server should be available at http://localhost:8080 url (if you installe
 ### Use the correct komodod version
 
 The last thing is to make sure you run a komodod version with an extension to nSPV getutxos call (it should additionally return script for each utxo).<br>
-Use this komodod branch for this:
-https://github.com/dimxy/komodo/tree/nspv-utxo-ext
+https://github.com/TokelPlatform/komodo tokel branch
 
 I recommed to run komodod with -debug=net to easily discover wrong magic errors and observe communication dynamic. Basically komodod should print ver/verack and ping/pong exchanges in the debug.log, if connection is okay
 
