@@ -202,8 +202,8 @@ function encodeTokensCreateV2OpReturn(origpk, name, desc, nftdata)
 
   let buffer = Buffer.allocUnsafe(1+1+1 + 
     varuint.encodingLength(origpk.length) + origpk.length + 
-    varuint.encodingLength(name.length) + name.length + 
-    varuint.encodingLength(desc.length) + desc.length + 
+    varuint.encodingLength(Buffer.byteLength(name, 'utf8')) + Buffer.byteLength(name, 'utf8') + 
+    varuint.encodingLength(Buffer.byteLength(desc, 'utf8')) + Buffer.byteLength(desc, 'utf8') + 
     (Buffer.isBuffer(nftdata) && nftdata.length > 0 ? varuint.encodingLength(nftdata.length) + nftdata.length : 0));
   let bufferWriter = new bufferutils.BufferWriter(buffer);
 
