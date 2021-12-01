@@ -26,7 +26,7 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
-//const mynetwork = networks.tkltest; 
+//const mynetwork = networks.TKLTEST; 
 const mynetwork = networks.TOKEL; 
 
 
@@ -149,14 +149,13 @@ if (!process.browser)
       */
 
 
-      let ntzresp = await ntzsproofs.nspvNtzs(peers, 10000);
-      console.log('ntzresp=', ntzresp);
+      //let ntzresp = await ntzsproofs.nspvNtzs(peers, 10000);
+      //console.log('ntzresp=', ntzresp);
 
-      let ntzsproofresp = await ntzsproofs.nspvNtzsProof(peers, ntzresp.ntz.txid);
-      console.log('ntzsproofresp=', ntzsproofresp);
+      //let ntzsproofresp = await ntzsproofs.nspvNtzsProof(peers, ntzresp.ntz.txid);
+      //console.log('ntzsproofresp=', ntzsproofresp);
       
       
-      /*
       let txid1 = '22eca5965bc69361183653aa69fdcdc4f90a3b4a7b39c96e36d042478ff54e34'; 
       let ht1 = 120000;
       let ntzvalid1 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid1, ht1);
@@ -215,7 +214,7 @@ if (!process.browser)
       let ht9 = 119995;
       let ntzvalid9 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid9, ht9);
       console.log("ntzvalid9=", ntzvalid9);
-      */
+    
       //let txproofvalid = await ntzsproofs.validateTxUsingTxProof(peers, txid);
       //console.log("txproof valid=", txproofvalid);
 
