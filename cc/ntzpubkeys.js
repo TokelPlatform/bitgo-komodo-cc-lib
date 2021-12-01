@@ -4,6 +4,7 @@ const Debug = require('debug')
 const logdebug = Debug('nspv')
 const logerror = Debug('nspv:error');
 
+const struct = require('varstruct')
 const bscript = require("../src/script");
 const bufferutils = require("../src/bufferutils");
 const ccutils = require('./ccutils');
@@ -566,9 +567,9 @@ function NSPV_opretextract(isKmd, opret) {
           if (trySymbol && (trySymbol == 'KMD' || trySymbol == 'BTC'))
             isBack = true;
         }
-        let desttxid;
+        let destTxid;
         if (isBack)
-          desttxid = bufferReader.readSlice(32);
+          destTxid = bufferReader.readSlice(32);
         let symbol = readSymbol(bufferReader.buffer, bufferReader.offset);
         logdebug('notarization data symbol:', symbol);
         if (!symbol)
@@ -577,17 +578,14 @@ function NSPV_opretextract(isKmd, opret) {
         bufferReader.offset += symbol.length + 1; // including ending zero
         let result = { height, blockhash, isBack, symbol };
         if (isBack)
-          result = Object.assign(result, { desttxid });
+          result = Object.assign(result, { destTxid });
 
         if (bufferReader.offset < bufferReader.buffer.length) {
           let MoM = bufferReader.readSlice(32);
-          let MoMDepthL = bufferReader.readUInt8();
-          let MoMDepthH = bufferReader.readUInt8();
-          let MoMDepth = MoMDepthL + (MoMDepthH << 8);
-          let ccidL = bufferReader.readUInt8();
-          let ccidH = bufferReader.readUInt8();
-          let ccid = ccidL + (ccidH << 8);
-
+          let MoMDepth = struct.Int16LE.decode(bufferReader.buffer, bufferReader.offset);
+          bufferReader.offset += 2;
+          let ccid = struct.Int16LE.decode(bufferReader.buffer, bufferReader.offset);
+          bufferReader.offset += 2;
           result = Object.assign(result, { MoM, MoMDepth, ccid });
           if (bufferReader.offset < bufferReader.buffer.length) {
             if (isBack)  {
@@ -598,7 +596,7 @@ function NSPV_opretextract(isKmd, opret) {
           }
         }
         if (bufferReader.offset != bufferReader.buffer.length)
-          throw new Error('data left');
+          throw new Error('unparsed data left');
         return result;
       }
       catch (err) {

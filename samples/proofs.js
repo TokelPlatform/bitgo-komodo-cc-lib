@@ -149,13 +149,14 @@ if (!process.browser)
       */
 
 
-      /*let ntzresp = await ntzsproofs.nspvNtzs(peers, 10000);
+      let ntzresp = await ntzsproofs.nspvNtzs(peers, 10000);
       console.log('ntzresp=', ntzresp);
 
-      let ntzsproofresp = await ntzsproofs.nspvNtzsProof(peers, ntzresp.prevntz.txid, ntzresp.nextntz.txid);
+      let ntzsproofresp = await ntzsproofs.nspvNtzsProof(peers, ntzresp.ntz.txid);
       console.log('ntzsproofresp=', ntzsproofresp);
-      */
       
+      
+      /*
       let txid1 = '22eca5965bc69361183653aa69fdcdc4f90a3b4a7b39c96e36d042478ff54e34'; 
       let ht1 = 120000;
       let ntzvalid1 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid1, ht1);
@@ -165,8 +166,8 @@ if (!process.browser)
         let txid2 = '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'; 
         let ht2 = 0;  //bad height
         let ntzvalid2 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid2, ht2);
-        console.log("ntzvalid2=", ntzvalid2);
-        throw new Error('bad height valid');
+        console.log("bad height ntzvalid2=", ntzvalid2);
+        if (ntzvalid2) throw new Error('bad height valid');
       }
       catch(e)  {
         console.log("bad height=", e.message);
@@ -192,8 +193,8 @@ if (!process.browser)
         let txid6 = 'f448568a2002a1583c8d6414d2ddf1c91fdbff01d4c0e0f66d3a505cede62ccd';
         let ht6 = 1;
         let ntzvalid6 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid6, ht6);
-        console.log("ntzvalid6=", ntzvalid6);
-        throw new Error('bad height valid');
+        console.log("bad height ntzvalid6=", ntzvalid6);
+        if (ntzvalid6) throw new Error('bad height valid');
       }
       catch(e)  {
         console.log("bad height=", e.message);
@@ -208,13 +209,13 @@ if (!process.browser)
       let txid8 = '2ba06f6a36d592aa64f01a6522f07ac151dfd9abdb3f6d8074922e5d79afd879'; 
       let ht8 = 119993;
       let ntzvalid8 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid8, ht8);
-      console.log("ntzvalid48", ntzvalid8);
+      console.log("ntzvalid8", ntzvalid8);
 
       let txid9 = '76811b4051e72d73f718697bdb3006a6187ffe596bb71bed6c2e5286a6829447'; 
       let ht9 = 119995;
       let ntzvalid9 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid9, ht9);
       console.log("ntzvalid9=", ntzvalid9);
-
+      */
       //let txproofvalid = await ntzsproofs.validateTxUsingTxProof(peers, txid);
       //console.log("txproof valid=", txproofvalid);
 

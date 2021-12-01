@@ -13,7 +13,7 @@ const PeerGroup = require('./peerGroup')
 require('./nspvPeer'); // init peer.js too
 const kmdblockindex = require('../src/kmdblockindex');
 
-const { nspvResp, nspvVersion } = require('./kmdtypes');
+const { nspvResp, NSPV_VERSION } = require('./kmdtypes');
 
 class NspvPeerGroup extends PeerGroup {
   constructor (params, opts) {
@@ -54,9 +54,9 @@ class NspvPeerGroup extends PeerGroup {
     //this.on('downloadHeaders', this._downloadHeaders.bind(this));
   }
 
-
-
 }
+
+// should add methods to prototype as we want it as old(PeerGroup) 
 
 PeerGroup.prototype._downloadHeaders = function()   {
   if (!this.blockIndex)
@@ -122,8 +122,8 @@ PeerGroup.prototype.nspvNtzs = function(height, opts, cb) {
   this._request('nspvNtzs', height, opts, cb)
 }
 
-PeerGroup.prototype.nspvNtzsProof = function(prevTxid, nextTxid, opts, cb) {
-  this._request('nspvNtzsProof', prevTxid, nextTxid, opts, cb)
+PeerGroup.prototype.nspvNtzsProof = function(ntzTxid, opts, cb) {
+  this._request('nspvNtzsProof', ntzTxid, opts, cb)
 }
 
 module.exports = old(NspvPeerGroup)

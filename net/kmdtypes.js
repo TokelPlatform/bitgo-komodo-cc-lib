@@ -10,7 +10,7 @@ const bufferutils = require("../src/bufferutils");
 //const { varBuffer } = require('bitcoin-protocol/src/types');
 //var typeforceNT = require('typeforce/nothrow');
 
-exports.nspvVersion = 0x0005;
+exports.NSPV_VERSION = 0x0006;
 
 exports.buffer8 = struct.Buffer(8)
 exports.buffer32 = struct.Buffer(32)
@@ -261,6 +261,29 @@ const NSPVMSGS = {
   NSPV_ERRORRESP: 0xff,  
 };
 
+exports.nspvMsgName = function(code)  {
+  switch(code) {
+    case NSPVMSGS.NSPV_INFO: return 'NSPV_INFO';
+    case NSPVMSGS.NSPV_INFORESP: return 'NSPV_INFORESP';
+    case NSPVMSGS.NSPV_UTXOS: return 'NSPV_UTXOS';
+    case NSPVMSGS.NSPV_UTXOSRESP: return 'NSPV_UTXOSRESP';
+    case NSPVMSGS.NSPV_NTZS: return 'NSPV_NTZS';
+    case NSPVMSGS.NSPV_NTZSRESP: return 'NSPV_NTZSRESP';
+    case NSPVMSGS.NSPV_NTZSPROOF: return 'NSPV_NTZSPROOF';
+    case NSPVMSGS.NSPV_NTZSPROOFRESP: return 'NSPV_NTZSPROOFRESP';
+    case NSPVMSGS.NSPV_TXPROOF: return 'NSPV_TXPROOF';
+    case NSPVMSGS.NSPV_TXPROOFRESP: return 'NSPV_TXPROOFRESP';
+    case NSPVMSGS.NSPV_BROADCAST: return 'NSPV_BROADCAST';
+    case NSPVMSGS.NSPV_BROADCASTRESP: return 'NSPV_BROADCASTRESP';
+    case NSPVMSGS.NSPV_TXIDS: return 'NSPV_TXIDS';
+    case NSPVMSGS.NSPV_TXIDSRESP: return 'NSPV_TXIDSRESP';
+    case NSPVMSGS.NSPV_REMOTERPC: return 'NSPV_REMOTERPC';
+    case NSPVMSGS.NSPV_REMOTERPCRESP: return 'NSPV_REMOTERPCRESP';  
+    case NSPVMSGS.NSPV_ERRORRESP: return 'NSPV_ERRORRESP';
+    default: return 'unknown';  
+  }
+}
+
 exports.NSPVMSGS = NSPVMSGS;
 
 let bufferaddr = struct.Buffer(64);
@@ -269,10 +292,11 @@ let bufferaddr = struct.Buffer(64);
 let nspvNtz = struct([
   { name: 'blockhash', type: exports.buffer32 },
   { name: 'txid', type: exports.buffer32 },
-  { name: 'otherTxid', type: exports.buffer32 },
+  { name: 'destTxid', type: exports.buffer32 },
   { name: 'height', type: struct.Int32LE },
   { name: 'txidheight', type: struct.Int32LE },
   { name: 'timestamp', type: struct.UInt32LE },
+  { name: 'momdepth', type: struct.UInt16LE },
 ]);
 
 let nspvInfoReq = struct([
@@ -511,13 +535,6 @@ let nspvTxProofResp = (function(){
   return { encode, decode, encodingLength }
 })();
 
-/*
-struct NSPV_ntzsresp {
-    struct NSPV_ntz prevntz, nextntz;
-    int32_t reqheight;
-};
-*/
-
 
 // custom parser for ntz req/resp nspv msgs
 let nspvNtzsReq = (function(){
@@ -551,12 +568,12 @@ let nspvNtzsResp = (function(){
     let bufferReader = new bufferutils.BufferReader(slicedBuffer);
     let respCode = bufferReader.readUInt8();
     let requestId = bufferReader.readUInt32();
-    let prevntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
-    bufferReader.offset += nspvNtz.decode.bytes;
-    let nextntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
+    //let prevntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
+    //bufferReader.offset += nspvNtz.decode.bytes;
+    let ntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
     bufferReader.offset += nspvNtz.decode.bytes;
     let reqHeight = bufferReader.readUInt32();
-    return { respCode, requestId, prevntz, nextntz, reqHeight };
+    return { respCode, requestId, /*prevntz,*/ ntz, reqHeight };
   }
   return { encode, decode, encodingLength };
 })();
@@ -568,12 +585,12 @@ let nspvNtzsProofReq = (function(){
     let bufferWriter = new bufferutils.BufferWriter(buffer, offset);
     bufferWriter.writeUInt8(value.reqCode);
     bufferWriter.writeUInt32(value.requestId);
-    bufferWriter.writeSlice(value.prevTxid);
-    bufferWriter.writeSlice(value.nextTxid);
+    //bufferWriter.writeSlice(value.prevTxid);
+    bufferWriter.writeSlice(value.ntzTxid);
     encode.bytes = bufferWriter.offset;
   }
   function encodingLength(value) {
-    return 1 + 4 + 32 + 32;
+    return 1 + 4 /*+ 32*/ + 32;
   }
   function decode(buffer, offset, end) {
     return { };  // not used
@@ -592,9 +609,8 @@ let nspvNtzsProofResp = (function(){
   }
 
   function decodeNtzsProofShared(bufferReader) {
-    let numhdrs_l = bufferReader.readUInt8();
-    let numhdrs_h = bufferReader.readUInt8();
-    let numhdrs = (numhdrs_h << 8) + numhdrs_l;  // dont have this: bufferReader.readUInt16();
+    let numhdrs = struct.Int16LE.decode(bufferReader.buffer, bufferReader.offset);
+    bufferReader.offset += 2;
     let hdrs = [];
     for (let i = 0; i < numhdrs; i ++)   {
       //hdrs.push(decodeEquiHdr(bufferReader));
@@ -602,14 +618,14 @@ let nspvNtzsProofResp = (function(){
       bufferReader.offset += exports.kmdheader.decode.bytes;
     }
 
-    let prevht = bufferReader.readUInt32();   // from prev ntz tx opreturn
-    let nextht = bufferReader.readUInt32();   // from next ntz tx opreturn
-    let pad32 = bufferReader.readUInt32();
+    //let prevht = bufferReader.readUInt32();   // from prev ntz tx opreturn
+    let ntzedHeight = bufferReader.readUInt32();   // from next ntz tx opreturn
+    //let pad32 = bufferReader.readUInt32();
 
-    let pad16_l = bufferReader.readUInt8();
-    let pad16_h = bufferReader.readUInt8();
-    let pad16 = (pad16_h << 8) + pad16_l; // bufferReader.readUInt16();
-    return { numhdrs, hdrs, prevht, nextht, pad32, pad16 };
+    //let pad16_l = bufferReader.readUInt8();
+    //let pad16_h = bufferReader.readUInt8();
+    //let pad16 = (pad16_h << 8) + pad16_l; // bufferReader.readUInt16();
+    return { numhdrs, hdrs, /*prevht,*/ ntzedHeight: ntzedHeight /*, pad32, pad16*/ };
   }
   function decode(buffer, offset, end) {
     let slicedBuffer = buffer.slice(offset, end);
@@ -617,15 +633,16 @@ let nspvNtzsProofResp = (function(){
     let respCode = bufferReader.readUInt8();
     let requestId = bufferReader.readUInt32();
     let common = decodeNtzsProofShared(bufferReader);
-    let prevtxid = bufferReader.readSlice(32);
-    let nexttxid = bufferReader.readSlice(32);
-    let prevtxidht = bufferReader.readUInt32();  // prev ntz tx height
-    let nexttxidht = bufferReader.readUInt32();  // next ntz tx height
-    let prevtxlen = bufferReader.readUInt32();
-    let prevtxbuf = bufferReader.readSlice(prevtxlen);
-    let nexttxlen = bufferReader.readUInt32();
-    let nexttxbuf = bufferReader.readSlice(nexttxlen);
-    return { respCode, requestId, common, prevtxid, nexttxid, prevtxidht, nexttxidht, prevtxlen, nexttxlen, prevtxbuf, nexttxbuf };
+    //let prevNtzTxid = bufferReader.readSlice(32);
+    let ntzTxid = bufferReader.readSlice(32);
+    //let prevNtzHeight = bufferReader.readUInt32();  // prev ntz tx height
+    let ntzTxHeight = bufferReader.readUInt32();  // next ntz tx height
+    //let prevtxlen = bufferReader.readUInt32();
+    //let prevtxbuf = bufferReader.readSlice(prevtxlen);
+    let ntzTxLen = bufferReader.readUInt32();
+    let ntzTxBuf = bufferReader.readSlice(ntzTxLen);
+    //return { respCode, requestId, common, prevNtzTxid, nextNtzTxid, prevNtzHeight, nextNtzHeight, prevtxlen, nexttxlen, prevtxbuf, nexttxbuf };
+    return { respCode, requestId, common, ntzTxid, ntzTxHeight, ntzTxLen, ntzTxBuf };
   }
   return { encode, decode, encodingLength };
 })();

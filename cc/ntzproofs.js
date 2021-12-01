@@ -4,9 +4,9 @@ const Debug = require('debug');
 const logdebug = Debug('net:nspv');
 const logerror = Debug('net:nspv:error');
 
-var bcrypto = require('../src/crypto');
-var fastMerkleRoot = require('merkle-lib/fastRoot');
-var bmp = require('bitcoin-merkle-proof');
+const bcrypto = require('../src/crypto');
+const fastMerkleRoot = require('merkle-lib/fastRoot');
+const bmp = require('bitcoin-merkle-proof');
 const ccutils = require('./ccutils');
 const ntzpubkeys = require('./ntzpubkeys');
 //const TransactionBuilder = require('../src/transaction_builder');
@@ -46,14 +46,13 @@ function nspvNtzs(peers, height)
 /**
  * get notarization txns with their proofs
  * @param {*} peers 
- * @param {*} prevTxid 
- * @param {*} nextTxid 
+ * @param {*} ntzTxid 
  * @returns 
  */
-function nspvNtzsProof(peers, prevTxid, nextTxid)
+function nspvNtzsProof(peers, ntzTxid)
 {
   return new Promise((resolve, reject) => {
-    peers.nspvNtzsProof(prevTxid, nextTxid, {}, (err, res, peer) => {
+    peers.nspvNtzsProof(ntzTxid, {}, (err, res, peer) => {
     //console.log('err=', err, 'res=', res);
     if (!err) 
         resolve(res);
@@ -78,7 +77,7 @@ function nspvNtzsThenNtzProofs(peers, height)
     
     //console.log('err=', err, 'ntzRes=', ntzRes);
     if (!ntzErr) {
-      peers.nspvNtzsProof(ntzsRes.prevntz.txid, ntzsRes.nextntz.txid, {}, (ntzsProofErr, ntzsProofRes, peer) => {
+      peers.nspvNtzsProof(ntzsRes.ntz.txid, {}, (ntzsProofErr, ntzsProofRes, peer) => {
         if (!ntzsProofErr) 
           resolve({ ntzs: ntzsRes, ntzsProof: ntzsProofRes });
         else
@@ -124,14 +123,16 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
     return null;
   }
   
-  let hdrOffset = height - ntzs.prevntz.height;  // first height in the bracket is prevntz.height + 1
+  /*
+  let hdrOffset = height - (ntzs.prevntz.height + 1);  // first height in the bracket is prevntz.height + 1
   if (hdrOffset < 0 || hdrOffset > ntzs.nextntz.height)  {
     logerror(`invalid notarization bracket found: [${ntzs.prevntz.height}, ${ntzs.nextntz.height}] for tx height: ${height}`);
     return null;
-  }
+  } */
+  let hdrOffset = height - (ntzsProof.common.ntzedHeight - ntzsProof.common.hdrs.length) - 1; 
 
-  if (hdrOffset >= ntzsProof.common.hdrs.length)  {
-    logerror(`invalid notarization headers length: ${ntzsProof.common.hdrs.length} for tx header offset: ${hdrOffset}`);
+  if (hdrOffset < 0 || hdrOffset >= ntzsProof.common.hdrs.length)  {
+    logerror(`invalid header array offset ${hdrOffset} for notarization headers length ${ntzsProof.common.hdrs.length}`);
     return null;
   }
 
@@ -150,46 +151,31 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
     throw new Error("could not check merkle root against notarization data!");
   }
 
-  // validate prev notarization transaction and its notary sigs:
-  let prextx = Transaction.fromBuffer(ntzsProof.prevtxbuf, network);
-  let prevNtzData = ntzpubkeys.NSPV_notarizationextract(false, true, prextx, ntzs.prevntz.timestamp);
-  if (ccutils.isError(prevNtzData))
-    throw prevNtzData;
-
-  // check prev ntz data
-  if (Buffer.compare(prevNtzData.desttxid, ntzs.prevntz.otherTxid) != 0)
-    throw new Error('notarisation data invalid (prev txid in ntzs)');
-  if (prevNtzData.height !== ntzs.prevntz.height)
-    throw new Error('notarisation data invalid (prev height in ntzs)');
-  if (prevNtzData.height !== ntzsProof.common.prevht)
-    throw new Error('notarisation data invalid (prev height in ntzsproof)');
-
   // validate next notarization transaction and its notary sigs:
-  let nexttx = Transaction.fromBuffer(ntzsProof.nexttxbuf, network);
-  let nextNtzData = ntzpubkeys.NSPV_notarizationextract(false, true, nexttx, ntzs.nextntz.timestamp);
-  if (ccutils.isError(nextNtzData))
-    throw nextNtzData;
+  let ntzTx = Transaction.fromBuffer(ntzsProof.ntzTxBuf, network);
+  let ntzTxOpreturn = ntzpubkeys.NSPV_notarizationextract(false, true, ntzTx, ntzs.ntz.timestamp);
+  if (ccutils.isError(ntzTxOpreturn))
+    throw ntzTxOpreturn;
   // check next ntz data
-  if (Buffer.compare(nextNtzData.desttxid, ntzs.nextntz.otherTxid) != 0)
-    throw new Error('notarisation data invalid (next txid in ntzs)');
-  if (nextNtzData.height !== ntzs.nextntz.height)
-    throw new Error('notarisation data invalid (next height in ntzs)');
-  if (nextNtzData.height !== ntzsProof.common.nextht)
-    throw new Error('notarisation data invalid (next height in ntzsproof)');
-  if (Buffer.compare(nextNtzData.blockhash, kmdblockindex.kmdHdrHash(ntzsProof.common.hdrs[ntzsProof.common.hdrs.length-1])) != 0)
-    throw new Error('notarisation data invalid (next blockhash)');
+  if (Buffer.compare(ntzTxOpreturn.destTxid, ntzs.ntz.destTxid) != 0)
+    throw new Error('notarisation data invalid (destTxid in ntz)');
+  if (ntzTxOpreturn.height !== ntzs.ntz.height)
+    throw new Error('notarisation data invalid (height in ntz)');
+  if (ntzTxOpreturn.height !== ntzsProof.common.ntzedHeight)
+    throw new Error('notarisation data invalid (height in ntzsproof)');
+  if (Buffer.compare(ntzTxOpreturn.blockhash, kmdblockindex.kmdHdrHash(ntzsProof.common.hdrs[ntzsProof.common.hdrs.length-1])) != 0)
+    throw new Error('notarisation data invalid (blockhash)');
 
-  let ntzparsed = ntzpubkeys.NSPV_opretextract(false, nexttx.outs[1].script);
+  // check mom
+  let ntzparsed = ntzpubkeys.NSPV_opretextract(false, ntzTx.outs[1].script);
   //console.log(ntzparsed)
 
   // check mom
-  /* this won't work until nspv 6
   let leaves = [];
   ntzsProof.common.hdrs.slice().reverse().forEach(h => leaves.push(h.merkleRoot));
   let mom = fastMerkleRoot(leaves, bcrypto.hash256);
   if (Buffer.compare(mom, ntzparsed.MoM) !== 0)
     throw new Error('notarisation MoM invalid'); 
-  */
 
   // check chain name
   if (coins.getNetworkName(network) !== ntzparsed.symbol)
