@@ -452,8 +452,7 @@ module.exports = {
     magic:  0xf6475548,
     // to connect over p2p:
     dnsSeeds: [ 
-      //'vpc1:22024' 
-      'ec2-18-189-25-123.us-east-2.compute.amazonaws.com:22024'
+      //'ec2-18-189-25-123.us-east-2.compute.amazonaws.com:22024'
     ],
     staticPeers: [
       '164.132.225.134:22024',
@@ -461,7 +460,7 @@ module.exports = {
       //'18.190.86.67:22024'
       //'localhost:22024'
       //'18.189.25.123:22024'
-      'tcp://164.132.225.134:22024',
+      //'tcp://164.132.225.134:22024',
       '167.99.114.240:22024',
     ],
     // to connect over websockets:
