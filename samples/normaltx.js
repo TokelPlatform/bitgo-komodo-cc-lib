@@ -15,6 +15,7 @@ const typeforce = require('typeforce');
 // create peer group
 var NspvPeerGroup = require('../net/nspvPeerGroup');
 require('../net/nspvPeer');  // init peer.js too
+const general = require('../cc/general.js')
 
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
@@ -109,6 +110,7 @@ exports.Connect = Connect;
 // exported top level functions to be called from browser
 // param check and pass further:
 
+/*
 exports.create_normaltx = create_normaltx;
 async function create_normaltx(_wif, _destaddress, _satoshi) {
   let wif = _wif;
@@ -118,46 +120,11 @@ async function create_normaltx(_wif, _destaddress, _satoshi) {
 
   return tx.toHex();
 };
-
+*/
 
 // tx creation code
 
-async function makeNormalTx(wif, destaddress, amount) 
-{
-  typeforce(types.BN, amount);
-  // init lib cryptoconditions
-  ccbasic.cryptoconditions = await ccimp;  // note we need cryptoconditions here bcz it is used in FinalizCCtx o check if a vin is normal or cc 
 
-  const txbuilder = new TransactionBuilder(mynetwork);
-  const txfee = 10000;
-  const amountfee = amount.add(new BN(txfee));
-
-  let mypair = ecpair.fromWIF(wif, mynetwork);
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.getPublicKeyBuffer(), amountfee);
-
-  let tx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
-
-  // zcash stuff:
-  txbuilder.setVersion(tx.version);
-  if (txbuilder.tx.version >= 3)
-    txbuilder.setVersionGroupId(tx.versionGroupId);
-
-  // parse txwutxos.previousTxns and add them as vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, tx, txwutxos.previousTxns, mynetwork);
-  if (added.lt(amountfee))
-    throw new Error("insufficient normal inputs (" + added.toString() + ")")
-
-  txbuilder.addOutput(destaddress, amount);
-  let myaddress = ccutils.pubkey2NormalAddressKmd(mypair.getPublicKeyBuffer());  // pk to kmd address
-  const change = added.sub(amountfee);
-  txbuilder.addOutput(myaddress, change);  // change
-
-  if (txbuilder.tx.version >= 4)
-    txbuilder.setExpiryHeight(tx.expiryHeight);
-
-  ccutils.finalizeCCtx(mypair, txbuilder);  // sign inputs
-  return txbuilder.build();
-}
 
 /*
 const bigi = require('bigi');
@@ -197,11 +164,11 @@ if (!process.browser)
       // tests:
       
       // make a normal tx
-      //let txhex = await create_normaltx(mywif2, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", (88+15.4+5)*100000000);  // amount in satoshi
-      //let txhex = await create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", new BN(5000));
-      //let txhex = await create_normaltx(mywif3, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 30.9 * 100000000);  // amount in satoshi
-      //let txhex = await create_normaltx(mywif4, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0.9 * 100000000);  // amount in satoshi
-      //console.log('txhex=', txhex);
+      //let txhex = await create_normaltx(mywif2, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN((88+15.4+5)*100000000), mynetwork, peers);  // amount in satoshi
+      //let txhex = await create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", new BN(5000), mynetwork, peers);
+      //let txhex = await create_normaltx(mywif3, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(30.9 * 100000000), mynetwork, peers);  // amount in satoshi
+      let txhex = await general.create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(0.9 * 100000000), mynetwork, peers);  // amount in satoshi
+      console.log('txhex=', txhex);
 
       let result
       //let result = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
@@ -218,12 +185,13 @@ if (!process.browser)
       //result = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
       //result = await ccutils.getUtxos(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0);
       
+      /*
       result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
       console.log('result=', result, result.txids.length);
       result.txids.forEach(t => {
         console.log(ccutils.hashToHex(t.txid), t.index, t.satoshis.toString(), t.height);
       });
-      
+      */
 
       /* check addresses in the getTxids result
        add txids in set (remove duplicates)
