@@ -22,6 +22,8 @@ const typeforceNT = require('typeforce/nothrow');
 const bscript = require("../src/script");
 const address = require('../src/address');
 
+const BN = require('bn.js');
+let BN_0 = new BN(0);
 
 // tokel data props ids:
 const TKLPROP_ID = 1;
@@ -112,10 +114,18 @@ function nspvTokenV2InfoTokel(peers, pk, tokenid)
  * @returns promise to create creation tx
  */
 async function tokensv2Create(peers, mynetwork, wif, name, desc, satoshi, nftdatahex) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce('String', name);
+  typeforce('String', desc);
+  typeforce(typeforce.oneOf(types.Satoshi, types.BN), satoshi);
+
+  let bnSatoshi = types.Satoshi(satoshi) ? new BN(satoshi) : satoshi;
   let nftdata;
   if (nftdatahex)
     nftdata = Buffer.from(nftdatahex, 'hex');
-  return makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
+  return makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, bnSatoshi, nftdata);
 }
 
 /**
@@ -131,10 +141,19 @@ async function tokensv2Create(peers, mynetwork, wif, name, desc, satoshi, nftdat
  * @returns promise to create creation tx
  */
 async function tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, jsondata) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce('String', name);
+  typeforce('String', desc);
+  typeforce(typeforce.oneOf(types.Satoshi, types.BN), satoshi);
+
+  let bnSatoshi = types.Satoshi(satoshi) ? new BN(satoshi) : satoshi;
+
   let nftdata;
   if (jsondata)
     nftdata = makeTokelData(jsondata);
-  return makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, satoshi, nftdata);
+  return makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, bnSatoshi, nftdata);
 }
 
 /**
@@ -147,11 +166,19 @@ async function tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, j
  * @param {*} satoshi token amount to transfer (must be 1 for Tokel NFT)
  * @returns promise to create transfer tx
  */
-async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, satoshi) {
-  let tokenid = ccutils.hashFromHex(tokenidhex);
-  let destpk = Buffer.from(destpkhex, 'hex');
+async function tokensv2Transfer(peers, mynetwork, wif, tokenid, destpk, satoshi) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce(typeforce.oneOf(types.Hash256bit, 'String'), tokenid);
+  typeforce(typeforce.oneOf('Buffer', 'String'), destpk);
+  typeforce(typeforce.oneOf(types.Satoshi, types.BN), satoshi);
 
-  return makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, destpk, satoshi);
+  let _tokenid = ccutils.castHashBin(tokenid);
+  let _destpk = typeof destpk == 'String' ? Buffer.from(destpk, 'hex') : destpk;
+  let bnSatoshi = types.Satoshi(satoshi) ? new BN(satoshi) : satoshi;
+
+  return makeTokensV2TransferTx(peers, mynetwork, wif, _tokenid, _destpk, bnSatoshi);
 }
 
 /**
@@ -160,12 +187,18 @@ async function tokensv2Transfer(peers, mynetwork, wif, tokenidhex, destpkhex, sa
  * @param {*} tokenidhex 
  * @returns promise to return info
  */
-async function tokensInfoV2Tokel(peers, mynetwork, wif, tokenidhex) {
+async function tokensInfoV2Tokel(peers, mynetwork, wif, tokenid) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce(typeforce.oneOf(types.Hash256bit, 'String'), tokenid);
+  
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
-  let tokenid = ccutils.hashFromHex(tokenidhex);
-  return nspvTokenV2InfoTokel(peers, mypk, tokenid);
-};
+  let _tokenid = ccutils.castHashBin(tokenid);
+  let promiseinfo = nspvTokenV2InfoTokel(peers, mypk, _tokenid);
+  return promiseinfo;
+}
 
 // encode token OP_RETURN data
 function encodeTokensCreateV2OpReturn(origpk, name, desc, nftdata)
@@ -302,7 +335,7 @@ function encodeTokensV2Data(tokenid, destpks, extradata)
 }
 
 // make token creation tx
-async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, nftdata)
+async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, bnAmount, nftdata)
 {
   // init lib cryptoconditions
   //ccbasic.cryptoconditions = await ccimp;  // lets load it in the topmost call
@@ -310,13 +343,13 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
   const markerfee = 10000;
-  const normalAmount = txfee + markerfee + amount;
+  const bnNormalAmount = new BN(txfee + markerfee).add(bnAmount);
 
   const tokensGlobalPk = Buffer.from(tokensv2GlobalPk, 'hex');
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount);
 
   let sourcetx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
@@ -326,9 +359,9 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
     txbuilder.setVersionGroupId(sourcetx.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx, txwutxos.previousTxns, mynetwork);
-  if (added < normalAmount)
-    throw new Error("insufficient normal inputs (" + added + ")")
+  let bnAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx, txwutxos.previousTxns, mynetwork);
+  if (bnAdded.lt(bnNormalAmount))
+    throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")")
 
   // create tokens cc to my address
   let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1);
@@ -343,10 +376,10 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
   }
 
   txbuilder.addOutput(markerccSpk, markerfee);
-  txbuilder.addOutput(myccSpk, amount);
+  txbuilder.addOutput(myccSpk, bnAmount);
 
-  if (added - normalAmount > ccutils.MYDUST)
-    txbuilder.addOutput(mynormaladdress, added - normalAmount);  // change
+  if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
   txbuilder.addOutput(encodeTokensCreateV2OpReturn(mypk, name, desc, nftdata), 0); // make opreturn
 
   if (txbuilder.tx.version >= 4)
@@ -362,7 +395,7 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, amount, n
 //}
 
 // make token transfer tx
-async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, ccamount) 
+async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, bnTokenAmount) 
 {
   typeforce(typeforce.oneOf(types.Buffer, types.String), _destpk);
 
@@ -370,6 +403,7 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, c
   // ccbasic.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
+  const bnNormalAmount = new BN(txfee);
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
@@ -379,7 +413,7 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, c
   if (!ccutils.isValidPubKey(destpk))
     throw new Error("invalid destination pubkey");
 
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, txfee);
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount);
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
   // set zcash stuff:
@@ -388,37 +422,37 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, c
     txbuilder.setVersionGroupId(sourcetx1.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
-  if (added < txfee)
-    throw new Error("insufficient normal inputs (" + added + ")");
+  let bnAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
+  if (bnAdded.lt(bnNormalAmount))
+    throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")");
 
   //await sleep(1100); // to bypass old server rate limiter
-  let ccutxos = await nspvAddTokensInputs(peers, tokenid, mypk, ccamount);
+  let ccutxos = await nspvAddTokensInputs(peers, tokenid, mypk, bnTokenAmount);
   let sourcetx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
-  let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork);
-  if (ccadded < ccamount)
-    throw new Error("insufficient token inputs (" + ccadded + ")");
+  let bnCCAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork);
+  if (bnCCAdded.lt(bnTokenAmount))
+    throw new Error("insufficient token inputs (" + bnCCAdded.toString() + ")");
 
   // create tokens cc to dest address
   let destccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [destpk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [destpk], encodeTokensV2Data(tokenid)));
   if (destccSpk == null)  
     throw new Error('could not create tokens cc spk for destination');
   
-  txbuilder.addOutput(destccSpk, ccamount);
+  txbuilder.addOutput(destccSpk, bnTokenAmount);
   
   // create tokens to my address for cc change and spending probe
-  if (ccadded - ccamount > 0)
+  if (bnCCAdded.sub(bnTokenAmount).gt(BN_0))
   {
     let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [mypk], encodeTokensV2Data(tokenid)));
     if (myccSpk == null)  
       throw new Error('could not create tokens cc spk for mypk');
 
-    txbuilder.addOutput(myccSpk, ccadded-ccamount);
+    txbuilder.addOutput(myccSpk, bnCCAdded.sub(bnTokenAmount));
   }
   
-  if (added - txfee > ccutils.MYDUST)
+  if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
   {
-    txbuilder.addOutput(mynormaladdress, added-txfee);  // normal change
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // normal change
   }
 
   if (txbuilder.tx.version >= 4)

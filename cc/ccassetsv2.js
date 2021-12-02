@@ -4,11 +4,12 @@ const assert = require('assert');
 const TransactionBuilder = require('../src/transaction_builder');
 const Transaction = require('../src/transaction');
 const OPS = require('bitcoin-ops');
-
+const BN = require('bn.js');
+let BN_0 = new BN(0);
 const Debug = require('debug')
 const logdebug = Debug('cctokens')
 
-const bufferutils = require("../src/bufferutils");
+const bufferutils = require("../src/bnbufferutils");
 const kmdmessages = require('../net/kmdmessages');
 const ccbasic = require('./ccbasic');
 const ccutils = require('./ccutils');
@@ -32,7 +33,7 @@ const assetsv2GlobalAddress = "CeKqrjLjD5WgBETbSeLaJJc1NDKHTdLwUf";
 const EVAL_ASSETSV2 = 0xF6;
 
 const TKLROYALTY_DIVISOR = 1000;
-const ASSETS_NORMAL_DUST = 500;
+const ASSETS_NORMAL_DUST = new BN(500);
 const ASSETS_EXPIRY_DEFAULT = 4 * 7 * 24 * 60;
 
 function encodeAssetsV2Data(funcid, unitPrice, origpk, expiryHeight)
@@ -46,14 +47,14 @@ function encodeAssetsV2Data(funcid, unitPrice, origpk, expiryHeight)
     bufLen += 4;
 
   let buffer = Buffer.allocUnsafe(bufLen);
-  let bufferWriter = new bufferutils.BufferWriter(buffer);
+  let bufferWriter = new bufferutils.BNBufferWriter(buffer);
   let version = 1;
 
   bufferWriter.writeUInt8(EVAL_ASSETSV2);
   bufferWriter.writeUInt8(funcid.charCodeAt(0));
   bufferWriter.writeUInt8(version);
   if (unitPrice !== undefined)
-    bufferWriter.writeUInt64(unitPrice);
+    bufferWriter.writeBigInt64(unitPrice);
   if (origpk !== undefined)
     bufferWriter.writeVarSlice(origpk);
   if (expiryHeight !== undefined)
@@ -63,12 +64,12 @@ function encodeAssetsV2Data(funcid, unitPrice, origpk, expiryHeight)
 
 function decodeAssetsV2Data(script)
 {
-  let bufferReader = new bufferutils.BufferReader(script);
+  let bufferReader = new bufferutils.BNBufferReader(script);
   let evalcode = bufferReader.readUInt8();
   let funcid = Buffer.from([ bufferReader.readUInt8() ]).toString();
   let version = bufferReader.readUInt8();
    
-  let unitPrice = bufferReader.readUInt64();
+  let unitPrice = bufferReader.readBigInt64();
   let origpk = bufferReader.readVarSlice();
   let expiryHeight = bufferReader.readInt32();
 
@@ -98,11 +99,20 @@ function decodeTokensAssetsV2OpReturn(spk)
  * @returns promise to create tx
  */
 async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHeight) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce(typeforce.oneOf(types.Satoshi, types.BN), units);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
+  typeforce(types.Satoshi, price);
+  typeforce(typeforce.oneOf(types.Satoshi, undefined), expiryHeight);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
+  let bnUnits = types.Satoshi(units) ? new BN(units) : units;
   let _expiryHeight = expiryHeight || 0;
-  let priceSat = ccutils.toSatoshi(price);
-	return makeTokenV2AskTx(peers, mynetwork, wif, units, _tokenid, priceSat, _expiryHeight);
+  let bnPriceSat = ccutils.toBNSatoshi(price);
+  console.log('price', bnPriceSat.toString());
+	return makeTokenV2AskTx(peers, mynetwork, wif, bnUnits, _tokenid, bnPriceSat, _expiryHeight);
 }
 
 /**
@@ -117,11 +127,20 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
  * @returns promise to create tx
  */
  async function tokenv2bid(peers, mynetwork, wif, units, tokenid, price, expiryHeight) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce(typeforce.oneOf(types.Satoshi, types.BN), units);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
+  typeforce(types.Satoshi, price);
+  typeforce(typeforce.oneOf(types.Satoshi, undefined), expiryHeight);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
+  let bnUnits = types.Satoshi(units) ? new BN(units) : units;
   let _expiryHeight = expiryHeight || 0;
-  let priceSat = ccutils.toSatoshi(price);
-	return makeTokenV2BidTx(peers, mynetwork, wif, units, _tokenid, priceSat, _expiryHeight);
+  let bnPriceSat = ccutils.toBNSatoshi(price);
+  console.log('price', bnPriceSat.toString());
+	return makeTokenV2BidTx(peers, mynetwork, wif, bnUnits, _tokenid, bnPriceSat, _expiryHeight);
 }
 
 /**
@@ -135,11 +154,19 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
  * @returns promise to create tx
  */
  async function tokenv2fillask(peers, mynetwork, wif, tokenid, askid, units, price) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), askid);
+  typeforce(typeforce.oneOf(types.Satoshi, types.BN), units);
+  typeforce(typeforce.oneOf(types.Satoshi, undefined), price);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
 	let _askid = ccutils.castHashBin(askid);
-  let priceSat = price !== undefined ? ccutils.toSatoshi(price) : undefined;
-	return makeTokenV2FillAskTx(peers, mynetwork, wif, _tokenid, _askid, units, priceSat);
+  let bnUnits = types.Satoshi(units) ? new BN(units) : units;
+  let priceSat = price !== undefined ? ccutils.toBNSatoshi(price) : undefined;
+	return makeTokenV2FillAskTx(peers, mynetwork, wif, _tokenid, _askid, bnUnits, priceSat);
 }
 
 /**
@@ -154,11 +181,19 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
  * @returns promise to create tx
  */
  async function tokenv2fillbid(peers, mynetwork, wif, tokenid, bidid, units, price) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), bidid);
+  typeforce(typeforce.oneOf(types.Satoshi, types.BN), units);
+  typeforce(typeforce.oneOf(types.Satoshi, undefined), price);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
 	let _bidid = ccutils.castHashBin(bidid);
-  let priceSat = price !== undefined ? ccutils.toSatoshi(price) : undefined;
-	return makeTokenV2FillBidTx(peers, mynetwork, wif, _tokenid, _bidid, units, priceSat);
+  let bnUnits = types.Satoshi(units) ? new BN(units) : units;
+  let priceSat = price !== undefined ? ccutils.toBNSatoshi(price) : undefined;
+	return makeTokenV2FillBidTx(peers, mynetwork, wif, _tokenid, _bidid, bnUnits, priceSat);
 }
 
 /**
@@ -171,6 +206,11 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
  * @returns promise to create tx
  */
  async function tokenv2cancelask(peers, mynetwork, wif, tokenid, askid) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), askid);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
 	let _askid = ccutils.castHashBin(askid);
@@ -187,6 +227,11 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
  * @returns promise to create tx
  */
  async function tokenv2cancelbid(peers, mynetwork, wif, tokenid, bidid) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
+  typeforce(typeforce.oneOf('String', types.Hash256bit), bidid);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
 	let _bidid = ccutils.castHashBin(bidid);
@@ -194,18 +239,17 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
 }
 
 // make ask tx
-async function makeTokenV2AskTx(peers, mynetwork, wif, units, tokenid, unitPrice, orderExpiryHeight)
+async function makeTokenV2AskTx(peers, mynetwork, wif, bnUnits, tokenid, bnUnitPrice, orderExpiryHeight)
 {
   // init lib cryptoconditions
   //ccbasic.cryptoconditions = await ccimp;  // lets load it in the topmost call
 
   const txfee = 10000;
   const markerfee = 10000;
-  const normalAmount = txfee + markerfee;
-  if (!units)
-    throw new Error("invalid amount or tokens number params");
-  if (unitPrice <= 0)
-    throw new Error("invalid amount or tokens number params");
+  const bnNormalAmount = new BN(txfee + markerfee);
+
+  if (bnUnitPrice.lt(BN_0))
+    throw new Error("invalid token price");
 
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
   let mypair = ecpair.fromWIF(wif, mynetwork);
@@ -215,8 +259,8 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, units, tokenid, unitPrice
   let pps = [];
   if (!orderExpiryHeight) 
       pps.push(ccutils.nspvGetInfo(peers, 0));  // NSPV_GETINFO to get current height
-  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
-  pps.push(cctokens.nspvAddTokensInputs(peers, tokenid, mypk, units)); 
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount));
+  pps.push(cctokens.nspvAddTokensInputs(peers, tokenid, mypk, bnUnits)); 
   let results = await Promise.all(pps);
   if (!results || !Array.isArray(results) || results.length != pps.length) 
     throw new Error('could not get info or tx inputs from nspv node');
@@ -226,9 +270,9 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, units, tokenid, unitPrice
   let txwutxos = results[results.length-2];
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
   
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork); // add normal vins to the created tx
-  if (added < normalAmount)
-    throw new Error("insufficient normal inputs (" + added + ")");
+  let bnAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork); // add normal vins to the created tx
+  if (bnAdded.lt(bnNormalAmount))
+    throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")");
 
   // zcash stuff:
   txbuilder.setVersion(sourcetx1.version);
@@ -237,9 +281,9 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, units, tokenid, unitPrice
 
   let ccutxos = results[results.length-1];
   let sourcetx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
-  let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork); // add token inputs to the new tx
-  if (ccadded < units)
-    throw new Error("insufficient token inputs (" + ccadded + ")");
+  let bnCCAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork); // add token inputs to the new tx
+  if (bnCCAdded.lt(bnUnits))
+    throw new Error("insufficient token inputs (" + bnCCAdded.toString() + ")");
 
   if (!orderExpiryHeight) {
     let getinfo = results[0];
@@ -247,22 +291,22 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, units, tokenid, unitPrice
   }
 
   let globalccSpk = ccutils.makeCCSpkV2MofN([cctokens.EVAL_TOKENSV2, EVAL_ASSETSV2], [assetsGlobalPk], 1);
-  txbuilder.addOutput(globalccSpk, units);    // deposit tokens on global assets pk
+  txbuilder.addOutput(globalccSpk, bnUnits);    // deposit tokens on global assets pk
 
   let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [mypk, assetsGlobalPk], 1);
   txbuilder.addOutput(markerccSpk, markerfee);  // 1of2 marker for mytokenorders
 
-  if (ccadded - units > 0)
+  if (bnCCAdded.sub(bnUnits).gt(BN_0))
   {
     let myccSpk = ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(cctokens.EVAL_TOKENSV2, 1,1, [mypk], cctokens.encodeTokensV2Data(tokenid)));
-    txbuilder.addOutput(myccSpk, ccadded - units); // token change to self
+    txbuilder.addOutput(myccSpk, bnCCAdded.sub(bnUnits)); // token change to self
   }
 
-  if (added - normalAmount > ccutils.MYDUST)
-    txbuilder.addOutput(mynormaladdress, added - normalAmount);  // change
+  if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
 
   txbuilder.addOutput(cctokens.encodeTokensV2OpReturn(tokenid, 
-                                encodeAssetsV2Data('s', unitPrice, mypk, orderExpiryHeight)), 0); // make opreturn
+                                encodeAssetsV2Data('s', bnUnitPrice, mypk, orderExpiryHeight)), 0); // make opreturn
 
   if (txbuilder.tx.version >= 4)
     txbuilder.setExpiryHeight(sourcetx1.expiryHeight);
@@ -273,20 +317,18 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, units, tokenid, unitPrice
 }
 
 // make bid tx
-async function makeTokenV2BidTx(peers, mynetwork, wif, units, tokenid, unitPrice, orderExpiryHeight)
+async function makeTokenV2BidTx(peers, mynetwork, wif, bnUnits, tokenid, bnUnitPrice, orderExpiryHeight)
 {
   // init lib cryptoconditions
   //ccbasic.cryptoconditions = await ccimp;  // lets load it in the topmost call
-
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
   const markerfee = 10000;
-  if (!units)
-    throw new Error("invalid amount or tokens number params");
-  if (unitPrice <= 0)
-    throw new Error("invalid amount or tokens number params");
-  const bidAmount = units * unitPrice;
-  const normalAmount = txfee + bidAmount + markerfee;
+
+  if (bnUnitPrice.lt(BN_0))
+    throw new Error("invalid token price");
+  const bnBidAmount = bnUnits.mul(bnUnitPrice);
+  const bnNormalAmount = bnBidAmount.add(new BN(txfee + markerfee));
 
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
   let mypair = ecpair.fromWIF(wif, mynetwork);
@@ -296,7 +338,7 @@ async function makeTokenV2BidTx(peers, mynetwork, wif, units, tokenid, unitPrice
   let pps = [];
   if (!orderExpiryHeight) 
     pps.push(ccutils.nspvGetInfo(peers, 0));
-  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount));
   let results = await Promise.all(pps);
   if (!results || !Array.isArray(results) || results.length != pps.length) 
     throw new Error('could not get info or tx inputs from nspv node');
@@ -310,9 +352,9 @@ async function makeTokenV2BidTx(peers, mynetwork, wif, units, tokenid, unitPrice
     txbuilder.setVersionGroupId(sourcetx.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx, txwutxos.previousTxns, mynetwork);
-  if (added < normalAmount)
-    throw new Error("insufficient normal inputs (" + added + ")")
+  let bnAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx, txwutxos.previousTxns, mynetwork);
+  if (bnAdded.lt(bnNormalAmount))
+    throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")")
 
   if (!orderExpiryHeight) {
     let getinfo = results[0];
@@ -320,16 +362,16 @@ async function makeTokenV2BidTx(peers, mynetwork, wif, units, tokenid, unitPrice
   }
 
   let globalccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [assetsGlobalPk], 1);
-  txbuilder.addOutput(globalccSpk, bidAmount);
+  txbuilder.addOutput(globalccSpk, bnBidAmount);
 
   let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [mypk, assetsGlobalPk], 1);
   txbuilder.addOutput(markerccSpk, markerfee);
 
-  if (added - normalAmount > ccutils.MYDUST)
-    txbuilder.addOutput(mynormaladdress, added - normalAmount);  // change
+  if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))  // added - normalAmount > ccutils.BN_MYDUST
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
 
   txbuilder.addOutput(cctokens.encodeTokensV2OpReturn(tokenid,
-                                encodeAssetsV2Data('b', unitPrice, mypk, orderExpiryHeight)), 0); // make opreturn
+                                encodeAssetsV2Data('b', bnUnitPrice, mypk, orderExpiryHeight)), 0); // make opreturn
 
   if (txbuilder.tx.version >= 4)
     txbuilder.setExpiryHeight(sourcetx.expiryHeight);
@@ -339,7 +381,7 @@ async function makeTokenV2BidTx(peers, mynetwork, wif, units, tokenid, unitPrice
 }
 
 // make fill ask tx
-async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, fillUnits, _unitPrice)
+async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, bnFillUnits, _bnUnitPrice)
 {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
@@ -363,27 +405,29 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, fillU
   if (!askData || !askData.assetData || askData.assetData.unitPrice === undefined)
     throw new Error("invalid ask tx (no assets data)");
 
-  let unitPrice = _unitPrice || askData.assetData.unitPrice;
-  if (unitPrice <= 0)
+  let bnUnitPrice = _bnUnitPrice || askData.assetData.unitPrice;
+  if (bnUnitPrice.lte(BN_0))
     throw new Error("invalid unit price");
 
   const askVout = 0;
-  const askTokens = asktx.outs[askVout].value;
+  const bnAskTokens = asktx.outs[askVout].value;
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
   const markerfee = 10000;
-  const paidAmount = unitPrice * fillUnits;
-  const normalAmount = txfee + paidAmount + (askTokens - fillUnits > 0 ? markerfee : 0);
+  const bnPaidAmount = bnUnitPrice.mul(new BN(bnFillUnits));
+  const bnNormalAmount = new BN(txfee).add(bnPaidAmount).add( new BN( bnAskTokens.sub(bnFillUnits).gt(BN_0) ? markerfee : 0 ));  //txfee + paidAmount + (askTokens - fillUnits > 0 ? markerfee : 0);
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
 
   // tokel royalty if exists
   const royaltyFract = tokenData.tokeldata && tokenData.tokeldata.royalty ? tokenData.tokeldata.royalty : 0;
-  let royaltyValue = royaltyFract > 0 ? paidAmount / TKLROYALTY_DIVISOR * royaltyFract : 0;
-  if (royaltyFract > 0 && paidAmount - royaltyValue <= ASSETS_NORMAL_DUST / royaltyFract * TKLROYALTY_DIVISOR - ASSETS_NORMAL_DUST)  // if value paid to seller less than when the royalty is minimum
-      royaltyValue = 0;
+  //let royaltyValue = royaltyFract > 0 ? paidAmount / TKLROYALTY_DIVISOR * royaltyFract : 0;
+  let bnRoyaltyValue = royaltyFract > 0 ? bnPaidAmount.div(new BN(TKLROYALTY_DIVISOR)).mul(new BN(royaltyFract)) : BN_0;
+  //if (royaltyFract > 0 && paidAmount - royaltyValue <= ASSETS_NORMAL_DUST / royaltyFract * TKLROYALTY_DIVISOR - ASSETS_NORMAL_DUST)  // if value paid to seller less than when the royalty is minimum
+  if (royaltyFract > 0 && bnPaidAmount.sub(bnRoyaltyValue).lte(ASSETS_NORMAL_DUST.div(new BN(royaltyFract)).mul(new BN(TKLROYALTY_DIVISOR)).sub(ASSETS_NORMAL_DUST)) ) // if value paid to seller less than when the royalty is minimum
+      bnRoyaltyValue = BN_0;
 
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount);
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount);
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
   // zcash stuff:
@@ -392,9 +436,9 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, fillU
     txbuilder.setVersionGroupId(sourcetx1.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
-  if (added < normalAmount)
-    throw new Error("insufficient normal inputs (" + added + ")")
+  let bnAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
+  if (bnAdded.lt(bnNormalAmount))
+    throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")")
 
   txbuilder.addInput(asktx, askVout);
 
@@ -415,26 +459,26 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, fillU
 */
   
   let globalccSpk = ccutils.makeCCSpkV2MofN([cctokens.EVAL_TOKENSV2, EVAL_ASSETSV2], [assetsGlobalPk], 1);
-  txbuilder.addOutput(globalccSpk, askTokens - fillUnits);    // send remaining tokens on global assets pk
+  txbuilder.addOutput(globalccSpk, bnAskTokens - bnFillUnits);    // send remaining tokens on global assets pk
 
   let myccSpk = ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(cctokens.EVAL_TOKENSV2, 1,1, [mypk], cctokens.encodeTokensV2Data(tokenid)));
-  txbuilder.addOutput(myccSpk, fillUnits);  // purchased tokens
+  txbuilder.addOutput(myccSpk, bnFillUnits);  // purchased tokens
 
   let askCreatorAddress = ccutils.pubkey2NormalAddressKmd(askData.assetData.origpk);
-  txbuilder.addOutput(askCreatorAddress, paidAmount - royaltyValue);  // coins to ask creator
+  txbuilder.addOutput(askCreatorAddress, bnPaidAmount - bnRoyaltyValue);  // coins to ask creator
 
-  if (royaltyValue > 0)  {
+  if (bnRoyaltyValue > 0)  {
     let tokenCreatorAddress = ccutils.pubkey2NormalAddressKmd(tokenData.origpk);
-    txbuilder.addOutput(tokenCreatorAddress, royaltyValue);  // royalty to token creator
+    txbuilder.addOutput(tokenCreatorAddress, bnRoyaltyValue);  // royalty to token creator
   }
 
-  if (askTokens - fillUnits > 0)  {
+  if (bnAskTokens.sub(bnFillUnits).gt(BN_0))  {
     let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [mypk, assetsGlobalPk], 1);
     txbuilder.addOutput(markerccSpk, markerfee);  // 1of2 marker for mytokenorders
   }
 
-  if (added - normalAmount > ccutils.MYDUST)
-    txbuilder.addOutput(mynormaladdress, added - normalAmount);  // change
+  if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
 
   txbuilder.addOutput(cctokens.encodeTokensV2OpReturn(tokenid,
                                 encodeAssetsV2Data('S', askData.assetData.unitPrice, askData.assetData.origpk, askData.assetData.expiryHeight)), 0); // make opreturn
@@ -449,7 +493,7 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, fillU
 }
 
 // make fill bid tx
-async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, fillUnits, _unitPrice)
+async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, bnFillUnits, _bnUnitPrice)
 {
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
@@ -476,29 +520,29 @@ async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, fillU
   // _unitPrice is the token price user wishes to pay
   // bidData.assetData.unitPrice is bidder's token price
 
-  let unitPrice = _unitPrice || bidData.assetData.unitPrice;
-  if (unitPrice <= 0)
+  let bnUnitPrice = _bnUnitPrice || bidData.assetData.unitPrice;
+  if (bnUnitPrice.lte(BN_0))
     throw new Error("invalid unit price");
 
   const bidVout = 0;
-  const bidAmount = bidtx.outs[bidVout].value;
-  const bidTokens = (bidAmount / bidData.assetData.unitPrice) >>> 0;   // current bid's tokens quantity
-  const paidAmount = unitPrice * fillUnits;
+  const bnBidAmount = bidtx.outs[bidVout].value;
+  const bnBidTokens = bnBidAmount.div(bidData.assetData.unitPrice);   // current bid's tokens quantity
+  const bnPaidAmount = bnUnitPrice.mul(bnFillUnits);
   const royaltyFract = tokenData.tokeldata && tokenData.tokeldata.royalty ? tokenData.tokeldata.royalty : 0;
-  let royaltyValue = royaltyFract > 0 ? paidAmount / TKLROYALTY_DIVISOR * royaltyFract : 0;
-  if (royaltyValue <= ASSETS_NORMAL_DUST) // check for dust
-      royaltyValue = 0;
+  let bnRoyaltyValue = royaltyFract > 0 ? bnPaidAmount.div(new BN(TKLROYALTY_DIVISOR)).mul(new BN(royaltyFract)) : BN_0;
+  if (bnRoyaltyValue.lte(ASSETS_NORMAL_DUST)) // check for dust
+      bnRoyaltyValue = BN_0;
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
   const markerfee = 10000;
-  const normalAmount = txfee + paidAmount + (bidTokens - fillUnits > 0 ? markerfee : 0);
+  const bnNormalAmount = new BN(txfee).add(bnPaidAmount).add( bnBidTokens.sub(bnFillUnits).gt(BN_0) ? new BN(markerfee) : BN_0 );
 
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
 
   let pps = [];
-  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
-  pps.push(cctokens.nspvAddTokensInputs(peers, tokenid, mypk, fillUnits));
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount));
+  pps.push(cctokens.nspvAddTokensInputs(peers, tokenid, mypk, bnFillUnits));
   let results = await Promise.all(pps);
   if (!results || !Array.isArray(results) || results.length != pps.length) 
     throw new Error('could not get tx inputs from nspv node');
@@ -512,17 +556,17 @@ async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, fillU
     txbuilder.setVersionGroupId(sourcetx1.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
-  if (added < normalAmount)
-    throw new Error("insufficient normal inputs (" + added + ")")
+  let bnAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
+  if (bnAdded.lt(bnNormalAmount))
+    throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")")
 
   txbuilder.addInput(bidtx, bidVout);
   
   let ccutxos = results[1];
   let sourcetx2 = Transaction.fromBuffer(Buffer.from(ccutxos.txhex, 'hex'), mynetwork);
-  let ccadded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork);
-  if (ccadded < fillUnits)
-    throw new Error("insufficient token inputs (" + ccadded + ")");
+  let bnCCAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx2, ccutxos.previousTxns, mynetwork);
+  if (bnCCAdded.lt(bnFillUnits))
+    throw new Error("insufficient token inputs (" + bnCCAdded.toString() + ")");
 
   
 /*
@@ -546,37 +590,37 @@ if (tokensChange != 0LL)
     mtx.vout.push_back(T::MakeTokensCC1vout(T::EvalCode(), tokensChange, mypk));  // change in single-eval tokens
 */
 
-  if (bidTokens - fillUnits > 0 || bidAmount - paidAmount <= ASSETS_NORMAL_DUST) {
+  if (bnBidTokens.sub(bnFillUnits).gt(BN_0) || bnBidAmount.sub(bnPaidAmount).lte(ASSETS_NORMAL_DUST)) {
     let globalccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [assetsGlobalPk], 1);
-    txbuilder.addOutput(globalccSpk, bidAmount - paidAmount);    // send coin remainder on global assets pk
+    txbuilder.addOutput(globalccSpk, bnBidAmount.sub(bnPaidAmount));    // send coin remainder on global assets pk
   }
   else {
     let bidCreatorAddress = ccutils.pubkey2NormalAddressKmd(bidData.assetData.origpk);
-    txbuilder.addOutput(bidCreatorAddress, bidAmount - paidAmount);  // if no tokens remaining or dust then send back to bidder
+    txbuilder.addOutput(bidCreatorAddress, bnBidAmount.sub(bnPaidAmount));  // if no tokens remaining or dust then send back to bidder
   }
   
-  txbuilder.addOutput(mynormaladdress, paidAmount - royaltyValue);  // purchased coins for tokens
-  if (royaltyValue > 0)  {
+  txbuilder.addOutput(mynormaladdress, bnPaidAmount.sub(bnRoyaltyValue));  // purchased coins for tokens
+  if (bnRoyaltyValue.gt(BN_0))  {
     let tokenCreatorAddress = ccutils.pubkey2NormalAddressKmd(tokenData.origpk);
-    txbuilder.addOutput(tokenCreatorAddress, royaltyValue);  // royalty to token creator
+    txbuilder.addOutput(tokenCreatorAddress, bnRoyaltyValue);  // royalty to token creator
   }
 
   let bidderCCSpk = ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, [bidData.assetData.origpk], 1, ccbasic.makeOpDropData(cctokens.EVAL_TOKENSV2, 1,1, [bidData.assetData.origpk], cctokens.encodeTokensV2Data(tokenid)));
-  txbuilder.addOutput(bidderCCSpk, fillUnits);  // tokens to bidder
+  txbuilder.addOutput(bidderCCSpk, bnFillUnits);  // tokens to bidder
 
-  if (bidTokens - fillUnits > 0)  {
+  if (bnBidTokens.sub(bnFillUnits).gt(BN_0))  {
     let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [mypk, assetsGlobalPk], 1);
     txbuilder.addOutput(markerccSpk, markerfee);  // 1of2 marker for mytokenorders
   }
 
-  if (ccadded - fillUnits > 0)
+  if (bnCCAdded.sub(bnFillUnits).gt(BN_0))
   {
     let myccSpk = ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(cctokens.EVAL_TOKENSV2, 1,1, [mypk], cctokens.encodeTokensV2Data(tokenid)));
-    txbuilder.addOutput(myccSpk, ccadded - fillUnits); // token change to self
+    txbuilder.addOutput(myccSpk, bnCCAdded.sub(bnFillUnits)); // token change to self
   }
 
-  if (added - normalAmount > ccutils.MYDUST)
-    txbuilder.addOutput(mynormaladdress, added - normalAmount);  // change
+  if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
 
   txbuilder.addOutput(cctokens.encodeTokensV2OpReturn(tokenid, 
                                 encodeAssetsV2Data('B', bidData.assetData.unitPrice, bidData.assetData.origpk, bidData.assetData.expiryHeight)), 0); // make opreturn
@@ -595,7 +639,7 @@ if (tokensChange != 0LL)
 async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 {
   const txfee = 10000;
-  const normalAmount = txfee;
+  const bnNormalAmount = new BN(txfee);
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
@@ -603,7 +647,7 @@ async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 
   let pps = [];
   pps.push(ccutils.getTransactionsMany(peers, mypk, tokenid, askid));
-  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount));
   let results = await Promise.all(pps);
   if (!results || !Array.isArray(results) || results.length != pps.length) 
     throw new Error('could not get tx inputs or token or ask tx');
@@ -627,7 +671,7 @@ async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
     throw new Error("invalid ask tx (no assets data)");
 
   const askVout = 0;
-  const askTokens = asktx.outs[askVout].value;
+  const bnAskTokens = asktx.outs[askVout].value;
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
   const txbuilder = new TransactionBuilder(mynetwork);
 
@@ -640,9 +684,9 @@ async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
     txbuilder.setVersionGroupId(sourcetx1.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
-  if (added < normalAmount)
-    throw new Error("insufficient normal inputs (" + added + ")")
+  let bnAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
+  if (bnAdded.lt(bnNormalAmount))
+    throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")")
 
   txbuilder.addInput(asktx, askVout);
   if (askData.assetData.funcid == 's' && asktx.outs.length > 1)
@@ -666,10 +710,10 @@ async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 */
   
   let askCreatorCCSpk = ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, [askData.assetData.origpk], 1, ccbasic.makeOpDropData(cctokens.EVAL_TOKENSV2, 1,1, [askData.assetData.origpk], cctokens.encodeTokensV2Data(tokenid)));
-  txbuilder.addOutput(askCreatorCCSpk, askTokens);  // tokens to asking party
+  txbuilder.addOutput(askCreatorCCSpk, bnAskTokens);  // tokens to asking party
 
-  if (added - normalAmount > ccutils.MYDUST)
-    txbuilder.addOutput(mynormaladdress, added - normalAmount);  // change
+  if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
 
   txbuilder.addOutput(cctokens.encodeTokensV2OpReturn(tokenid, encodeAssetsV2Data('x')), 0); // add opreturn
 
@@ -686,7 +730,7 @@ async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
 {
   const txfee = 10000;
-  const normalAmount = txfee;
+  const bnNormalAmount = new BN(txfee);
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
@@ -694,7 +738,7 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
   
   let pps = [];
   pps.push(ccutils.getTransactionsMany(peers, mypk, tokenid, bidid));
-  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, normalAmount));
+  pps.push(ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount));
   let results = await Promise.all(pps);
   if (!results || !Array.isArray(results) || results.length != pps.length) 
     throw new Error('could not get tx inputs or token or bid tx');
@@ -718,7 +762,7 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
     throw new Error("invalid bid tx (no assets data)");
 
   const bidVout = 0;
-  const bidAmount = bidtx.outs[bidVout].value;
+  const bnBidAmount = bidtx.outs[bidVout].value;
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
@@ -732,9 +776,9 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
     txbuilder.setVersionGroupId(sourcetx1.versionGroupId);
 
   // add vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
-  if (added < normalAmount)
-    throw new Error("insufficient normal inputs (" + added + ")")
+  let bnAdded = ccutils.addInputsFromPreviousTxns(txbuilder, sourcetx1, txwutxos.previousTxns, mynetwork);
+  if (bnAdded.lt(bnNormalAmount))
+    throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")")
 
   txbuilder.addInput(bidtx, bidVout);
   if (bidData.assetData.funcid == 'b' && bidtx.outs.length > 1)
@@ -754,16 +798,16 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
   }
 */
 
-  if (bidAmount > ASSETS_NORMAL_DUST) {
+  if (bnBidAmount.gt(ASSETS_NORMAL_DUST)) {
     let bidCreatorAddress = ccutils.pubkey2NormalAddressKmd(bidData.assetData.origpk);
-    txbuilder.addOutput(bidCreatorAddress, bidAmount);  // remaining coins to bid creator
+    txbuilder.addOutput(bidCreatorAddress, bnBidAmount);  // remaining coins to bid creator
   } else {
     let globalccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [assetsGlobalPk], 1);
-    txbuilder.addOutput(globalccSpk, bidAmount);    // send dust back to global assets pk (as dust allowed on cc but not on normal outputs)
+    txbuilder.addOutput(globalccSpk, bnBidAmount);    // send dust back to global assets pk (as dust allowed on cc but not on normal outputs)
   }
 
-  if (added - normalAmount > ccutils.MYDUST)
-    txbuilder.addOutput(mynormaladdress, added - normalAmount);  // change
+  if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
 
   txbuilder.addOutput(cctokens.encodeTokensV2OpReturn(tokenid, encodeAssetsV2Data('o')), 0); // add opreturn
 

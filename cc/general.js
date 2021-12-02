@@ -11,6 +11,9 @@ const ccutils = require('./ccutils')
 var ccimp = require('../cc/ccimp');   // you will need to do a call like:
                                       // ccbasic.cryptoconditions = await ccimp;
                                       // to init the cryptoconditions wasm lib before cc usage (this is due to wasm delayed loading specifics)
+const types = require('../src/types');
+const typeforce = require('typeforce');
+const BN = require('bn.js')
 
 
 /**
@@ -50,46 +53,40 @@ async function create_normaltx(_wif, _destaddress, _satoshi, _network, _peers) {
   return tx.toHex();
 }
 
-async function makeNormalTx(wif, destaddress, amount, network, peers) {
+async function makeNormalTx(wif, destaddress, amount, network, peers) 
+{
+  typeforce(types.BN, amount);
   // init lib cryptoconditions
-  p2cryptoconditions.cryptoconditions = await ccimp; // note we need cryptoconditions here bcz it is used in FinalizCCtx o check if a vin is normal or cc
+  //ccbasic.cryptoconditions = await ccimp;  // note we need cryptoconditions here bcz it is used in FinalizCCtx o check if a vin is normal or cc 
 
   const txbuilder = new TransactionBuilder(network);
   const txfee = 10000;
+  const amountfee = amount.add(new BN(txfee));
 
   let mypair = ecpair.fromWIF(wif, network);
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(
-    peers,
-    mypair.getPublicKeyBuffer(),
-    amount + txfee
-  );
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.getPublicKeyBuffer(), amountfee);
 
-  let tx = Transaction.fromBuffer(
-    Buffer.from(txwutxos.txhex, 'hex'),
-    network
-  );
+  let tx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), network);
 
   // zcash stuff:
   txbuilder.setVersion(tx.version);
-  if (txbuilder.tx.version >= 3) txbuilder.setVersionGroupId(tx.versionGroupId);
+  if (txbuilder.tx.version >= 3)
+    txbuilder.setVersionGroupId(tx.versionGroupId);
 
   // parse txwutxos.previousTxns and add them as vins to the created tx
-  let added = ccutils.addInputsFromPreviousTxns(
-    txbuilder,
-    tx,
-    txwutxos.previousTxns,
-    network
-  );
-  if (added < amount + txfee)
-    throw new Error('insufficient normal inputs (' + added + ')');
+  let added = ccutils.addInputsFromPreviousTxns(txbuilder, tx, txwutxos.previousTxns, network);
+  if (added.lt(amountfee))
+    throw new Error("insufficient normal inputs (" + added.toString() + ")")
 
   txbuilder.addOutput(destaddress, amount);
-  let myaddress = ccutils.pubkey2NormalAddressKmd(mypair.getPublicKeyBuffer()); // pk to kmd address
-  txbuilder.addOutput(myaddress, added - amount - txfee); // change
+  let myaddress = ccutils.pubkey2NormalAddressKmd(mypair.getPublicKeyBuffer());  // pk to kmd address
+  const change = added.sub(amountfee);
+  txbuilder.addOutput(myaddress, change);  // change
 
-  if (txbuilder.tx.version >= 4) txbuilder.setExpiryHeight(tx.expiryHeight);
+  if (txbuilder.tx.version >= 4)
+    txbuilder.setExpiryHeight(tx.expiryHeight);
 
-  ccutils.finalizeCCtx(mypair, txbuilder); // sign inputs
+  ccutils.finalizeCCtx(mypair, txbuilder);  // sign inputs
   return txbuilder.build();
 }
 

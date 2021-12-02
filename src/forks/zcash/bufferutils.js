@@ -3,6 +3,7 @@ const types = require('../../types')
 const version = require('./version')
 
 const { BufferReader, BufferWriter } = require('../../bufferutils')
+const bn64 = require('../../bn64')
 
 const NUM_JOINSPLITS_INPUTS = 2
 const NUM_JOINSPLITS_OUTPUTS = 2
@@ -24,6 +25,11 @@ class ZcashBufferReader extends BufferReader {
     b *= 0x100000000
     this.offset += 8
     return b + a
+  }
+  readBigInt64() {
+    let v = bn64.readInt64LE(this.buffer, this.offset)
+    this.offset += 8
+    return v
   }
 
   readCompressedG1 () {
@@ -150,6 +156,11 @@ class ZcashBufferWriter extends BufferWriter {
   writeCompressedG2 (i) {
     this.writeUInt8(G2_PREFIX_MASK | i.yLsb)
     this.writeSlice(i.x)
+  }
+
+  writeBigInt64(i) {
+    bn64.writeInt64LE(i, this.buffer, this.offset)
+    this.offset += 8
   }
 }
 

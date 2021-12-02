@@ -18,6 +18,7 @@ function Satoshi (value) {
 
 // external dependent types
 var BigInt = typeforce.quacksLike('BigInteger')
+var BN = typeforce.quacksLike('BN')
 var ECPoint = typeforce.quacksLike('Point')
 
 // exposed, external API
@@ -38,6 +39,7 @@ var Network = typeforce.compile({
 // extend typeforce types with ours
 var types = {
   BigInt: BigInt,
+  BN: BN,
   BIP32Path: BIP32Path,
   Buffer256bit: typeforce.BufferN(32),
   ECPoint: ECPoint,
