@@ -167,12 +167,12 @@ if (!process.browser)
       //let ccoutputs = await ccutils.getCCUtxos(peers, ccindexkey, 0, 0);
       //let ccoutputs = await ccutils.getCCUtxos(peers, "RJkivfMQjLxfHyVHs1EY43Lr71YvLbZPL9", 0, 0);  // empty address
       //let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
-      //let ccoutputs_validated = await cctokens.getTokensForPubkey(mynetwork, peers, Buffer.from("02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e", 'hex'), 0 ,0);
-      //console.log("ccoutputs_validated=", ccoutputs_validated);
-
-      let ccoutputs = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
-      let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
+      let ccoutputs_validated = await cctokens.getTokensForPubkey(mynetwork, peers, Buffer.from("02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e", 'hex'), 0 ,0);
       console.log("ccoutputs_validated=", ccoutputs_validated);
+
+      /*let ccoutputs = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
+      let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
+      console.log("ccoutputs_validated=", ccoutputs_validated);*/
 
     }
     catch(err) {
