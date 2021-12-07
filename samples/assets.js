@@ -9,6 +9,9 @@ const ecpair = require('../src/ecpair');
 const Transaction = require('../src/transaction');
 const Block = require('../src/block');
 const address = require('../src/address');
+const BN = require('bn.js');
+const connect = require('../net/connect.js')
+
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
@@ -93,7 +96,8 @@ const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0
 //const mytokenid = "60c01f20d0188ffef811542b1893051459f44aaf32dc869a9536af5b3b410216";  //nft roaylty999
 //const mytokenid = "2631002692d3b69ae24019e75ac2c39c16ec06a0bb162513dddcb2cb8b6170c3"; //nft roaylty500
 //const mytokenid = "0363312d88b7b7f7b22a6880b64bc9e58ed1cdf7dc4655ff5a378cf66dde61d0"; //nft roaylty500
-const mytokenid = "96534bd7edf3c40e28d8dcb8e3bf96caba6675ee6c0e4c6a63ee89a7930d6743"; //nft roaylty500
+//const mytokenid = "96534bd7edf3c40e28d8dcb8e3bf96caba6675ee6c0e4c6a63ee89a7930d6743"; //nft roaylty500
+const mytokenid = "a4f8788f5de93de2616141f7bb007a0139bf0e697a75ef2ca6d4474d41b998df"; //nft roaylty500
 
 // sleep to insert delay between nspv calls to bypass the old nspv rate limiter
 function sleep(ms) {
@@ -103,16 +107,8 @@ function sleep(ms) {
 
 if (!process.browser) 
 {
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('connectError', (err, peer) => {
-    // some peers may fail to connect to, but this okay as long as there enough peers in the network
-    if (!peers.hasMethods())  { // no working methods found
-      console.log("got 'connectError'", "'" + err.message + "'", "no connect methods, exiting...");
-      peers.close();
-    }
-  });
-  // create connections to peers
-  peers.connect(async () => {
+  connect(params, opts)
+  .then(async (peers) => {
   
     try {
 
@@ -121,7 +117,7 @@ if (!process.browser)
 
       // Several tests (uncomment needed):
       let mywif = mytokencreatewif;
-      let mywif2 = mynormalwif2;
+      let mywif2 = mytokencreatewif; //mynormalwif2;
       //let mypair = ecpair.fromWIF(mywif, mynetwork);
       //let mypk = mypair.getPublicKeyBuffer();
       const retries = 24;

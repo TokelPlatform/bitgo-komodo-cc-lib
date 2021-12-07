@@ -16,11 +16,12 @@ const ntzsproofs = require('../cc/ntzproofs');
 const kmdblockindex = require('../src/kmdblockindex');
 
 var bmp = require('bitcoin-merkle-proof')
+const connect = require('../net/connect.js')
 
 
 // create peer group
-var NspvPeerGroup = require('../net/nspvPeerGroup');
-require('../net/nspvPeer');  // init peer.js too
+//var NspvPeerGroup = require('../net/nspvPeerGroup');
+//require('../net/nspvPeer');  // init peer.js too
 
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
@@ -100,36 +101,9 @@ function Connect()
   
 if (!process.browser) 
 {
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    // console.log('in event: connected to peer', peer.socket.remoteAddress)
-  });
-  peers.on('connectError', (err, peer) => {
-    // some peers may fail to connect to, but this okay as long as there enough peers in the network
-    if (!peers.hasMethods())  { // nothing to do
-      console.log("got 'connectError'", "'" + err.message + "'", "no connect methods, exiting...");
-      peers.close();
-    }
-  });
+  connect(params, opts)
+  .then(async (peers) => {
 
-  peers.on('peerError', err => {
-    // some peers may fail to connect to, but this okay as long as there enough peers in the network
-    console.log("got 'peerError'", err.message);
-  });
-  peers.on('peerGroupError', err => {
-    // maybe let the GUI print the error  
-    console.log("got 'peerGroupError'", err.message, 'exiting...')
-    peers.close();
-  });
-  peers.on('error', err => {
-    // maybe let the GUI print the error  
-    console.log("got 'error'", err.message)
-  });
-
-
-  // create connections to peers
-  peers.nspvConnect(async () => {
-  
     try {
 
       // tests:

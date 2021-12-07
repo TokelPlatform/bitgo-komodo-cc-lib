@@ -8,6 +8,7 @@ const ecpair = require('../src/ecpair');
 const Transaction = require('../src/transaction');
 const Block = require('../src/block');
 const address = require('../src/address');
+const connect = require('../net/connect.js')
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
@@ -76,7 +77,7 @@ var opts = {
   wsOpts: { rejectUnauthorized: false }  // enable self-signed certificates
 }
 
-var peers;
+//var peers;
 
 // Example test calls running under nodejs
 const mytokencreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
@@ -94,12 +95,8 @@ function sleep(ms) {
 
 if (!process.browser) 
 {
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    // console.log('in event: connected to peer', peer.socket.remoteAddress)
-  });
-  // create connections to peers
-  peers.connect(async () => {
+  connect(params, opts)
+  .then(async (peers) => {
   
     try {
 

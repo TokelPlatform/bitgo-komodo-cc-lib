@@ -13,9 +13,11 @@ const BN = require('bn.js')
 const types = require('../src/types');
 const typeforce = require('typeforce');
 // create peer group
-var NspvPeerGroup = require('../net/nspvPeerGroup');
-require('../net/nspvPeer');  // init peer.js too
+//var NspvPeerGroup = require('../net/nspvPeerGroup');
+//require('../net/nspvPeer');  // init peer.js too
 const general = require('../cc/general.js')
+const connect = require('../net/connect.js')
+
 
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
@@ -81,66 +83,6 @@ var opts = {
   //wsOpts: { rejectUnauthorized: false } 
 }
 
-var peers;
-
-
-// connect to peers, for calling from browser
-function Connect()
-{
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    //console.log('in event: connected to peer', peer.socket.remoteAddress)
-  });
-
-  return new Promise((resolve, reject) => {
-
-    peers.on('connectError', (err, peer)=>{ reject(err, peer) });
-    peers.on('peerError', (err)=>reject(err));
-    peers.on('error', (err)=>reject(err));
-
-    peers.connect(() => {
-      console.log('in promise: connected to peer!!!');
-      resolve();
-    });
-  });
-}
-
-exports.Connect = Connect;
-
-// exported top level functions to be called from browser
-// param check and pass further:
-
-/*
-exports.create_normaltx = create_normaltx;
-async function create_normaltx(_wif, _destaddress, _satoshi) {
-  let wif = _wif;
-  let destaddress = _destaddress;
-  let satoshi  = _satoshi;
-  let tx = await makeNormalTx(wif, destaddress, satoshi);
-
-  return tx.toHex();
-};
-*/
-
-// tx creation code
-
-
-
-/*
-const bigi = require('bigi');
-const bip39 = require('bip39');
-const sha = require('sha.js');
-
-const ECPair = require('../src/ecpair');
-let seed = bip39.mnemonicToSeed('produce hungry kingdom decrease kick popular door author stadium fence fringe unhappy favorite vintage wise')
-const hash = sha('sha256').update(seed);
-const bytes = hash.digest();
-let d = bigi.fromBuffer(bytes)
-let p = new ECPair(d)
-console.log("wif", p.toWIF());
-console.log("");
-*/
-
 // test key:
 const mywif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
 const mywif2 = 'UuKUSQHnRGk4CDbRnbLRrJHq5Dwx58qR9Q9K2VpJjn3APXLurNcu';
@@ -149,13 +91,8 @@ const mywif4 = 'UvksaDo9CTFfmYNcc6ykmAB28k3dfgFcufRLFVcNuNJH4yJf2K9F'; // 03b1e5
 
 if (!process.browser) 
 {
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    // console.log('in event: connected to peer', peer.socket.remoteAddress)
-  });
-  // create connections to peers
-  peers.nspvConnect(async () => {
-  
+  connect(params, opts)
+  .then(async (peers) => {
     try {
       ccbasic.cryptoconditions = await ccimp;  // init cryptoconditions var
 
@@ -164,14 +101,14 @@ if (!process.browser)
       // tests:
       
       // make a normal tx
-      //let txhex = await create_normaltx(mywif2, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN((88+15.4+5)*100000000), mynetwork, peers);  // amount in satoshi
-      //let txhex = await create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", new BN(5000), mynetwork, peers);
-      //let txhex = await create_normaltx(mywif3, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(30.9 * 100000000), mynetwork, peers);  // amount in satoshi
+      //let txhex = await general.create_normaltx(mywif2, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN((88+15.4+5)*100000000), mynetwork, peers);  // amount in satoshi
+      //let txhex = await general.create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", new BN(5000), mynetwork, peers);
+      //let txhex = await general.create_normaltx(mywif3, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(30.9 * 100000000), mynetwork, peers);  // amount in satoshi
       let txhex = await general.create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(0.9 * 100000000), mynetwork, peers);  // amount in satoshi
       console.log('txhex=', txhex);
 
       let result
-      //let result = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
+      //result = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
       //let result = await ccutils.getTxids(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
       //let result = await ccutils.getUtxos(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
       //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
@@ -185,13 +122,13 @@ if (!process.browser)
       //result = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
       //result = await ccutils.getUtxos(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0);
       
-      /*
-      result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
+      
+      /*result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
       console.log('result=', result, result.txids.length);
       result.txids.forEach(t => {
         console.log(ccutils.hashToHex(t.txid), t.index, t.satoshis.toString(), t.height);
-      });
-      */
+      });*/
+      
 
       /* check addresses in the getTxids result
        add txids in set (remove duplicates)

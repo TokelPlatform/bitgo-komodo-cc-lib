@@ -5,10 +5,11 @@ const kmdmessages = require('../net/kmdmessages');
 const cctokens = require('../cc/cctokensv2');
 
 // create peer group
-const NspvPeerGroup = require('../net/nspvPeerGroup');
+//const NspvPeerGroup = require('../net/nspvPeerGroup');
 //const PeerGroup = require('../net/peerGroup');
 const peerutils = require('../net/utils');
-require('../net/nspvPeer');  // init peer.js too
+//require('../net/nspvPeer');  // init peer.js too
+const connect = require('../net/connect.js')
 
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
@@ -90,12 +91,8 @@ const mytokenid = "3aa2fa3739cc12bf291dfd3174d0bcc4cf0c3b76afb441d460672378168c2
 
 if (!process.browser) 
 {
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {    
-    console.log('added new peer', peerutils.getPeerUrl(peer))
-  });
-  // create connections to peers
-  peers.nspvConnect(async () => {
+  connect(params, opts)
+  .then(async (peers) => {
   
     try {
 
