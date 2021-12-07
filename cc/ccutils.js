@@ -749,8 +749,8 @@ function hashReverse(txid)
 
 
 // TODO lets change to string representation
-exports.toBNSatoshi = function (val) {
-  typeforce(types.Satoshi, val)
+exports.CoinsToBNSatoshi = function (val) {
+  typeforce('Number', val)
   //if (types.Satoshi(val))
   //  throw new Error('value not a number');
   let coins = Math.trunc(val);

@@ -98,20 +98,20 @@ function decodeTokensAssetsV2OpReturn(spk)
  * @param {*} expiryHeight block height after which this ask expires
  * @returns promise to create tx
  */
-async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHeight) {
+async function tokenv2ask(peers, mynetwork, wif, units, tokenid, priceCoins, expiryHeight) {
   typeforce('PeerGroup', peers);
   typeforce(types.Network, mynetwork);
   typeforce('String', wif);
   typeforce(typeforce.oneOf(types.Satoshi, types.BN), units);
   typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
-  typeforce(types.Satoshi, price);
+  typeforce('Number', priceCoins);
   typeforce(typeforce.oneOf(types.Satoshi, undefined), expiryHeight);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
   let bnUnits = types.Satoshi(units) ? new BN(units) : units;
   let _expiryHeight = expiryHeight || 0;
-  let bnPriceSat = ccutils.toBNSatoshi(price);
-  console.log('price', bnPriceSat.toString());
+  let bnPriceSat = ccutils.CoinsToBNSatoshi(priceCoins);
+  //console.log('price', bnPriceSat.toString());
 	return makeTokenV2AskTx(peers, mynetwork, wif, bnUnits, _tokenid, bnPriceSat, _expiryHeight);
 }
 
@@ -126,19 +126,19 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
  * @param {*} expiryHeight block height after which this bid expires
  * @returns promise to create tx
  */
- async function tokenv2bid(peers, mynetwork, wif, units, tokenid, price, expiryHeight) {
+ async function tokenv2bid(peers, mynetwork, wif, units, tokenid, priceCoins, expiryHeight) {
   typeforce('PeerGroup', peers);
   typeforce(types.Network, mynetwork);
   typeforce('String', wif);
   typeforce(typeforce.oneOf(types.Satoshi, types.BN), units);
   typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
-  typeforce(types.Satoshi, price);
+  typeforce('Number', priceCoins);
   typeforce(typeforce.oneOf(types.Satoshi, undefined), expiryHeight);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
   let bnUnits = types.Satoshi(units) ? new BN(units) : units;
   let _expiryHeight = expiryHeight || 0;
-  let bnPriceSat = ccutils.toBNSatoshi(price);
+  let bnPriceSat = ccutils.CoinsToBNSatoshi(priceCoins);
   console.log('price', bnPriceSat.toString());
 	return makeTokenV2BidTx(peers, mynetwork, wif, bnUnits, _tokenid, bnPriceSat, _expiryHeight);
 }
@@ -165,7 +165,7 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
 	let _tokenid = ccutils.castHashBin(tokenid);
 	let _askid = ccutils.castHashBin(askid);
   let bnUnits = types.Satoshi(units) ? new BN(units) : units;
-  let priceSat = price !== undefined ? ccutils.toBNSatoshi(price) : undefined;
+  let priceSat = price !== undefined ? ccutils.CoinsToBNSatoshi(price) : undefined;
 	return makeTokenV2FillAskTx(peers, mynetwork, wif, _tokenid, _askid, bnUnits, priceSat);
 }
 
@@ -192,7 +192,7 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, price, expiryHe
 	let _tokenid = ccutils.castHashBin(tokenid);
 	let _bidid = ccutils.castHashBin(bidid);
   let bnUnits = types.Satoshi(units) ? new BN(units) : units;
-  let priceSat = price !== undefined ? ccutils.toBNSatoshi(price) : undefined;
+  let priceSat = price !== undefined ? ccutils.CoinsToBNSatoshi(price) : undefined;
 	return makeTokenV2FillBidTx(peers, mynetwork, wif, _tokenid, _bidid, bnUnits, priceSat);
 }
 
@@ -427,6 +427,7 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, bnFil
   if (royaltyFract > 0 && bnPaidAmount.sub(bnRoyaltyValue).lte(ASSETS_NORMAL_DUST.div(new BN(royaltyFract)).mul(new BN(TKLROYALTY_DIVISOR)).sub(ASSETS_NORMAL_DUST)) ) // if value paid to seller less than when the royalty is minimum
       bnRoyaltyValue = BN_0;
 
+  console.log("makeTokenV2FillAskTx bnNormalAmount=", bnNormalAmount.toString());
   let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount);
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
@@ -632,7 +633,7 @@ if (tokensChange != 0LL)
   let probeGlobal = ccutils.makeCCCondMofN([EVAL_ASSETSV2], [assetsGlobalPk], 1);  // probe to spend coins from assets GlobalPubKey
   let probeMarker = ccutils.makeCCCondMofN(EVAL_ASSETSV2, [mypk, assetsGlobalPk], 1);  // probe to spend from 1of2 marker
   ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeMy}, {cond: probeGlobal, privateKey: assetsv2GlobalPrivkey}, {cond: probeMarker, privateKey: mypair.getPrivateKeyBuffer()}]);
-  return txbuilder.build();
+  return txbuilder.build(true);
 }
 
 // make cancel ask tx
