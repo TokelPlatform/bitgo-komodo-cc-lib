@@ -148,6 +148,10 @@ class Peer extends EventEmitter {
     this._sendVersion()
   }
 
+  getUrl()  {
+    return this.socket ? utils.getSocketUrl(this.socket) : '';
+  }
+
   disconnect (err) {
     if (this.disconnected) return
     this.disconnected = true

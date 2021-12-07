@@ -13,7 +13,7 @@ const { hashFromHex, hashToHex, isValidHash, castHashBin } = require('../cc/ccut
 
 // NSPV extended Error with nspv request and rpc method (if the nspv request is 'remoteRpc')
 class NspvError extends Error {
-  constructor(msgc, req, ban) {
+  constructor(msgc, req, peer, ban) {
     let msg;
     if (typeof msgc === 'object')  {
       if (msgc.msg !== undefined)
@@ -34,6 +34,8 @@ class NspvError extends Error {
     }
     if (ban !== undefined)
       this.ban = ban;
+    if (peer)
+      this.peer = peer;
   }
 }
 exports.NspvError = old(NspvError); // export as Error
@@ -50,10 +52,10 @@ Peer.prototype._registerListeners = function() {
         this.gotNspvInfo = true;
         this._nspvReady();
       } else {
-        if (!nspvInfo)
-          logerror('could not parse nspv getinfo response', err);
+        if (err)
+          logerror('nspv getinfo error:', err.message, 'peer:', err?.peer.getUrl());
         if (nspvInfo && nspvInfo.version !== NSPV_VERSION)
-          logerror('unsupported remote nspv node version', err);
+          logerror('unsupported remote nspv node version', err.message, 'peer:', err?.peer.getUrl());
       }
     });
   })
@@ -94,15 +96,15 @@ Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
 
   var timeout
   var onNspvResp = (resp) => {
-    if (timeout) clearTimeout(timeout)
+    if (timeout) clearTimeout(timeout);
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      let err = new NspvError("nspv remote error: " + resp.errDesc, NSPVMSGS.NSPV_INFO, 11);
+      let err = new NspvError("nspv remote error: " + resp.errDesc, NSPVMSGS.NSPV_INFO, this, 11);
       cb(err);
       this._error(err);  // disconnect peer if getinfo could not be done (it is like nspv verack)
       return;
     }
     if (!resp || !resp.version || typeof resp.notarisation === undefined) { 
-      let err = new NspvError("could not parse nspv getinfo response")
+      let err = new NspvError(`could not parse nspv getinfo response`, NSPVMSGS.NSPV_INFO, this);
       cb(err);
       this._error(err); // disconnect peer if getinfo could not be done
       return;
@@ -125,7 +127,7 @@ Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_INFO timed out: ${opts.timeout} ms`);
-    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_INFO);
+    var error = new NspvError(`NSPV request timed out`, NSPVMSGS.NSPV_INFO, this);
     error.timeout = true;
     cb(error)
   }, opts.timeout)
@@ -143,7 +145,7 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, c
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new NspvError("nspv remote get utxos error: " + resp.errDesc, NSPVMSGS.NSPV_UTXOS)); 
+      cb(new NspvError("nspv remote get utxos error: " + resp.errDesc, NSPVMSGS.NSPV_UTXOS, this)); 
       return;
     }
     cb(null, resp)
@@ -166,7 +168,7 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, c
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_UTXOSRESP timed out: ${opts.timeout} ms`)
-    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_UTXOS)
+    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_UTXOS, this)
     error.timeout = true
     cb(error)
   }, opts.timeout)
@@ -184,7 +186,7 @@ Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, c
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new NspvError("nspv get txids remote error: " + resp.errDesc, NSPVMSGS.NSPV_TXIDS)); 
+      cb(new NspvError("nspv get txids remote error: " + resp.errDesc, NSPVMSGS.NSPV_TXIDS, this)); 
       return;
     }
     cb(null, resp)
@@ -207,7 +209,7 @@ Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, c
   if (!opts.timeout) return
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_TXIDSRESP timed out: ${opts.timeout} ms`)
-    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_TXIDS)
+    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_TXIDS, this)
     error.timeout = true
     cb(error)
   }, opts.timeout)
@@ -242,11 +244,11 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
-      cb(new NspvError("nspv remote rpc error: " + resp.errDesc, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod })); 
+      cb(new NspvError("nspv remote rpc error: " + resp.errDesc, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this)); 
       return;
     }
     if (!resp || !resp.jsonSer) {
-      cb(new NspvError("could not parse nspv remote rpc response", { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
+      cb(new NspvError("could not parse nspv remote rpc response", { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this));
       return;
     }
 
@@ -254,28 +256,28 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
     let result = JSON.parse(resp.jsonSer.toString());
     if (result.error) {
       if (typeof result.result === 'string')
-        cb(new NspvError(result.error, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
+        cb(new NspvError(result.error, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this));
       else if (result.error.message)
-        cb(new NspvError(result.error.message, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
+        cb(new NspvError(result.error.message, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this));
       else if (result.error.code)
-        cb(new NspvError(result.error.code, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
+        cb(new NspvError(result.error.code, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this));
       else
-        cb(new NspvError('nspv error (could not parse error msg)', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
+        cb(new NspvError('nspv error (could not parse error msg)', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this));
       return;
     }
 
     if (result.result !== undefined && result.result.error) {
-      cb(new NspvError(`nspv remote error: ${result.result.error}`, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
+      cb(new NspvError(`nspv remote error: ${result.result.error}`, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this));
       return;
     }
 
     if (!resp.method) {
-      cb(new NspvError('null nspv response method', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
+      cb(new NspvError('null nspv response method', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this));
       return;
     }
     let respMethod = resp.method.toString('ascii', 0, resp.method.indexOf(0x00) >= 0 ? resp.method.indexOf(0x00) : resp.method.length); // cut off ending nulls
     if (rpcMethod !== respMethod)  {
-      cb(new NspvError('invalid nspv response method', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
+      cb(new NspvError('invalid nspv response method', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this));
       return;
     }
     cb(null, result.result); //yes result inside result
@@ -299,7 +301,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_REMOTERPC ${rpcMethod} timed out: ${opts.timeout} ms`)
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
-    var error = new NspvError('NSPV request timed out', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod })
+    var error = new NspvError('NSPV request timed out', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }, this)
     error.timeout = true
     cb(error)
   }, opts.timeout)
@@ -317,12 +319,12 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
 
   let txid = castHashBin(_txid);
   if (!txid) {
-    cb(new NspvError('txid param invalid', NSPVMSGS.NSPV_BROADCAST));
+    cb(new NspvError('txid param invalid', NSPVMSGS.NSPV_BROADCAST), this);
     return;
   }
 
   if (typeof txhex !== 'string') {
-    cb(new NspvError('txhex not a string', NSPVMSGS.NSPV_BROADCAST));
+    cb(new NspvError('txhex not a string', NSPVMSGS.NSPV_BROADCAST), this);
     return;
   }
 
@@ -330,17 +332,17 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      let err = new NspvError("nspv broadcast remote error: " + (resp.errDesc ? resp.errDesc : ''), NSPVMSGS.NSPV_BROADCAST);
+      let err = new NspvError("nspv broadcast remote error: " + (resp.errDesc ? resp.errDesc : ''), NSPVMSGS.NSPV_BROADCAST, this);
       cb(err);
       return;
     }
     if (!resp || !resp.txid || !resp.retcode) {
-      let err = new NspvError("could not parse nspv broadcast response", NSPVMSGS.NSPV_BROADCAST);
+      let err = new NspvError("could not parse nspv broadcast response", NSPVMSGS.NSPV_BROADCAST, this);
       cb(err);
       return;
     }
     if (resp.retcode < 0) {
-      let err = new NspvError(`nspv broadcast remote error ${resp.retcode}`, NSPVMSGS.NSPV_BROADCAST);
+      let err = new NspvError(`nspv broadcast remote error ${resp.retcode}`, NSPVMSGS.NSPV_BROADCAST, this);
       cb(err);
       return;
     }
@@ -363,7 +365,7 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_BROADCAST timed out: ${opts.timeout} ms`)
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
-    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_BROADCAST)
+    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_BROADCAST, this)
     error.timeout = true
     cb(error)
   }, opts.timeout)
@@ -379,17 +381,17 @@ Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
 
   let txid = castHashBin(_txid)
   if (!txid) {
-    cb(new NspvError('txid param invalid', NSPVMSGS.NSPV_TXPROOF));
+    cb(new NspvError('txid param invalid', NSPVMSGS.NSPV_TXPROOF, this));
     return;
   }
 
   if (typeof vout !== 'number') {
-    cb(new NspvError('vout not a number', NSPVMSGS.NSPV_TXPROOF));
+    cb(new NspvError('vout not a number', NSPVMSGS.NSPV_TXPROOF, this));
     return;
   }
 
   if (typeof height !== 'number') {
-    cb(new NspvError('vout not a number', NSPVMSGS.NSPV_TXPROOF));
+    cb(new NspvError('vout not a number', NSPVMSGS.NSPV_TXPROOF, this));
     return;
   }
 
@@ -397,11 +399,11 @@ Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new NspvError("nspv txproof remote error: " + resp.errDesc, NSPVMSGS.NSPV_TXPROOF));
+      cb(new NspvError("nspv txproof remote error: " + resp.errDesc, NSPVMSGS.NSPV_TXPROOF, this));
       return;
     }
     if (!resp || !resp.respCode || typeof resp.txid === undefined || typeof resp.unspentValue === undefined || typeof resp.vout === undefined || typeof resp.height === undefined || typeof resp.tx === undefined || typeof resp.txproof === undefined) { // check all props?
-      cb(new NspvError("could not parse nspv txproof response", NSPVMSGS.NSPV_TXPROOF));
+      cb(new NspvError("could not parse nspv txproof response", NSPVMSGS.NSPV_TXPROOF, this));
       return;
     }
     //cb(null, { retcode: resp.retcode, txid: hashToHex(resp.txid), unspentValue:  resp.unspentValue, height: resp.height, vout: resp.vout, txbin: resp.txbin, txproof: resp.txproof }); 
@@ -425,7 +427,7 @@ Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_TXPROOF timed out: ${opts.timeout} ms`)
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
-    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_TXPROOF)
+    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_TXPROOF, this)
     error.timeout = true
     cb(error)
   }, opts.timeout)
@@ -440,7 +442,7 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
   if (!opts.timeout) opts.timeout = this._getTimeout()
 
   if (typeof height !== 'number') {
-    cb(new NspvError('height not a number', NSPVMSGS.NSPV_NTZS));
+    cb(new NspvError('height not a number', NSPVMSGS.NSPV_NTZS, this));
     return;
   }
 
@@ -448,11 +450,11 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new NspvError("nspv ntzs remote error: " + resp.errDesc, NSPVMSGS.NSPV_NTZS));
+      cb(new NspvError("nspv ntzs remote error: " + resp.errDesc, NSPVMSGS.NSPV_NTZS, this));
       return;
     }
     if (!resp || !resp.respCode || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined || typeof resp.reqHeight === undefined ) { // check parsed props
-      cb(new NspvError("could not parse nspv ntzs response", NSPVMSGS.NSPV_NTZS));
+      cb(new NspvError("could not parse nspv ntzs response", NSPVMSGS.NSPV_NTZS, this));
       return;
     }
     cb(null, resp); 
@@ -473,7 +475,7 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_NTZS timed out: ${opts.timeout} ms`)
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
-    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_NTZS)
+    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_NTZS, this)
     error.timeout = true
     cb(error)
   }, opts.timeout)
@@ -489,7 +491,7 @@ Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
 
   let ntzTxid = castHashBin(_ntzTxid);
   if (!ntzTxid) {
-    cb(new NspvError('ntz txid param invalid', NSPVMSGS.NSPV_NTZSPROOF));
+    cb(new NspvError('ntz txid param invalid', NSPVMSGS.NSPV_NTZSPROOF, this));
     return;
   }
 
@@ -497,11 +499,11 @@ Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
-      cb(new NspvError("nspv ntzs proof remote error: " + resp.errDesc, NSPVMSGS.NSPV_NTZSPROOF));
+      cb(new NspvError("nspv ntzs proof remote error: " + resp.errDesc, NSPVMSGS.NSPV_NTZSPROOF, this));
       return;
     }
     if (!resp || !resp.respCode || typeof resp.common === undefined || typeof resp.prevtxid === undefined || typeof resp.nexttxid === undefined || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined ) { // check all props
-      cb(new NspvError("could not parse nspv ntzs proof response", NSPVMSGS.NSPV_NTZSPROOF));
+      cb(new NspvError("could not parse nspv ntzs proof response", NSPVMSGS.NSPV_NTZSPROOF, this));
       return;
     }
     cb(null, resp); 
@@ -522,7 +524,7 @@ Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
   timeout = setTimeout(() => {
     logerror(`getnSPV NSPV_NTZSPROOF timed out: ${opts.timeout} ms`)
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
-    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_NTZSPROOF)
+    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_NTZSPROOF, this)
     error.timeout = true
     cb(error)
   }, opts.timeout)
