@@ -12,12 +12,7 @@ const kmdmessages = require('../net/kmdmessages');
 const ccutils = require('../cc/ccutils');
 const ccfaucet = require('../cc/ccfaucet');
 const ecpair = require('../src/ecpair');
-
-// create peer group
-const NspvPeerGroup = require('../net/nspvPeerGroup');
-//const PeerGroup = require('../net/peerGroup');
-const peerutils = require('../net/utils');
-require('../net/nspvPeer');  // init peer.js too
+const connect = require('../net/connect.js')
 
 const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
@@ -82,7 +77,6 @@ var opts = {
   wsOpts: { rejectUnauthorized: false } 
 }
 
-var peers;
 
 // Example test calls running under nodejs
 const myfaucetcreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
@@ -97,12 +91,8 @@ function sleep(ms) {
 
 if (!process.browser) 
 {
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    console.log('added new peer', peerutils.getPeerUrl(peer))
-  });
-  // create connections to peers
-  peers.connect(async () => {
+  connect(params, opts)
+  .then(async (peers) => {
   
     try {
 
