@@ -19,6 +19,7 @@ const bn64 = require('../src/bn64');
 //const { varBuffer } = require('bitcoin-protocol/src/types');
 //var typeforceNT = require('typeforce/nothrow');
 
+exports.NSPV_VERSION_5 = 0x0005;
 exports.NSPV_VERSION = 0x0006;
 
 exports.buffer8 = struct.Buffer(8)
@@ -330,6 +331,15 @@ let nspvNtz = struct([
   { name: 'momdepth', type: struct.UInt16LE },
 ]);
 
+let nspvNtz_v5 = struct([
+  { name: 'blockhash', type: exports.buffer32 },
+  { name: 'txid', type: exports.buffer32 },
+  { name: 'destTxid', type: exports.buffer32 },
+  { name: 'height', type: struct.Int32LE },
+  { name: 'txidheight', type: struct.Int32LE },
+  { name: 'timestamp', type: struct.UInt32LE },
+]);
+
 let nspvInfoReq = struct([
   { name: 'reqCode', type: struct.UInt8 },
   { name: 'requestId', type: struct.UInt32LE },
@@ -348,6 +358,16 @@ let nspvInfoResp = struct([
   { name: 'version', type: struct.UInt32LE },
 ]);
 
+let nspvInfoResp_v5 = struct([
+  { name: 'respCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'notarization', type: nspvNtz_v5 },
+  { name: 'blockhash', type: exports.buffer32 },
+  { name: 'height', type: struct.Int32LE },
+  { name: 'hdrheight', type: struct.Int32LE },
+  { name: 'header', type: exports.kmdheader },
+  { name: 'version', type: struct.UInt32LE },
+]);
 
 let nspvUtxosReq = struct([
   { name: 'reqCode', type: struct.UInt8 },
@@ -503,7 +523,7 @@ exports.txProof = (function(){
     let hashes = vhashes.decode(bufferReader.buffer, bufferReader.offset);
     bufferReader.offset += vhashes.decode.bytes;
     let vBits = bufferReader.readVarSlice();
-    // make partial merkle tree structure for bitcoin-merkle-proof lib:
+    decode.bytes = bufferReader.offset;
     return { numTransactions: numTransactions, hashes: hashes, flags: vBits, merkleRoot: header.merkleRoot }; 
   }
   return { encode, decode, encodingLength }
@@ -559,7 +579,7 @@ let nspvTxProofResp = (function(){
     let pmt = null;
     if (txprooflen > 0)
       pmt = exports.txProof.decode(txproofbuf);
-    bufferReader.offset += exports.txProof.decode.bytes;
+    decode.bytes = bufferReader.offset; 
 
     return { respCode, requestId, txid, unspentValue, height, vout, tx, partialMerkleTree: pmt };
   }
@@ -604,6 +624,7 @@ let nspvNtzsResp = (function(){
     let ntz = nspvNtz.decode(bufferReader.buffer, bufferReader.offset);
     bufferReader.offset += nspvNtz.decode.bytes;
     let reqHeight = bufferReader.readUInt32();
+    decode.bytes = bufferReader.offset;
     return { respCode, requestId, /*prevntz,*/ ntz, reqHeight };
   }
   return { encode, decode, encodingLength };
@@ -673,6 +694,7 @@ let nspvNtzsProofResp = (function(){
     let ntzTxLen = bufferReader.readUInt32();
     let ntzTxBuf = bufferReader.readSlice(ntzTxLen);
     //return { respCode, requestId, common, prevNtzTxid, nextNtzTxid, prevNtzHeight, nextNtzHeight, prevtxlen, nexttxlen, prevtxbuf, nexttxbuf };
+    decode.bytes = bufferReader.offset;
     return { respCode, requestId, common, ntzTxid, ntzTxHeight, ntzTxLen, ntzTxBuf };
   }
   return { encode, decode, encodingLength };
@@ -767,13 +789,16 @@ exports.nspvResp = (function () {
     return buffer.slice(offset, offset + bytes)
   }
 
-  function getEncodingType(code)
+  function getEncodingType(code, expectVersion)
   {
     let type;
     switch(code)
     {
       case NSPVMSGS.NSPV_INFORESP:
-        type = nspvInfoResp;
+        if (expectVersion == 5)
+          type = nspvInfoResp_v5;
+        else
+          type = nspvInfoResp;
         break;
       case NSPVMSGS.NSPV_UTXOSRESP:
         type = nspvUtxosResp;
@@ -805,9 +830,9 @@ exports.nspvResp = (function () {
     return type;
   }
 
-  function decode (buffer, offset = 0, end = buffer.length) {
+  function decode (buffer, offset = 0, end = buffer.length, expectVersion) {
     let respCode = buffer[0];
-    let type = getEncodingType(respCode);
+    let type = getEncodingType(respCode, expectVersion);
     if (type === undefined)
       return;
     let resp = type.decode(buffer, offset, end)
