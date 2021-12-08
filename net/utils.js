@@ -40,27 +40,12 @@ function getTxHash (tx) {
   return sha256(sha256(txBytes))
 }
 
-function isWebSocketPeer(peer)
+/*
+isWebSocket(socket)
 {
-  return peer.socket !== undefined && peer.socket.socket instanceof ws;
+  return socket?.socket instanceof ws;
 }
-exports.isWebSocketPeer = isWebSocketPeer
-
-function getPeerUrl(peer)
-{
-  let remotep = '';
-  if (isWebSocketPeer(peer))
-    return peer.socket.socket.url;
-  else if (peer.socket) {
-    if (peer.socket.remoteAddress)
-        remotep += peer.socket.remoteAddress
-    if (peer.socket.remotePort)
-        remotep += ':' + peer.socket.remotePort
-  }
-  return remotep
-}
-
-function getSocketUrl(socket)
+getSocketUrl(socket)
 {
   let remotep = '';
   if (socket !== undefined) {
@@ -75,11 +60,7 @@ function getSocketUrl(socket)
   }
   return remotep
 }
-
-function isWebSocket(socket)
-{
-  return socket !== undefined && socket.socket instanceof ws;
-}
+*/
 
 module.exports = {
   getRandom,
@@ -88,8 +69,4 @@ module.exports = {
   getBlockHash,
   getTxHash,
   sha256,
-  isWebSocketPeer,
-  isWebSocket,
-  getPeerUrl,
-  getSocketUrl
 }

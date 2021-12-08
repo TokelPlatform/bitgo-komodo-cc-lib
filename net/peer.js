@@ -14,6 +14,8 @@ const through = require('through2').obj
 const EventEmitter = require('events')
 const pkg = require('../package.json')
 const utils = require('./utils.js')
+const ws = require('ws')
+
 
 const SERVICES_SPV = Buffer.from('0800000000000000', 'hex')
 const SERVICES_FULL = Buffer.from('0100000000000000', 'hex')
@@ -75,7 +77,7 @@ class Peer extends EventEmitter {
     this.services = null
     this.socket = null
     this.ready = false
-    this._handshakeTimeout = null
+    this._handshakeTimer = null
     this.disconnected = false
     this.latency = 2 * 1000 // default to 2s
 
@@ -95,7 +97,7 @@ class Peer extends EventEmitter {
     // TODO?: maybe this should error if we try to write after close?
     if (!this.socket.writable) return
     this._encoder.write({ command, payload })
-    logdebug("sent cmd", this._formatCommand(command, payload), "to url", utils.getSocketUrl(this.socket))
+    logdebug("sent cmd", this._formatCommand(command, payload), "to url", this.getUrl())
   }
 
   connect (socket) {
@@ -124,13 +126,12 @@ class Peer extends EventEmitter {
 
     // timeout if handshake doesn't finish fast enough
     if (this.handshakeTimeout) {
-      this._handshakeTimeout = setTimeout(() => {
-        this._handshakeTimeout = null
-        this._error(new Error('Peer handshake timed out'))
+      this._handshakeTimer = setTimeout(() => {
+        this._handshakeTimer = null
+        this._error(new Error(`Peer handshake timed out ${this.getUrl()}`))
       }, this.handshakeTimeout)
       this.once('ready', () => {
-        clearTimeout(this._handshakeTimeout)
-        this._handshakeTimeout = null
+        this.clearTimers()
       })
     }
 
@@ -151,10 +152,16 @@ class Peer extends EventEmitter {
   disconnect (err) {
     if (this.disconnected) return
     this.disconnected = true
-    if (this._handshakeTimeout) clearTimeout(this._handshakeTimeout)
-    clearInterval(this._pingInterval)
+    this.clearTimers()
+    if (this._pingInterval) clearInterval(this._pingInterval)
+    this._pingInterval = null
     this.socket.end()
     this.emit('disconnect', err)
+  }
+
+  clearTimers() {
+    if (this._handshakeTimer) clearTimeout(this._handshakeTimer)
+    this._handshakeTimer = null
   }
 
   ping (cb) {
@@ -179,7 +186,7 @@ class Peer extends EventEmitter {
   _registerListeners () {
     this._decoder.on('error', this._error.bind(this))
     this._decoder.on('data', (message) => {
-      logdebug("received cmd", this._formatCommand(message.command, message.payload), "from url", utils.getSocketUrl(this.socket))
+      logdebug("received cmd", this._formatCommand(message.command, message.payload), "from url", this.getUrl())
       this.emit('message', message)                     // forward received messages to PeerGroup.OnMessage()
       this.emit(message.command, message.payload)       // forward messages to Peer processors
     })
@@ -192,7 +199,7 @@ class Peer extends EventEmitter {
     this.on('verack', () => {
       if (this.ready) return this._error(new Error('Got duplicate verack'))
       this.verack = true
-      this._maybeReady()
+      //this._maybeReady() // see nspvPeer
     })
 
     this.on('ping', (message) => this.send('pong', message))
@@ -230,7 +237,7 @@ class Peer extends EventEmitter {
       return this._error(new Error('Node does not provide NODE_BLOOM service'))
     }
     this.send('verack')
-    this._maybeReady()  
+    // this._maybeReady()  // see nspvPeer
   }
 
   _maybeReady () {
@@ -427,4 +434,25 @@ class Peer extends EventEmitter {
     var req = this.getHeadersQueue.shift()
     this.getHeaders(req.locator, req.opts, req.cb)
   }
+
+  _isWebSocketPeer()
+  {
+    return this?.socket?.socket instanceof ws;
+  }
+
+  
+  getUrl()
+  {
+    let remotep = '';
+    if (this._isWebSocketPeer())
+      return this.socket.socket.url;
+    else if (this.socket) {
+      if (this.socket.remoteAddress)
+          remotep += this.socket.remoteAddress
+      if (this.socket.remotePort)
+          remotep += ':' + this.socket.remotePort
+    }
+    return remotep
+  }
+  
 }

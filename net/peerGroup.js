@@ -133,7 +133,7 @@ class PeerGroup extends EventEmitter {
   _onConnection (err, socket, addrstates, addr) {
     if (err) {
       if (socket) socket.destroy()
-      logerror('discovery connection error: ' + errToString(err))
+      logdebug(`discovery connection error: ${err}`)
       this.emit('connectError', err, null)  // emit user's event
       if (this.connecting) {
         // setImmediate(this._connectPeer.bind(this)) // lets wait for some time before
@@ -152,8 +152,9 @@ class PeerGroup extends EventEmitter {
     // peer error callback
     let onPeerError = (err) => {
       err = err || Error('Connection error')
-      logdebug('peer connection error: ' + errToString(err))
+      logdebug(`peer connection error: ${err}`)
       peer.removeListener('disconnect', onPeerError)
+      peer.clearTimers()
       this.emit('connectError', err, peer)  // emit user's event
 
       // clear inuse state:
@@ -342,7 +343,7 @@ class PeerGroup extends EventEmitter {
     }
     socket.once('error', (err) => {
       clearTimeout(timeout); // clear timeout to prevent reconnection duplication (both on error and timeout)
-      onConnectionCb(Error(errToString(err) + ', peer ' + addr), socket, this.webAddrs, addr);
+      onConnectionCb(err, socket, this.webAddrs, addr);
     })
     socket.once('connect', () => {
       socket.removeListener('error', onConnectionCb);
@@ -477,8 +478,7 @@ class PeerGroup extends EventEmitter {
 
     message.forEach((elem)=> {
       // TODO: check nspv service bit
-      ////// this._addTcpAddr(elem.address, elem.port)  // TODO: enable!!  (disable to connect always to only one node, for debug)
-      // this.tcpAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
+      this.tcpAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
     })
   }
 
@@ -510,12 +510,12 @@ class PeerGroup extends EventEmitter {
       if (addrstates)
         addrstates.setClear(addr, err)
 
-      logerror(`peer disconnected, peer.length = ${this.peers.length}, reason=${err}\n${err.stack}`)
+      logerror(`peer disconnected, peer.length = ${this.peers.length}, reason=${err}`)
       if (this.connecting) this._fillPeers()
       this.emit('disconnect', peer, err)
     })
     peer.on('error', (err) => {
-      logerror('peer.on error called', errToString(err))
+      logdebug(`peer.on error called ${err}`)
       this.emit('peerError', err)
       peer.disconnect(err)
 
@@ -528,7 +528,9 @@ class PeerGroup extends EventEmitter {
   }
 
   randomPeer () {
-    this._assertPeers()
+    // could be that last peer disconnected in a concurrent call, so no _assertPeers
+    // this._assertPeers() 
+    if (this.peers.length === 0) return null 
     return utils.getRandom(this.peers)
   }
 
@@ -560,6 +562,10 @@ class PeerGroup extends EventEmitter {
     let cb = args.pop()
     while (!cb) cb = args.pop()
     let peer = this.randomPeer()
+    if (!peer) {
+      cb(new Error('no connected peers'))
+      return
+    }
     args.push((err, res) => {
       if (this.closed) return
       if (err && err.timeout) {
@@ -579,16 +585,6 @@ class PeerGroup extends EventEmitter {
   {
     this.connecting = false;
   }
-}
-
-function errToString(err)
-{
-  if (typeof(err) === 'object') {
-    if (err.message != undefined)
-      return err.message;
-    return err.toString();
-  }
-  return err.toString();
 }
 
 module.exports = old(PeerGroup)

@@ -7,7 +7,7 @@ const logerror = Debug('nspv:error');
 const old = require('old')
 const bufferutils = require("../src/bufferutils");
 const Peer = require('./peer')
-const { NSPVMSGS, NSPV_VERSION, nspvReq, nspvResp, nspvMsgName } = require('./kmdtypes');
+const { NSPVMSGS, NSPV_VERSION, NSPV_VERSION_5, nspvReq, nspvResp, nspvMsgName } = require('./kmdtypes');
 const { hashFromHex, hashToHex, isValidHash, castHashBin } = require('../cc/ccutils');
 //const { kmdMessages  } = require('./kmdmessages');
 
@@ -45,34 +45,51 @@ Peer.prototype._registerListeners = function() {
   this.on('verack', () => {
     logdebug("on 'verack' event fired")
     // after verack received we must send NSPV_INFO (sort of secondary nspv connect) to check versions
-    this.nspvGetInfo(0, {}, (err, nspvInfo) => {
-      if (nspvInfo && nspvInfo.version === NSPV_VERSION)  {
+    this.nspvGetInfo(0, {}, (err, nspvInfo, peer) => {
+      if (nspvInfo?.version === NSPV_VERSION || nspvInfo?.version === NSPV_VERSION_5 /*TODO: temp allow old nodes*/)  {
         this.gotNspvInfo = true;
+        this.nspvVersion = nspvInfo.version;
         this._nspvReady();
       } else {
-        if (!nspvInfo)
-          logerror('could not parse nspv getinfo response', err);
-        if (nspvInfo && nspvInfo.version !== NSPV_VERSION)
-          logerror('unsupported remote nspv node version', err);
+        if (err)
+          logerror(err?.message, peer.getUrl());
+        if (nspvInfo && (nspvInfo.version !== NSPV_VERSION || nspvInfo.version !== NSPV_VERSION_5))
+          logerror('unsupported remote nspv node version', nspvInfo?.version, peer.getUrl());
       }
     });
   })
 
   this.on('nSPV', (buf) => {
-    let resp = nspvResp.decode(buf);
-    //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp);
-    this.emit(`nSPV:${resp.requestId}`, resp);
+    let resp = nspvResp.decode(buf, undefined, undefined, this?.expectVersion);
+    /* maybe we could not check that payload fully decoded so we can add more data in the tail and have it compatible with older clients
+       however if any changes occur we should change the nspv version too 
+       anyway current nspv nodes may allocate more buffer size then the payload:
+    if (nspvResp.decode.bytes !== buf.length) {
+      logerror('could not parse nspv response, decoded bytes mismatch', `decoded=${nspvResp.decode.bytes}`, `length=${buf.length}`, this.getUrl());
+      this.emit('error', new Error("could not parse nspv response, decoded vs buffer bytes mismatch"));
+      return;
+    } */
+    this.emit(`nSPV:${resp.requestId}`, resp); //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp);
   })
 }
 
 Peer.prototype._formatCommand = function(command, payload) {
-  return "'" + command + "'" + ((command == 'getnSPV' || command == 'nSPV') ? ' (' + nspvMsgName(payload[0]) + ')' : '');
+  let msgName;
+  if (command == 'getnSPV' || command == 'nSPV') 
+    msgName = nspvMsgName(payload[0]);
+  let errDesc;
+  if (command == 'nSPV' && payload[0] == NSPVMSGS.NSPV_ERRORRESP)  {
+    let resp = nspvResp.decode(payload, undefined, undefined, this?.expectVersion);
+    errDesc = resp?.errDesc;
+  }
+  return `'${command}'` + (msgName ? ` (${msgName})` : '') + (errDesc ? ` '${errDesc}'` : '');
 }
 
 // send 'ready' event
 Peer.prototype._nspvReady = function() {
   if (!this.verack || !this.version || !this.gotNspvInfo) return
   //this.ready = true
+  this._maybeReady(); // will trigger event to add a new peer (and make it available for nspv calls. Can't do this earlier
   this.emit('nspvReady')
 }
 var requestId = 0;
@@ -85,29 +102,37 @@ function incRequestId() {
 Peer.prototype.gotNspvInfo = false;
 
 // get nspv info 
-Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
+Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb, expectVersion) {
   if (typeof opts === 'function') {
     cb = opts
     opts = {}
   }
   if (!opts.timeout) opts.timeout = this._getTimeout()
 
+  if (expectVersion) this.expectVersion = expectVersion;
+
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      let err = new NspvError("nspv remote error: " + resp.errDesc, NSPVMSGS.NSPV_INFO, 11);
-      cb(err);
-      this._error(err);  // disconnect peer if getinfo could not be done (it is like nspv verack)
+      // TODO: temp try to reconnect as version 5
+      if (resp.errCode == -13 && !expectVersion)  { // 'version not supported' && we have not tried older version yet 
+        this.nspvGetInfo(reqHeight, opts, cb, NSPV_VERSION_5);
+        return;
+      }
+
+      let error = new NspvError("nspv remote error: " + resp.errDesc, NSPVMSGS.NSPV_INFO, 11);
+      cb(error, null, this);
+      this._error(error);  // disconnect peer if getinfo could not be done (it is like nspv verack)
       return;
     }
     if (!resp || !resp.version || typeof resp.notarisation === undefined) { 
-      let err = new NspvError("could not parse nspv getinfo response")
-      cb(err);
-      this._error(err); // disconnect peer if getinfo could not be done
+      let error = new NspvError("could not parse nspv getinfo response")
+      cb(error, null, this);
+      this._error(error); // disconnect peer if getinfo could not be done
       return;
     }
-    cb(null, resp); 
+    cb(null, resp, this); 
   }
   incRequestId();
   //this.once(`nSPV:${NSPVMSGS.NSPV_INFO}.${requestId}`, onNspvResp)
@@ -116,7 +141,7 @@ Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
   let nspvInfoReq = {
     reqCode: NSPVMSGS.NSPV_INFO,
     requestId: requestId,
-    version: NSPV_VERSION,
+    version: !expectVersion ? NSPV_VERSION : expectVersion,
     reqHeight: reqHeight,
   }
   let buf = nspvReq.encode(nspvInfoReq)
@@ -127,7 +152,7 @@ Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
     logerror(`getnSPV NSPV_INFO timed out: ${opts.timeout} ms`);
     var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_INFO);
     error.timeout = true;
-    cb(error)
+    cb(error, null, this)
   }, opts.timeout)
 }
 
@@ -146,7 +171,7 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, c
       cb(new NspvError("nspv remote get utxos error: " + resp.errDesc, NSPVMSGS.NSPV_UTXOS)); 
       return;
     }
-    cb(null, resp)
+    cb(null, resp, this)
   }
   incRequestId();
   //this.once(`nSPV:${NSPVMSGS.NSPV_UTXOSRESP}.${requestId}`, onNspvResp)
@@ -168,7 +193,7 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, c
     logerror(`getnSPV NSPV_UTXOSRESP timed out: ${opts.timeout} ms`)
     var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_UTXOS)
     error.timeout = true
-    cb(error)
+    cb(error, null, this)
   }, opts.timeout)
 }
 
@@ -187,7 +212,7 @@ Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, c
       cb(new NspvError("nspv get txids remote error: " + resp.errDesc, NSPVMSGS.NSPV_TXIDS)); 
       return;
     }
-    cb(null, resp)
+    cb(null, resp, this)
   }
   incRequestId();
   //this.once(`nSPV:${NSPVMSGS.NSPV_TXIDSRESP}.${requestId}`, onNspvResp)
@@ -209,7 +234,7 @@ Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, c
     logerror(`getnSPV NSPV_TXIDSRESP timed out: ${opts.timeout} ms`)
     var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_TXIDS)
     error.timeout = true
-    cb(error)
+    cb(error, null, this)
   }, opts.timeout)
 }
 
@@ -278,7 +303,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
       cb(new NspvError('invalid nspv response method', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
       return;
     }
-    cb(null, result.result); //yes result inside result
+    cb(null, result.result, this); //yes result inside result
     //this._nextHeadersRequest()  // TODO: do we also need call to next?
   }
   incRequestId();
@@ -301,7 +326,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new NspvError('NSPV request timed out', { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod })
     error.timeout = true
-    cb(error)
+    cb(error, null, this)
   }, opts.timeout)
 }
 
@@ -330,21 +355,21 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      let err = new NspvError("nspv broadcast remote error: " + (resp.errDesc ? resp.errDesc : ''), NSPVMSGS.NSPV_BROADCAST);
-      cb(err);
+      let error = new NspvError("nspv broadcast remote error: " + (resp.errDesc ? resp.errDesc : ''), NSPVMSGS.NSPV_BROADCAST);
+      cb(error, null, this);
       return;
     }
     if (!resp || !resp.txid || !resp.retcode) {
-      let err = new NspvError("could not parse nspv broadcast response", NSPVMSGS.NSPV_BROADCAST);
-      cb(err);
+      let error = new NspvError("could not parse nspv broadcast response", NSPVMSGS.NSPV_BROADCAST);
+      cb(error, null, this);
       return;
     }
     if (resp.retcode < 0) {
-      let err = new NspvError(`nspv broadcast remote error ${resp.retcode}`, NSPVMSGS.NSPV_BROADCAST);
-      cb(err);
+      let error = new NspvError(`nspv broadcast remote error ${resp.retcode}`, NSPVMSGS.NSPV_BROADCAST);
+      cb(error, null, this);
       return;
     }
-    cb(null, { retcode: resp.retcode, txid: hashToHex(resp.txid) }); 
+    cb(null, { retcode: resp.retcode, txid: hashToHex(resp.txid) }, this); 
   }
   incRequestId();
   //this.once(`nSPV:${NSPVMSGS.NSPV_BROADCASTRESP}.${requestId}`, onNspvResp)
@@ -365,7 +390,7 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_BROADCAST)
     error.timeout = true
-    cb(error)
+    cb(error, null, this)
   }, opts.timeout)
 }
 
@@ -405,7 +430,7 @@ Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
       return;
     }
     //cb(null, { retcode: resp.retcode, txid: hashToHex(resp.txid), unspentValue:  resp.unspentValue, height: resp.height, vout: resp.vout, txbin: resp.txbin, txproof: resp.txproof }); 
-    cb(null, resp); 
+    cb(null, resp, this); 
   }
   incRequestId();
   //this.once(`nSPV:${NSPVMSGS.NSPV_TXPROOFRESP}.${requestId}`, onNspvResp)
@@ -427,7 +452,7 @@ Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_TXPROOF)
     error.timeout = true
-    cb(error)
+    cb(error, null, this)
   }, opts.timeout)
 }
 
@@ -455,7 +480,7 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
       cb(new NspvError("could not parse nspv ntzs response", NSPVMSGS.NSPV_NTZS));
       return;
     }
-    cb(null, resp); 
+    cb(null, resp, this); 
   }
   incRequestId();
   //this.once(`nSPV:${NSPVMSGS.NSPV_NTZSRESP}.${requestId}`, onNspvResp)
@@ -475,7 +500,7 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_NTZS)
     error.timeout = true
-    cb(error)
+    cb(error, null, this)
   }, opts.timeout)
 }
 
@@ -497,14 +522,14 @@ Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
-      cb(new NspvError("nspv ntzs proof remote error: " + resp.errDesc, NSPVMSGS.NSPV_NTZSPROOF));
+      cb(new NspvError(`nspv ntzs proof remote error: ${resp.errDesc} ${this.getUrl()}`, NSPVMSGS.NSPV_NTZSPROOF));
       return;
     }
     if (!resp || !resp.respCode || typeof resp.common === undefined || typeof resp.prevtxid === undefined || typeof resp.nexttxid === undefined || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined ) { // check all props
       cb(new NspvError("could not parse nspv ntzs proof response", NSPVMSGS.NSPV_NTZSPROOF));
       return;
     }
-    cb(null, resp); 
+    cb(null, resp, this); 
   }
   incRequestId();
   //this.once(`nSPV:${NSPVMSGS.NSPV_NTZSPROOFRESP}.${requestId}`, onNspvResp)
@@ -524,6 +549,6 @@ Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_NTZSPROOF)
     error.timeout = true
-    cb(error)
+    cb(error, null, this)
   }, opts.timeout)
 }

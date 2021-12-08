@@ -39,13 +39,14 @@ class NspvPeerGroup extends PeerGroup {
 
     })
 
+    /* TODO: why is this needed? 
     this.on('nSPV', (buf) => {
       let resp = nspvResp.decode(buf);
       if (resp === undefined)
         throw new Error('unknown nSPV response received');
       //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp)
       this.emit(`nSPV:${resp.requestId}`, resp)
-    })
+    })*/
 
     this.on('PeerGroupClose', () => {
       if (this.periodicTimer) clearInterval(this.periodicTimer);
