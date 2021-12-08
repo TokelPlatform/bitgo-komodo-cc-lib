@@ -72,33 +72,6 @@ var opts = {
     wsOpts: { rejectUnauthorized: false } 
 }
 
-var peers;
-
-/*
-// connect to peers, for calling from browser
-function Connect()
-{
-  peers = new NspvPeerGroup(params, opts);
-  peers.on('peer', (peer) => {
-    //console.log('in event: connected to peer', peer.socket.remoteAddress)
-  });
-
-  return new Promise((resolve, reject) => {
-
-    peers.on('connectError', (err, peer)=>{ reject(err, peer) });
-    peers.on('peerError', (err)=>reject(err));
-    peers.on('error', (err)=>reject(err));
-
-    peers.connect(() => {
-      console.log('in promise: connected to peer!!!');
-      resolve();
-    });
-  });
-}
-*/
-
-//exports.Connect = Connect;
-  
 if (!process.browser) 
 {
   connect(params, opts)
@@ -133,19 +106,20 @@ if (!process.browser)
       let txid1 = '22eca5965bc69361183653aa69fdcdc4f90a3b4a7b39c96e36d042478ff54e34'; 
       let ht1 = 120000;
       let ntzvalid1 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid1, ht1);
-      console.log("ntzvalid1=", ntzvalid1);
+      console.log("ntzvalid1=", ntzvalid1); 
 
       try {
         let txid2 = '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'; 
         let ht2 = 0;  //bad height
         let ntzvalid2 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid2, ht2);
-        console.log("bad height ntzvalid2=", ntzvalid2);
+        //console.log("bad height ntzvalid2=", ntzvalid2);
         if (ntzvalid2) throw new Error('bad height valid');
       }
       catch(e)  {
         console.log("bad height=", e.message);
       }
 
+      
       // ht = notarised ht, +/-1
       let txid3 = '5ab764cfd72ecdebf5bb817d02713d48fc103be91ae8fdf7ce56386ada73d1ab'; 
       let ht3 = 119998;
@@ -191,6 +165,7 @@ if (!process.browser)
     
       //let txproofvalid = await ntzsproofs.validateTxUsingTxProof(peers, txid);
       //console.log("txproof valid=", txproofvalid);
+      
 
       /* download headers
       let locnew = Buffer.from("0c750b86967a5873b3c3f4ba46f1188b731a82327799aa888598582aa61f654b", 'hex');
