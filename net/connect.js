@@ -13,13 +13,13 @@ function nspvConnect(params, opts) {
   return new Promise((resolve, reject) => {
     const peers = new NspvPeerGroup(params, opts);
     peers.on('peer', peer => {
-      logdebug('added new peer', utils.getPeerUrl(peer))
+      logdebug('added new peer', peer.getUrl())
     });
 
     peers.on('connectError', (err, peer) => {
       // some peers may fail to connect to, but this okay as long as there enough peers in the network
       if (!peers.hasMethods())  { // nothing to do
-        logdebug("nspvConnect got 'connectError'", err.message, 'no connect methods, exiting...');
+        logdebug("nspvConnect got 'connectError'", err?.message, 'no connect methods, exiting...');
         peers.close();
         reject(err);
       }
@@ -27,14 +27,13 @@ function nspvConnect(params, opts) {
 
     peers.on('peerError', err => {
       // some peers may fail to connect to, but this okay as long as there enough peers in the network
-      logdebug("nspvConnect got 'peerError'", err.message);
+      logdebug("nspvConnect got 'peerError'", err?.message);
     });
-
 
     peers.on('peerGroupError', err => {
       // maybe let the GUI print the error  
       //logdebug('nspvBrowserConnect error', err);
-      logdebug.log("nspvConnect got 'peerGroupError'", err.message, 'exiting...')
+      logdebug.log("nspvConnect got 'peerGroupError'", err?.message, 'exiting...')
       reject(err);
     });
 
