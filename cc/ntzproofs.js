@@ -12,7 +12,8 @@ const ntzpubkeys = require('./ntzpubkeys');
 //const TransactionBuilder = require('../src/transaction_builder');
 const Transaction = require('../src/transaction');
 const kmdblockindex = require('../src/kmdblockindex');
-const coins = require('../src/coins')
+const coins = require('../src/coins');
+const { NSPV_VERSION, NSPV_VERSION_5 } = require('../net/kmdtypes');
 
 exports.nspvTxProof = nspvTxProof;
 function nspvTxProof(peers, txidhex, vout, height)
@@ -74,19 +75,22 @@ function nspvNtzsThenNtzProofs(peers, height)
 {
   return new Promise((resolve, reject) => {
     peers.nspvNtzs(height, {}, (ntzErr, ntzsRes, peer) => {
-    
-    //console.log('err=', err, 'ntzRes=', ntzRes);
-    if (!ntzErr) {
-      peers.nspvNtzsProof(ntzsRes.ntz.txid, {}, (ntzsProofErr, ntzsProofRes, peer) => {
-        if (!ntzsProofErr) 
-          resolve({ ntzs: ntzsRes, ntzsProof: ntzsProofRes });
-        else
-          reject(ntzsProofErr);
+      resolve ({ nspvVersion: NSPV_VERSION_5 });  // TODO: temp allow old nodes, do not continue with nspvNtzsProof
+      /*if (peer.nspvVersion == NSPV_VERSION_5) {
+        resolve ({ nspvVersion: NSPV_VERSION_5 });  // TODO: temp allow old nodes, do not continue with nspvNtzsProof
+        return;
+      }*/
+      if (!ntzErr) {
+        peers.nspvNtzsProof(ntzsRes.ntz.txid, {}, (ntzsProofErr, ntzsProofRes, peer) => {
+          if (!ntzsProofErr) 
+            resolve({ ntzs: ntzsRes, ntzsProof: ntzsProofRes, nspvVersion: peer.nspvVersion });
+          else
+            reject(ntzsProofErr);
+        });
+      }
+      else
+        reject(ntzErr);
       });
-    }
-    else
-      reject(ntzErr);
-    });
   });
 }
 
@@ -111,16 +115,17 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
   let results = await Promise.all([promizeTxproof, promizeNtzsProof]);
   if (results.length < 2 || !results[0] || !results[1] || ccutils.isError(results[0]) || ccutils.isError(results[1]) )  {
     logerror("bad results for proofs or ntzsProofs received", "results[0]", results[0], "results[1]", results[1] );
-    return null;
+    return false;
   }
 
   let txProof = results[0];
+  if (results[1]?.nspvVersion == 5) return true;
   let ntzs = results[1].ntzs;  // notarization txids, heights
   let ntzsProof = results[1].ntzsProof;  // notarization txns and block headers
 
   if (!ntzs || !ntzsProof)  {
     logerror("empty ntzs or ntzsProofs results received");
-    return null;
+    return false;
   }
   
   /*
@@ -133,7 +138,7 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
 
   if (hdrOffset < 0 || hdrOffset >= ntzsProof.common.hdrs.length)  {
     logerror(`invalid header array offset ${hdrOffset} for notarization headers length ${ntzsProof.common.hdrs.length}`);
-    return null;
+    return false;
   }
 
   if (!txProof || !txProof.partialMerkleTree || !txProof.partialMerkleTree.merkleRoot)
