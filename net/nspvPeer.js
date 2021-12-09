@@ -114,19 +114,19 @@ Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb, expectVersion) {
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
-    if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP) {
       // TODO: temp try to reconnect as version 5
       if (resp.errCode == -13 && !expectVersion)  { // 'version not supported' && we have not tried older version yet 
         this.nspvGetInfo(reqHeight, opts, cb, NSPV_VERSION_5);
         return;
       }
 
-      let error = new NspvError("nspv remote error: " + resp.errDesc, NSPVMSGS.NSPV_INFO, 11);
+      let error = new NspvError("nspv remote error: " + resp?.errDesc, NSPVMSGS.NSPV_INFO, 11);
       cb(error, null, this);
       this._error(error);  // disconnect peer if getinfo could not be done (it is like nspv verack)
       return;
     }
-    if (!resp || !resp.version || typeof resp.notarisation === undefined) { 
+    if (!resp || resp?.respCode !== NSPVMSGS.NSPV_INFORESP || !resp.version) { 
       let error = new NspvError("could not parse nspv getinfo response")
       cb(error, null, this);
       this._error(error); // disconnect peer if getinfo could not be done
@@ -167,8 +167,8 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, opts, c
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
-    if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new NspvError("nspv remote get utxos error: " + resp.errDesc, NSPVMSGS.NSPV_UTXOS)); 
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP) {
+      cb(new NspvError("nspv remote get utxos error: " + resp?.errDesc, NSPVMSGS.NSPV_UTXOS)); 
       return;
     }
     cb(null, resp, this)
@@ -208,8 +208,8 @@ Peer.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, c
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
-    if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new NspvError("nspv get txids remote error: " + resp.errDesc, NSPVMSGS.NSPV_TXIDS)); 
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP) {
+      cb(new NspvError("nspv get txids remote error: " + resp?.errDesc, NSPVMSGS.NSPV_TXIDS)); 
       return;
     }
     cb(null, resp, this)
@@ -266,11 +266,11 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
-    if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
-      cb(new NspvError("nspv remote rpc error: " + resp.errDesc, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod })); 
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
+      cb(new NspvError("nspv remote rpc error: " + resp?.errDesc, { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod })); 
       return;
     }
-    if (!resp || !resp.jsonSer) {
+    if (!resp || resp?.respCode !== NSPVMSGS.NSPV_REMOTERPCRESP || !resp.jsonSer) {
       cb(new NspvError("could not parse nspv remote rpc response", { 'nspvReq': NSPVMSGS.NSPV_REMOTERPC, 'rpcMethod': rpcMethod }));
       return;
     }
@@ -354,12 +354,12 @@ Peer.prototype.nspvBroadcast = function(_txid, txhex, opts, cb) {
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
-    if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      let error = new NspvError("nspv broadcast remote error: " + (resp.errDesc ? resp.errDesc : ''), NSPVMSGS.NSPV_BROADCAST);
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP) {
+      let error = new NspvError("nspv broadcast remote error: " + resp?.errDesc, NSPVMSGS.NSPV_BROADCAST);
       cb(error, null, this);
       return;
     }
-    if (!resp || !resp.txid || !resp.retcode) {
+    if (!resp  || resp?.respCode !== NSPVMSGS.NSPV_BROADCASTRESP || !resp.txid || !resp.retcode) {
       let error = new NspvError("could not parse nspv broadcast response", NSPVMSGS.NSPV_BROADCAST);
       cb(error, null, this);
       return;
@@ -421,15 +421,14 @@ Peer.prototype.nspvTxProof = function(_txid, vout, height, opts, cb) {
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
-    if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new NspvError("nspv txproof remote error: " + resp.errDesc, NSPVMSGS.NSPV_TXPROOF));
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP) {
+      cb(new NspvError("nspv txproof remote error: " + resp?.errDesc, NSPVMSGS.NSPV_TXPROOF));
       return;
     }
-    if (!resp || !resp.respCode || typeof resp.txid === undefined || typeof resp.unspentValue === undefined || typeof resp.vout === undefined || typeof resp.height === undefined || typeof resp.tx === undefined || typeof resp.txproof === undefined) { // check all props?
+    if (!resp || resp?.respCode !== NSPVMSGS.NSPV_TXPROOFRESP || !resp.txid || !resp.partialMerkleTree || !resp.tx) { // check all props?
       cb(new NspvError("could not parse nspv txproof response", NSPVMSGS.NSPV_TXPROOF));
       return;
     }
-    //cb(null, { retcode: resp.retcode, txid: hashToHex(resp.txid), unspentValue:  resp.unspentValue, height: resp.height, vout: resp.vout, txbin: resp.txbin, txproof: resp.txproof }); 
     cb(null, resp, this); 
   }
   incRequestId();
@@ -472,11 +471,11 @@ Peer.prototype.nspvNtzs = function(height, opts, cb) {
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
-    if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      cb(new NspvError("nspv ntzs remote error: " + resp.errDesc, NSPVMSGS.NSPV_NTZS));
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP) {
+      cb(new NspvError("nspv ntzs remote error: " + resp?.errDesc, NSPVMSGS.NSPV_NTZS));
       return;
     }
-    if (!resp || !resp.respCode || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined || typeof resp.reqHeight === undefined ) { // check parsed props
+    if (!resp || resp?.respCode !== NSPVMSGS.NSPV_NTZSRESP /*TODO: enable for v6 || !resp.ntz*/ || !resp.reqHeight ) { // check parsed props
       cb(new NspvError("could not parse nspv ntzs response", NSPVMSGS.NSPV_NTZS));
       return;
     }
@@ -521,11 +520,11 @@ Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
   var timeout
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
-    if (resp && resp.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
-      cb(new NspvError(`nspv ntzs proof remote error: ${resp.errDesc} ${this.getUrl()}`, NSPVMSGS.NSPV_NTZSPROOF));
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
+      cb(new NspvError(`nspv ntzs proof remote error: ${resp?.errDesc} ${this.getUrl()}`, NSPVMSGS.NSPV_NTZSPROOF));
       return;
     }
-    if (!resp || !resp.respCode || typeof resp.common === undefined || typeof resp.prevtxid === undefined || typeof resp.nexttxid === undefined || typeof resp.prevntz === undefined || typeof resp.nextntz === undefined ) { // check all props
+    if (!resp || resp?.respCode !== NSPVMSGS.NSPV_NTZSPROOFRESP || !resp.common /* TODO: enable for v6 || !resp.ntzTxid || resp.ntzTxBuf || resp.ntzTxHeight*/ ) { // check all props
       cb(new NspvError("could not parse nspv ntzs proof response", NSPVMSGS.NSPV_NTZSPROOF));
       return;
     }
