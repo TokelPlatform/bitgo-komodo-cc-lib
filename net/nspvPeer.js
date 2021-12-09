@@ -69,7 +69,7 @@ Peer.prototype._registerListeners = function() {
       this.emit('error', new Error("could not parse nspv response, decoded vs buffer bytes mismatch"));
       return;
     } */
-    this.emit(`nSPV:${resp.requestId}`, resp); //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp);
+    this.emit(`nSPV:${resp?.requestId}`, resp); //this.emit(`nSPV:${resp.respCode}.${resp.requestId}`, resp);
   })
 }
 
