@@ -9,7 +9,6 @@ const typeforce = require('typeforce');
 //const { types } = require('bitcoin-protocol');
 const types = require('../src/types');
 //const bigi = require('bigi');
-const { assert } = require('sinon');
 const bn64 = require('../src/bn64');
 
 //const { validateTxUsingNtzsProof } = require('../cc/ntzproofs');
