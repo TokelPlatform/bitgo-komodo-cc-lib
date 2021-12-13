@@ -39,6 +39,7 @@ exports.getTransactionsManyDecoded = getTransactionsManyDecoded;
 exports.isEmptyObject = isEmptyObject;
 exports.ccTxidPubkey_tweak = ccTxidPubkey_tweak;
 
+const EMPTY_TXID = '0000000000000000000000000000000000000000000000000000000000000000';
 exports.BN_MYDUST = new BN(200);
 
 /**
