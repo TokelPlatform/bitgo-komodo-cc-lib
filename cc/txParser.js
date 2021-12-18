@@ -121,7 +121,7 @@ const parseTransactionData = (tx) => {
     if (changeReceivingAddress) {
       const txToAddress = tx.outs.find(s => s.address === changeReceivingAddress)
       if (txToAddress) {
-        change = txToAddress ? new BN(txToAddress.value) : new BN();
+        change = new BN(txToAddress.value);
       }
     }
     
