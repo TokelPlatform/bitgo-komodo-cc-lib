@@ -1,3 +1,11 @@
+/**
+ * The MIT License (MIT)
+ * 
+ * Copyright © 2021 The SuperNET Developers.
+ *  
+ * Based on: Bitcoin P2P networking that works in Node and the browser (https://www.npmjs.com/package/bitcoin-net)                                                                       
+ */
+
 'use strict'
 
 const Debug = require('debug')
