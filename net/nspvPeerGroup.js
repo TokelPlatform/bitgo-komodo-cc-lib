@@ -127,4 +127,8 @@ PeerGroup.prototype.nspvNtzsProof = function(ntzTxid, opts, cb) {
   this._request('nspvNtzsProof', ntzTxid, opts, cb)
 }
 
+PeerGroup.prototype.nspvGetTransactions = function(checkMempool, txids, opts, cb) {
+  this._request('nspvGetTransactions', checkMempool, txids, opts, cb)
+}
+
 module.exports = old(NspvPeerGroup)

@@ -90,6 +90,38 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
   return txbuilder.build();
 }
 
+/**
+ * get transactions by txids. Remote peer would not return respinses more than MAX_PROTOCOL_MESSAGE_SIZE (8MB)
+ * this request is a replacement for nspvGetTransactionsMany
+ * @param {*} peers 
+ * @param {*} mempool check mempool 
+ * @param {*} txid1 
+ * @param {*} txid2 
+ * @param {*} ... 
+ * @returns a promise to get serialised transactions, if a tx not found a empty tx is returned
+ */
+ function nspvGetTransactions(peers, checkMempool, ...args)
+ {
+  let txids = [];
+  for(let i = 0; i < args.length; i ++) {
+    let txid = ccutils.castHashBin(args[i]);
+    typeforce(types.Hash256bit, txid);
+    txids.push(txid);
+  }
+
+  return new Promise((resolve, reject) => {
+    peers.nspvGetTransactions(checkMempool, txids, {}, (err, res, peer) => {
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+ }
+
+
 exports.keyToWif = keyToWif;
 exports.getSeedPhrase = getSeedPhrase;
 exports.create_normaltx = create_normaltx;
+exports.nspvGetTransactions = nspvGetTransactions;
+
