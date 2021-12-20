@@ -12,11 +12,13 @@ const address = require('../src/address');
 const bufferutils = require("../src/bufferutils");
 const bscript = require('../src/script')
 const types = require('../src/types');
-const { decodeTransactionData, parseTransactionData, isCcTransaction } = require('./txParser')
+const { decodeTransactionData, parseTransactionData, isCcTransaction, MAX_TX_PER_REQUEST } = require('./txParser')
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 const OPS = require('bitcoin-ops');
 const BN = require('bn.js');
+
+const { splitArrayInChunks } = require('./helper')
 
 const Debug = require('debug')
 const logdebug = Debug('cc')
@@ -525,9 +527,27 @@ function getTransactionsMany(peers, mypk, ...args)
     const parsedInTransactions = {}
 
     if (inTransactionsIds.length > 0) {
-      inTransactionsIds = inTransactionsIds.flat()
-      let inTransactions = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
-      inTransactions.transactions.forEach(tx => {
+      inTransactionsIds = inTransactionsIds.flat();
+
+      let inTransactionsFull;
+
+      if (inTransactionsIds.length > MAX_TX_PER_REQUEST) {
+        const promises = [];
+        const chunks = splitArrayInChunks(inTransactionsIds, MAX_TX_PER_REQUEST);
+        chunks.forEach((chunk, idx) => 
+          setTimeout(() => {
+            return promises.push(getTransactionsMany(peers, mypk, ...chunk)) 
+          }, 100 * idx)
+        );
+        let promiseResults = await Promise.all(promises);
+        promiseResults = promiseResults.map(tx => tx.transactions);
+        inTransactionsFull = promiseResults.flat();
+      } else {
+        inTransactionsFull = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
+        inTransactionsFull = inTransactionsFull.transactions;
+      }
+      
+      inTransactionsFull.forEach(tx => {
         const newTx = decodeTransactionData(tx.tx, tx.blockHeader, network)
         parsedInTransactions[newTx.txid] = newTx
       });
