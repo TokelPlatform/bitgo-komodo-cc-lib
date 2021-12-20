@@ -2,6 +2,7 @@ const Transaction = require('../src/transaction');
 const addresslib = require('../src/address');
 const bscript = require('../src/script')
 const Block = require('../src/block');
+const BN = require('bn.js');
 
 /**
  * Decode Transaction Data into more readable format
@@ -88,7 +89,7 @@ INS
 const parseTransactionData = (tx) => {
   try {
     // skip C-index addresses since those are CC transactions
-    const sumOuts = tx.outs.reduce((a, b) => isCindexAddress(b.address) ? a : a += b.value, 0);
+    const sumOuts = tx.outs.reduce((a, b) => isCindexAddress(b.address) ? a : a.add(b.value), new BN());
     
     let sumIns = 0
     // probably there is a better way to find the current fee
@@ -98,7 +99,7 @@ const parseTransactionData = (tx) => {
     // those dont have vins, hence they dont have vins values
     if (tx.ins.length > 1 && tx.ins[0].tx) {
       // skip C-index addresses since those are CC transactions
-      sumIns = tx.ins.reduce((a, b) => isCindexAddress(b.tx?.address)  ? a : a += b.tx?.value, 0);
+      sumIns = tx.ins.reduce((a, b) => isCindexAddress(b.tx?.address) ? a : a.add(b.tx?.value), new BN());
       fees = sumIns - sumOuts
     } else {
       fees = FIXED_FEE;
@@ -116,17 +117,17 @@ const parseTransactionData = (tx) => {
     })
 
     // calculate change
-    let change = 0;
+    let change = new BN();
     if (changeReceivingAddress) {
       const txToAddress = tx.outs.find(s => s.address === changeReceivingAddress)
       if (txToAddress) {
-        change = txToAddress ? txToAddress.value : 0;
+        change = new BN(txToAddress.value);
       }
     }
     
     return {
       fees,
-      value:  sumOuts - change,
+      value: sumOuts.sub(change),
       senders,
       recipients
     }
