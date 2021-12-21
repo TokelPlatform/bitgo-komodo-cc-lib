@@ -1,9 +1,5 @@
 /**
- * The MIT License (MIT)
- * 
- * Copyright © 2021 The SuperNET Developers.
- *  
- * Based on: Bitcoin network protocol streams (https://www.npmjs.com/package/bitcoin-protocol)                                                                        
+ * Based on: Bitcoin P2P networking that works in Node and the browser (https://www.npmjs.com/package/bitcoin-protocol)                                                                       
  */
 
 'use strict'
