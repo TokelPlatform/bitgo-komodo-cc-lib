@@ -4,9 +4,6 @@ const bscript = require('../src/script')
 const Block = require('../src/block');
 const BN = require('bn.js');
 
-
-const MAX_TX_PER_REQUEST = 500;
-
 /**
  * Decode Transaction Data into more readable format
  * @param {*} tx  transaction to decode
@@ -151,6 +148,5 @@ module.exports = {
   getRecipients,
   getSenders,
   parseTransactionData,
-  isCcTransaction,
-  MAX_TX_PER_REQUEST
+  isCcTransaction
 }
