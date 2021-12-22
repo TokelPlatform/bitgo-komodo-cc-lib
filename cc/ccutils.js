@@ -534,14 +534,15 @@ function getTransactionsMany(peers, mypk, ...args)
       if (inTransactionsIds.length > MAX_TX_PER_REQUEST) {
         const promises = [];
         const chunks = splitArrayInChunks(inTransactionsIds, MAX_TX_PER_REQUEST);
-        chunks.forEach((chunk, idx) => 
-          setTimeout(() => {
-            return promises.push(getTransactionsMany(peers, mypk, ...chunk)) 
-          }, 100 * idx)
-        );
-        let promiseResults = await Promise.all(promises);
-        promiseResults = promiseResults.map(tx => tx.transactions);
-        inTransactionsFull = promiseResults.flat();
+        inTransactionsFull = await chunks.reduce(async (previousPromise, chunk, index) => {
+          let transactions = await previousPromise;
+
+          const tx = await new Promise((resolve) => setTimeout(() => {
+            getTransactionsMany(peers, mypk, ...chunk).then((value) => resolve(value));
+          }, 100 * index));
+
+          return [...transactions, ...tx.transactions];
+        }, Promise.resolve([]));
       } else {
         inTransactionsFull = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
         inTransactionsFull = inTransactionsFull.transactions;
