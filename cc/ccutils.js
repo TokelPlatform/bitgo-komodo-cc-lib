@@ -12,11 +12,14 @@ const address = require('../src/address');
 const bufferutils = require("../src/bufferutils");
 const bscript = require('../src/script')
 const types = require('../src/types');
-const { decodeTransactionData, parseTransactionData, isCcTransaction } = require('./txParser')
+const { decodeTransactionData, parseTransactionData, isCcTransaction } = require('./txParser');
+const { MAX_TX_PER_REQUEST } = require('./constants');
 var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 const OPS = require('bitcoin-ops');
 const BN = require('bn.js');
+
+const { splitArrayInChunks } = require('./helper')
 
 const Debug = require('debug')
 const logdebug = Debug('cc')
@@ -525,9 +528,28 @@ function getTransactionsMany(peers, mypk, ...args)
     const parsedInTransactions = {}
 
     if (inTransactionsIds.length > 0) {
-      inTransactionsIds = inTransactionsIds.flat()
-      let inTransactions = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
-      inTransactions.transactions.forEach(tx => {
+      inTransactionsIds = inTransactionsIds.flat();
+
+      let inTransactionsFull;
+
+      if (inTransactionsIds.length > MAX_TX_PER_REQUEST) {
+        const promises = [];
+        const chunks = splitArrayInChunks(inTransactionsIds, MAX_TX_PER_REQUEST);
+        inTransactionsFull = await chunks.reduce(async (previousPromise, chunk, index) => {
+          let transactions = await previousPromise;
+
+          const tx = await new Promise((resolve) => setTimeout(() => {
+            getTransactionsMany(peers, mypk, ...chunk).then((value) => resolve(value));
+          }, 100 * index));
+
+          return [...transactions, ...tx.transactions];
+        }, Promise.resolve([]));
+      } else {
+        inTransactionsFull = await getTransactionsMany(peers, mypk, ...inTransactionsIds);
+        inTransactionsFull = inTransactionsFull.transactions;
+      }
+      
+      inTransactionsFull.forEach(tx => {
         const newTx = decodeTransactionData(tx.tx, tx.blockHeader, network)
         parsedInTransactions[newTx.txid] = newTx
       });
