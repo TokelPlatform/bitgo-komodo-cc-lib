@@ -112,7 +112,7 @@ const parseTransactionData = (tx) => {
     let changeReceivingAddress = null;
     senders.forEach(addr => {
       if (!changeReceivingAddress) {
-        changeReceivingAddress = senders.find(s => s === addr);
+        changeReceivingAddress = recipients.find(s => s === addr);
       }
     })
 
