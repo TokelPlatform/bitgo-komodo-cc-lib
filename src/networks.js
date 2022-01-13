@@ -470,6 +470,40 @@ module.exports = {
     ],
   },
 
+  TKLTEST2: {
+    messagePrefix: '\x18TKLTEST2 asset chain:\n',
+    bech32: 'R',
+    bip32: getDefaultBip32Mainnet(),
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
+    magic:  0xbbef08d7,
+    // to connect over p2p:
+    dnsSeeds: [ 
+    ],
+    staticPeers: [
+      '167.99.114.240:19259',
+      '164.132.225.134:19259',
+      '195.201.20.230:19259'
+    ],
+    // to connect over websockets:
+    webSeeds: [
+    ],
+  },
+
   TOKEL: {
     messagePrefix: '\x18TOKEL chain:\n',
     bech32: 'R',
