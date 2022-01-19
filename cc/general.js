@@ -124,5 +124,5 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
 exports.keyToWif = keyToWif;
 exports.getSeedPhrase = getSeedPhrase;
 exports.create_normaltx = create_normaltx;
-exports.nspvGetTransactions = nspvGetTransactions;
+//exports.nspvGetTransactions = nspvGetTransactions; // for ver007
 
