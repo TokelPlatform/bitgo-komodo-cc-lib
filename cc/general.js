@@ -100,6 +100,7 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
  * @param {*} ... 
  * @returns a promise to get serialised transactions, if a tx not found a empty tx is returned
  */
+/* when nodes are upgraded on nspv v007
  function nspvGetTransactions(peers, checkMempool, ...args)
  {
   let txids = [];
@@ -118,7 +119,7 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
     });
   });
  }
-
+*/
 
 exports.keyToWif = keyToWif;
 exports.getSeedPhrase = getSeedPhrase;
