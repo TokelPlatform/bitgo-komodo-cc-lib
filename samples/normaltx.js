@@ -23,10 +23,10 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
-const mynetwork = networks.TKLTEST; 
+//const mynetwork = networks.TKLTEST; 
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.DIMXY24;
-//const mynetwork = networks.TOKEL; 
+const mynetwork = networks.TOKEL; 
 
 // not used for plan websockets, only for PXP which is not supported
 //var defaultPort = 1111
@@ -104,8 +104,8 @@ if (!process.browser)
       //let txhex = await general.create_normaltx(mywif2, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN((88+15.4+5)*100000000), mynetwork, peers);  // amount in satoshi
       //let txhex = await general.create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", new BN(5000), mynetwork, peers);
       //let txhex = await general.create_normaltx(mywif3, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(30.9 * 100000000), mynetwork, peers);  // amount in satoshi
-      let txhex = await general.create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(0.9 * 100000000), mynetwork, peers);  // amount in satoshi
-      console.log('txhex=', txhex);
+      //let txhex = await general.create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(0.9 * 100000000), mynetwork, peers);  // amount in satoshi
+      //console.log('txhex=', txhex);
 
       let result
       //result = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
@@ -121,7 +121,8 @@ if (!process.browser)
       //result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
       //result = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
       //result = await ccutils.getUtxos(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0);
-      
+      //console.log('result=', result);
+
       
       /*result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
       console.log('result=', result, result.txids.length);
@@ -183,6 +184,18 @@ if (!process.browser)
         console.log("r" + new String(i) + "=", r);
       });
       */
+
+      let result2 = await general.nspvGetTransactions(peers, false, 
+        '69b8d6eaaa2af8a952c5df329961ecec00a32e9e58eebb8bb831fb8e845e1c25',   // tokel not exist
+        'e932fdacaa16906e1ad70c4bfe52779094c565cec52c69b3182cbe081cf9f94b',   // tokel not exist
+        '19f0ec147502bdd012d89f471d8a175ea7e689611faaefe26a9eba3d4375b70f',   // tokel not exist
+        "fcaf0d4ca6c7392fe67474738da9f51acacd74bd31ae29260085ec9254020768",   // tokel exists
+        "3272f423635c95aec7c33c54964045238d55fa25bd940789b936e5186ea1ba9b"    // tokel exists
+        );
+      console.log('result nspvGetTransactions', result2);
+      result2.txns.forEach(tx => {
+        console.log("tx out len", tx.outs.length, "tx", tx );
+      });
 
       // tokev2address:
       //let tokev2address = await cctokens.TokenV2Address(peers, mypk, mypk);

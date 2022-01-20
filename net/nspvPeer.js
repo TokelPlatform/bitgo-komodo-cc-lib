@@ -7,8 +7,12 @@ const logerror = Debug('nspv:error');
 const old = require('old')
 const bufferutils = require("../src/bufferutils");
 const Peer = require('./peer')
-const { NSPVMSGS, NSPV_VERSION, NSPV_VERSION_5, nspvReq, nspvResp, nspvMsgName } = require('./kmdtypes');
+const { NSPVMSGS, NSPV_VERSION, nspvReq, nspvResp, nspvMsgName } = require('./kmdtypes');
 const { hashFromHex, hashToHex, isValidHash, castHashBin } = require('../cc/ccutils');
+const typeforce = require('typeforce');
+const types = require('../src/types');
+const typeforceNT = require('typeforce/nothrow');
+
 //const { kmdMessages  } = require('./kmdmessages');
 
 // NSPV extended Error with nspv request and rpc method (if the nspv request is 'remoteRpc')
@@ -46,14 +50,14 @@ Peer.prototype._registerListeners = function() {
     logdebug("on 'verack' event fired")
     // after verack received we must send NSPV_INFO (sort of secondary nspv connect) to check versions
     this.nspvGetInfo(0, {}, (err, nspvInfo, peer) => {
-      if (nspvInfo?.version === NSPV_VERSION || nspvInfo?.version === NSPV_VERSION_5 /*TODO: temp allow old nodes*/)  {
+      if (nspvInfo?.version === NSPV_VERSION)  {
         this.gotNspvInfo = true;
         this.nspvVersion = nspvInfo.version;
         this._nspvReady();
       } else {
         if (err)
           logerror(err?.message, peer.getUrl());
-        if (nspvInfo && (nspvInfo.version !== NSPV_VERSION || nspvInfo.version !== NSPV_VERSION_5))
+        if (nspvInfo && (nspvInfo.version !== NSPV_VERSION))
           logerror('unsupported remote nspv node version', nspvInfo?.version, peer.getUrl());
       }
     });
@@ -115,12 +119,6 @@ Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb, expectVersion) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      // TODO: temp try to reconnect as version 5
-      if (resp.errCode == -13 && !expectVersion)  { // 'version not supported' && we have not tried older version yet 
-        this.nspvGetInfo(reqHeight, opts, cb, NSPV_VERSION_5);
-        return;
-      }
-
       let error = new NspvError("nspv remote error: " + resp?.errDesc, NSPVMSGS.NSPV_INFO, 11);
       cb(error, null, this);
       this._error(error);  // disconnect peer if getinfo could not be done (it is like nspv verack)
@@ -547,6 +545,63 @@ Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
     logerror(`getnSPV NSPV_NTZSPROOF timed out: ${opts.timeout} ms`)
     this.removeListener(`nSPV:${requestId}`, onNspvResp)
     var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_NTZSPROOF)
+    error.timeout = true
+    cb(error, null, this)
+  }, opts.timeout)
+}
+
+// get txns by txids
+Peer.prototype.nspvGetTransactions = function(checkMempool, txids, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+  if (!opts.timeout) opts.timeout = this._getTimeout()
+
+  if (!typeforceNT(types.Boolean, checkMempool)) { cb(new NspvError('checkMempool param invalid', NSPVMSGS.NSPV_TRANSACTIONS)); return }
+  if (!Array.isArray(txids)) { cb(new NspvError('txids param not an array', NSPVMSGS.NSPV_TRANSACTIONS)); return }
+
+  let txidsBin = []
+  txids.forEach(txid => {
+    let txidbin = castHashBin(txid);
+    if (!typeforceNT(types.Hash256bit, txidbin)) { cb(new NspvError('txid invalid', NSPVMSGS.NSPV_TRANSACTIONS)); return }
+    txidsBin.push(txidbin);
+  });
+  if (!txidsBin) {
+    cb(new NspvError('txids param invalid', NSPVMSGS.NSPV_TRANSACTIONS));
+    return;
+  }
+
+  var timeout
+  var onNspvResp = (resp) => {
+    if (timeout) clearTimeout(timeout)
+    if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
+      cb(new NspvError(`nspv get transactions remote error: ${resp?.errDesc} ${this.getUrl()}`, NSPVMSGS.NSPV_TRANSACTIONS));
+      return;
+    }
+    if (!resp || resp?.respCode !== NSPVMSGS.NSPV_TRANSACTIONSRESP ) { // check returned props
+      cb(new NspvError("could not parse nspv get transactions response", NSPVMSGS.NSPV_TRANSACTIONS));
+      return;
+    }
+    cb(null, resp, this); 
+  }
+  incRequestId();
+  this.once(`nSPV:${requestId}`, onNspvResp)
+
+  let nspvTransactionsReq = {
+    reqCode: NSPVMSGS.NSPV_TRANSACTIONS,
+    requestId: requestId,
+    checkMempool: checkMempool,
+    txids: txidsBin,
+  }
+  let buf = nspvReq.encode(nspvTransactionsReq)
+  this.send('getnSPV', buf)
+
+  if (!opts.timeout) return
+  timeout = setTimeout(() => {
+    logerror(`getnSPV NSPV_TRANSACTIONS timed out: ${opts.timeout} ms`)
+    this.removeListener(`nSPV:${requestId}`, onNspvResp)
+    var error = new NspvError('NSPV request timed out', NSPVMSGS.NSPV_TRANSACTIONS)
     error.timeout = true
     cb(error, null, this)
   }, opts.timeout)

@@ -18,19 +18,18 @@ const networks = require('../src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
-const mynetwork = networks.DIMXY24; 
-//const mynetwork = networks.tkltest; 
+//const mynetwork = networks.DIMXY24; 
+const mynetwork = networks.TKLTEST; 
+//const mynetwork = networks.TOKEL; 
 
 // you will need to do a call like:
 // ccbasic.cryptoconditions = await ccimp;
 // to init the cryptoconditions wasm lib 
 // (this is due to wasm delayed loading specifics)
 const ccbasic = require('../cc/ccbasic');
-var ccimp;
-if (process.browser)
-  ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
-else
-  ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
+var ccimp = require('../cc/ccimp');   // you will need to do a call like:
+                                      // ccbasic.cryptoconditions = await ccimp;
+                                      // to init the cryptoconditions wasm lib before cc usage (this is due to wasm delayed loading specifics)
 
 // not used for plan websockets, only for PXP which is not supported
 var defaultPort = 14722

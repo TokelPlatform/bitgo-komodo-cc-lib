@@ -1,3 +1,7 @@
+/**
+ * Based on: Bitcoin P2P networking that works in Node and the browser (https://www.npmjs.com/package/bitcoin-net)                                                                       
+ */
+
 'use strict'
 
 const crypto = require('crypto')

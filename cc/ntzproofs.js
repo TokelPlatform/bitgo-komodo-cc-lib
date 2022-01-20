@@ -13,7 +13,6 @@ const ntzpubkeys = require('./ntzpubkeys');
 const Transaction = require('../src/transaction');
 const kmdblockindex = require('../src/kmdblockindex');
 const coins = require('../src/coins');
-const { NSPV_VERSION, NSPV_VERSION_5 } = require('../net/kmdtypes');
 
 exports.nspvTxProof = nspvTxProof;
 function nspvTxProof(peers, txidhex, vout, height)
@@ -75,11 +74,6 @@ function nspvNtzsThenNtzProofs(peers, height)
 {
   return new Promise((resolve, reject) => {
     peers.nspvNtzs(height, {}, (ntzErr, ntzsRes, peer) => {
-      resolve ({ nspvVersion: NSPV_VERSION_5 });  // TODO: temp allow old nodes, do not continue with nspvNtzsProof
-      /*if (peer.nspvVersion == NSPV_VERSION_5) {
-        resolve ({ nspvVersion: NSPV_VERSION_5 });  // TODO: temp allow old nodes, do not continue with nspvNtzsProof
-        return;
-      }*/
       if (!ntzErr) {
         peers.nspvNtzsProof(ntzsRes.ntz.txid, {}, (ntzsProofErr, ntzsProofRes, peer) => {
           if (!ntzsProofErr) 
@@ -92,11 +86,6 @@ function nspvNtzsThenNtzProofs(peers, height)
         reject(ntzErr);
       });
   });
-}
-
-function validateHeadersInNtzBracket(ntz)
-{
-
 }
 
 /**

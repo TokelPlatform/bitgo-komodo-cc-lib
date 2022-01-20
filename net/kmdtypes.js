@@ -1,3 +1,7 @@
+/**
+ * Based on: Bitcoin P2P networking that works in Node and the browser (https://www.npmjs.com/package/bitcoin-protocol)                                                                       
+ */
+
 'use strict'
 
 const struct = require('varstruct')
@@ -150,6 +154,27 @@ exports.messageCommand = (function () {
   return { encode, decode, encodingLength: () => 12 }
 })()
 
+let transaction = struct([
+  { name: 'version', type: struct.Int32LE },
+  {
+    name: 'ins',
+    type: struct.VarArray(varint, struct([
+      { name: 'hash', type: exports.buffer32 },
+      { name: 'index', type: struct.UInt32LE },
+      { name: 'script', type: exports.varBuffer },
+      { name: 'sequence', type: struct.UInt32LE }
+    ]))
+  },
+  {
+    name: 'outs',
+    type: struct.VarArray(varint, struct([
+      { name: 'value', type: struct.UInt64LE },
+      { name: 'script', type: exports.varBuffer }
+    ]))
+  },
+  { name: 'locktime', type: struct.UInt32LE }
+])
+
 let kmdtransaction = struct([
   { name: 'version', type: struct.Int32LE },
   { name: 'versionGroupId', type: struct.Int32LE },
@@ -203,9 +228,12 @@ let varBufferArray = struct.VarArray(varint, exports.varBuffer)
 exports.kmdtransaction = (function () {
   function encode (value, buffer = Buffer.alloc(encodingLength(value)), offset = 0) {
     value = Object.assign({}, value)
-    let hasWitness = value.ins.some(({ witness }) =>
-      witness != null && witness.length > 0)
+    /*let hasWitness = value.ins.some(({ witness }) =>
+      witness != null && witness.length > 0)*/
+    let hasWitness = false  // no witness in kmd
     let type = hasWitness ? witnessTransaction : kmdtransaction
+    if (value.version < 3)
+      type = transaction
 
     if (hasWitness) {
       value.marker = 0
@@ -231,8 +259,12 @@ exports.kmdtransaction = (function () {
   }
 
   function decode (buffer, offset = 0, end = buffer.length) {
-    let hasWitness = buffer[offset + 4] === 0
+    //let hasWitness = buffer[offset + 4] === 0
+    let hasWitness = false  // no witness in kmd
     let type = hasWitness ? witnessTransaction : kmdtransaction
+    let version = buffer.readUInt32LE(offset)
+    if (version < 3)
+      type = transaction // pre-zcash tx
 
     let tx = type.decode(buffer, offset, end)
     decode.bytes = type.decode.bytes
@@ -289,6 +321,8 @@ const NSPVMSGS = {
   NSPV_TXIDSRESP: 0x0f,
   NSPV_REMOTERPC: 0x14,
   NSPV_REMOTERPCRESP: 0x15,  
+  NSPV_TRANSACTIONS: 0x16,
+  NSPV_TRANSACTIONSRESP: 0x17, 
   NSPV_ERRORRESP: 0xff,  
 };
 
@@ -310,6 +344,8 @@ exports.nspvMsgName = function(code)  {
     case NSPVMSGS.NSPV_TXIDSRESP: return 'NSPV_TXIDSRESP';
     case NSPVMSGS.NSPV_REMOTERPC: return 'NSPV_REMOTERPC';
     case NSPVMSGS.NSPV_REMOTERPCRESP: return 'NSPV_REMOTERPCRESP';  
+    case NSPVMSGS.NSPV_TRANSACTIONS: return 'NSPV_TRANSACTIONS';
+    case NSPVMSGS.NSPV_TRANSACTIONSRESP: return 'NSPV_TRANSACTIONSRESP';  
     case NSPVMSGS.NSPV_ERRORRESP: return 'NSPV_ERRORRESP';
     default: return 'unknown';  
   }
@@ -699,6 +735,20 @@ let nspvNtzsProofResp = (function(){
   return { encode, decode, encodingLength };
 })();
 
+// get transactions req
+let nspvTransactionsReq = struct([
+  { name: 'reqCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'checkMempool', type: struct.UInt8 },
+  { name: 'txids', type: struct.VarArray(varint, exports.buffer32) }
+]);
+
+let nspvTransactionsResp = struct([
+  { name: 'respCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'txns', type: struct.VarArray(varint, exports.kmdtransaction) }
+]);
+
 // error may be returned to any request:
 let nspvErrorResp = struct([
   { name: 'respCode', type: struct.UInt8 },
@@ -748,6 +798,9 @@ exports.nspvReq = (function () {
         break;
       case NSPVMSGS.NSPV_REMOTERPC:
         type = nspvRemoteRpcReq;
+        break;
+      case NSPVMSGS.NSPV_TRANSACTIONS:
+        type = nspvTransactionsReq;
         break;
       default:
         return;
@@ -819,6 +872,9 @@ exports.nspvResp = (function () {
         break;
       case NSPVMSGS.NSPV_REMOTERPCRESP:
         type = nspvRemoteRpcResp;
+        break;
+      case NSPVMSGS.NSPV_TRANSACTIONSRESP:
+        type = nspvTransactionsResp;
         break;
       case NSPVMSGS.NSPV_ERRORRESP:
         type = nspvErrorResp;
