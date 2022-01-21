@@ -108,7 +108,6 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
   }
 
   let txProof = results[0];
-  if (results[1]?.nspvVersion == 5) return true;
   let ntzs = results[1].ntzs;  // notarization txids, heights
   let ntzsProof = results[1].ntzsProof;  // notarization txns and block headers
 
