@@ -169,7 +169,7 @@ let transaction = struct([
   {
     name: 'outs',
     type: struct.VarArray(varint, struct([
-      { name: 'value', type: struct.UInt64LE },
+      { name: 'value', type: exports.bigInt64LE },
       { name: 'script', type: exports.varBuffer }
     ]))
   },
@@ -220,7 +220,7 @@ let witnessTransaction = struct([
   {
     name: 'outs',
     type: struct.VarArray(varint, struct([
-      { name: 'value', type: struct.UInt64LE },
+      { name: 'value', type: exports.bigInt64LE },
       { name: 'script', type: exports.varBuffer }
     ]))
   }
@@ -600,7 +600,7 @@ let nspvTxProofResp = (function(){
     let respCode = bufferReader.readUInt8();
     let requestId = bufferReader.readUInt32();
     let txid = bufferReader.readSlice(32);
-    let unspentValue = struct.Int64LE.decode(bufferReader.buffer, bufferReader.offset);  // bufferReader.readUInt64();
+    let unspentValue = exports.bigInt64LE.decode(bufferReader.buffer, bufferReader.offset);  // bufferReader.readUInt64(), struct.Int64LE.decode(..)
     bufferReader.offset += 8;
     let height = bufferReader.readUInt32();
     let vout = bufferReader.readUInt32();
