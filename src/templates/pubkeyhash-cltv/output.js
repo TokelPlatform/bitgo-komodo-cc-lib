@@ -4,7 +4,8 @@ var bscript = require('../../script')
 var types = require('../../types')
 var typeforce = require('typeforce')
 var OPS = require('bitcoin-ops')
-const varint = require('varuint-bitcoin')
+//const varint = require('varuint-bitcoin')
+const script_number = require('../../script_number');
 
 function check (script) {
   var chunks = bscript.decompile(script)
@@ -25,7 +26,7 @@ function encode (pubKeyHash, nLockTime) {
   typeforce(types.Number, nLockTime)
 
   return bscript.compile([
-    varint.encode(nLockTime), OPS.OP_CHECKLOCKTIMEVERIFY, OPS.OP_DROP,
+    script_number.encode(nLockTime), OPS.OP_CHECKLOCKTIMEVERIFY, OPS.OP_DROP,
     OPS.OP_DUP,
     OPS.OP_HASH160,
     pubKeyHash,
@@ -38,7 +39,7 @@ function decode (buffer) {
   typeforce(check, buffer)
 
   var chunks = bscript.decompile(buffer)  
-  return { pubKeyHash: chunks[5], nLockTime: varint.decode(chunks[0]) }
+  return { pubKeyHash: chunks[5], nLockTime: script_number.decode(chunks[0], false, 5) }  // for OP_CLTV max is 5
 }
 
 module.exports = {
