@@ -68,8 +68,6 @@ var params = {
 }
 
 var opts = {
-  //connectWeb: true,     // use websockets, not used
-  //wrtc: wrtc,          // not supported any more
   numPeers: 8,
   //hardLimit: 2,        // max peers
   //connectPlainWeb: true,  // use plain websockets, no PXP
