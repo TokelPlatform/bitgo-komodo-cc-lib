@@ -30,6 +30,11 @@ function nspvConnect(params, opts) {
       logdebug("nspvConnect got 'peerError'", err?.message);
     });
 
+    peers.on('error', err => { // some other error
+      // some peers may fail to connect to, but this okay as long as there enough peers in the network
+      logdebug("nspvConnect got 'error'", err?.message);
+    });
+
     peers.on('peerGroupError', err => {
       // maybe let the GUI print the error  
       //logdebug('nspvBrowserConnect error', err);
