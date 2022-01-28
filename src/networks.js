@@ -353,8 +353,8 @@ module.exports = {
     //to connect over p2p:
     dnsSeeds: [],
     staticPeers: [ 
-      'localhost:14722' 
-      //'18.190.86.67:14722'
+      //'localhost:14722' 
+      '18.190.86.60:14722'
     ], 
     // to connect over websockets:
     webSeeds: [
@@ -469,6 +469,48 @@ module.exports = {
     ],
   },
 
+
+  TKLTEST2: {
+    messagePrefix: '\x18TKLTEST asset chain:\n',
+    bech32: 'R',
+    bip32: getDefaultBip32Mainnet(),
+    pubKeyHash: 0x3c,
+    scriptHash: 0x55,
+    cryptoconditionHash: 0x1c,
+    wif: 0xbc,
+    consensusBranchId: {
+      1: 0x00,
+      2: 0x00,
+      3: 0x5ba81b19,
+      4: 0x76b809bb, // (old Sapling branch id - used in kmd)
+      // 4: 0x2bb40e60
+      // 4: 0xf5b9230b
+    },
+    coin: coins.ZEC,
+    komodoAssetNet: true,
+    protocolVersion: 170009,
+    messages: kmdmessages.kmdMessages,
+    magic:  0xf6475548,
+    // to connect over p2p:
+    dnsSeeds: [ 
+      //'ec2-18-189-25-123.us-east-2.compute.amazonaws.com:22024'
+    ],
+    staticPeers: [
+      '1.1.1.1:22024'
+      //'164.132.225.134:22024',
+      // '167.99.114.240:22024',
+      //'18.190.86.67:22024'
+      //'localhost:22024'
+      //'18.189.25.123:22024'
+      //'tcp://164.132.225.134:22024',
+      //'167.99.114.240:22024',
+    ],
+    // to connect over websockets:
+    webSeeds: [
+      //'ws://18.189.25.123:8192'
+    ],
+  },
+
   TOKEL: {
     messagePrefix: '\x18TOKEL chain:\n',
     bech32: 'R',
@@ -496,12 +538,13 @@ module.exports = {
       //'ec2-18-189-25-123.us-east-2.compute.amazonaws.com:29404'
     ],
     staticPeers: [
-      '192.99.71.125:29404',
-      '135.125.204.169:29404',
+      //'192.99.71.125:29404',
+      //'135.125.204.169:29404',
       ////'18.190.86.67:29404'
-      // 'localhost:29404',
+      'localhost:29404',
       //'18.189.25.123:29404'
       //'51.38.124.215:29404'
+      '54.39.17.184:29404'
     ],
 
     // to connect over websockets:
