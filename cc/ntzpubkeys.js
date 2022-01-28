@@ -16,6 +16,8 @@ const ECPair = require('../src/ecpair')
 const NUM_KMD_SEASONS = 6
 //const NUM_KMD_NOTARIES = 64
 
+const NUM_SIGS_REQUIRED = 12
+
 const nStakedDecemberHardforkTimestamp   = 1576840000   //December 2019 hardfork 12/20/2019 @ 11:06am (UTC)
 const nDecemberHardforkHeight            = 1670000      //December 2019 hardfork
 
@@ -507,6 +509,8 @@ function NSPV_fastnotariescount(tx, notaries_season)
         //logdebug("notary signature validated for vini", vini);
         break;
       }
+      if (bitweight(alreadySigned) >= NUM_SIGS_REQUIRED)
+        break;
     }
   }
   return bitweight(alreadySigned);
@@ -526,7 +530,7 @@ exports.NSPV_notarizationextract = function (isKmd, doVerify, tx, timestamp)
         if (doVerify)  {
           let numsigs = NSPV_fastnotariescount(tx, notaries_season);
           logdebug('verified notary sigs=', numsigs);
-          if (numsigs < 12) 
+          if (numsigs < NUM_SIGS_REQUIRED) 
             return new Error(`could not verify required notaries signatures, verified sigs=${numsigs}`);
         }
         return parsed;
