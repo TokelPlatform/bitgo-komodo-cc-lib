@@ -30,26 +30,6 @@ const INITIAL_PING_N = 4 // send this many pings when we first connect
 const INITIAL_PING_INTERVAL = 250 // wait this many ms between initial pings
 const MIN_TIMEOUT = 4000 // lower bound for timeouts (in case latency is low)
 
-const serviceBits = {
-  'NODE_NETWORK': 0,
-  'NODE_GETUTXO': 1,
-  'NODE_BLOOM': 2,
-  'NODE_WITNESS': 3,
-  'NODE_NETWORK_LIMITED': 10
-}
-function getServices (buf) {
-  let services = {}
-  for (let name in serviceBits) {
-    let byteIndex = Math.floor(serviceBits[name] / 8)
-    let byte = buf.readUInt32LE(byteIndex)
-    let bitIndex = serviceBits[name] % 8
-    if (byte & (1 << bitIndex)) {
-      services[name] = true
-    }
-  }
-  return services
-}
-
 const debugStream = (f) => through((message, enc, cb) => {
   f(message)
   cb(null, message)
@@ -73,7 +53,7 @@ class Peer extends EventEmitter {
       this.userAgent += `${pkg.name}:${pkg.version}/`
     }
     if (opts.subUserAgent) this.userAgent += opts.subUserAgent
-    this.handshakeTimeout = opts.handshakeTimeout || 8 * 1000
+    this.handshakeTimeout = opts.handshakeTimeout || 16 * 1000
     this.getTip = opts.getTip
     this.relay = opts.relay || false
     this.pingInterval = opts.pingInterval || 15 * 1000
@@ -161,6 +141,10 @@ class Peer extends EventEmitter {
     this._pingInterval = null
     this.socket.end()
     this.emit('disconnect', err)
+    //console.log('disconnect peer, events:', this.eventNames());
+    this.removeAllListeners(); // clear incoming message processing
+    logdebug("peer disconnected", this.getUrl())
+    console.log("peer disconnected", this.getUrl())
   }
 
   clearTimers() {
@@ -218,7 +202,7 @@ class Peer extends EventEmitter {
       this.emit(`tx:${utils.getTxHash(tx).toString('base64')}`, tx)
     })
 
-    //this.on('addr', this._onAddr)
+    //this.on('addr', this._onAddr) // a different code calls this
   }
 
 /*  _onAddr(message) {
@@ -226,7 +210,7 @@ class Peer extends EventEmitter {
   } */
 
   _onVersion (message) {
-    this.services = getServices(message.services)
+    this.services = utils.getServices(message.services)
     if (!this.services.NODE_NETWORK) {
       return this._error(new Error('Node does not provide NODE_NETWORK service'))
     }
