@@ -353,8 +353,8 @@ module.exports = {
     //to connect over p2p:
     dnsSeeds: [],
     staticPeers: [ 
-      'localhost:14722' 
-      //'18.190.86.67:14722'
+      //'localhost:14722' 
+      '18.190.86.60:14722'
     ], 
     // to connect over websockets:
     webSeeds: [
@@ -470,8 +470,9 @@ module.exports = {
     ],
   },
 
+
   TKLTEST2: {
-    messagePrefix: '\x18TKLTEST2 asset chain:\n',
+    messagePrefix: '\x18TKLTEST asset chain:\n',
     bech32: 'R',
     bip32: getDefaultBip32Mainnet(),
     pubKeyHash: 0x3c,
@@ -531,12 +532,13 @@ module.exports = {
       //'ec2-18-189-25-123.us-east-2.compute.amazonaws.com:29404'
     ],
     staticPeers: [
-      '192.99.71.125:29404',
-      '135.125.204.169:29404',
+      //'192.99.71.125:29404',
+      //'135.125.204.169:29404',
       ////'18.190.86.67:29404'
-      // 'localhost:29404',
+      'localhost:29404',
       //'18.189.25.123:29404'
       //'51.38.124.215:29404'
+      '54.39.17.184:29404'
     ],
 
     // to connect over websockets:
