@@ -814,3 +814,8 @@ exports.isError = function(o)
 {
   return typeof(o) === 'object' && o.name === 'Error';
 }
+
+exports.isEmptyHash = function(hash)
+{
+  return !hash || Buffer.compare(Buffer.from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]), hash) == 0;
+}
