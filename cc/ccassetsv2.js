@@ -139,7 +139,7 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, priceCoins, exp
   let bnUnits = types.Satoshi(units) ? new BN(units) : units;
   let _expiryHeight = expiryHeight || 0;
   let bnPriceSat = ccutils.CoinsToBNSatoshi(priceCoins);
-  console.log('price', bnPriceSat.toString());
+  //console.log('price', bnPriceSat.toString());
 	return makeTokenV2BidTx(peers, mynetwork, wif, bnUnits, _tokenid, bnPriceSat, _expiryHeight);
 }
 
@@ -427,7 +427,7 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, bnFil
   if (royaltyFract > 0 && bnPaidAmount.sub(bnRoyaltyValue).lte(ASSETS_NORMAL_DUST.div(new BN(royaltyFract)).mul(new BN(TKLROYALTY_DIVISOR)).sub(ASSETS_NORMAL_DUST)) ) // if value paid to seller less than when the royalty is minimum
       bnRoyaltyValue = BN_0;
 
-  console.log("makeTokenV2FillAskTx bnNormalAmount=", bnNormalAmount.toString());
+  //console.log("makeTokenV2FillAskTx bnNormalAmount=", bnNormalAmount.toString());
   let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount);
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
 
