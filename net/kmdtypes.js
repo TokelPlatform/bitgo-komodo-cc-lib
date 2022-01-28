@@ -13,16 +13,13 @@ const typeforce = require('typeforce');
 //const { types } = require('bitcoin-protocol');
 const types = require('../src/types');
 //const bigi = require('bigi');
+//const { assert } = require('sinon');
 const bn64 = require('../src/bn64');
-
-//const { validateTxUsingNtzsProof } = require('../cc/ntzproofs');
-
 
 //var typeforce = require('typeforce');
 //const { varBuffer } = require('bitcoin-protocol/src/types');
 //var typeforceNT = require('typeforce/nothrow');
 
-exports.NSPV_VERSION_5 = 0x0005;
 exports.NSPV_VERSION = 0x0006;
 
 exports.buffer8 = struct.Buffer(8)
@@ -841,16 +838,13 @@ exports.nspvResp = (function () {
     return buffer.slice(offset, offset + bytes)
   }
 
-  function getEncodingType(code, expectVersion)
+  function getEncodingType(code)
   {
     let type;
     switch(code)
     {
       case NSPVMSGS.NSPV_INFORESP:
-        if (expectVersion == 5)
-          type = nspvInfoResp_v5;
-        else
-          type = nspvInfoResp;
+        type = nspvInfoResp;
         break;
       case NSPVMSGS.NSPV_UTXOSRESP:
         type = nspvUtxosResp;
@@ -885,9 +879,9 @@ exports.nspvResp = (function () {
     return type;
   }
 
-  function decode (buffer, offset = 0, end = buffer.length, expectVersion) {
+  function decode (buffer, offset = 0, end = buffer.length) {
     let respCode = buffer[0];
-    let type = getEncodingType(respCode, expectVersion);
+    let type = getEncodingType(respCode);
     if (type === undefined)
       return;
     let resp = type.decode(buffer, offset, end)
