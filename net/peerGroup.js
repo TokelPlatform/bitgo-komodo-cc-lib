@@ -417,6 +417,7 @@ class PeerGroup extends EventEmitter {
       if (utils.getServices(elem?.services).NODE_NSPV)
         this.tcpAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
     })
+    this.tcpAddrs.shuffle();
   }
 
 
