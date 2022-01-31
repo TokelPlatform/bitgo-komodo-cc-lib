@@ -100,7 +100,7 @@ const parseTransactionData = (tx) => {
     if (tx.ins.length > 1 && tx.ins[0].tx) {
       // skip C-index addresses since those are CC transactions
       sumIns = tx.ins.reduce((a, b) => isCindexAddress(b.tx?.address) ? a : a.add(b.tx?.value), new BN());
-      fees = sumIns - sumOuts
+      fees = sumIns.sub(sumOuts)
     } else {
       fees = FIXED_FEE;
     }
