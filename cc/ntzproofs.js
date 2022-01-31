@@ -150,7 +150,7 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
   let txid = ccutils.castHashBin(_txid);
   typeforce('Number', height);
 
-  logdebug('getting ntz data for height', height);
+  logdebug('getting tx proof and ntz data for height', height);
   let txProof = findTxProofInCache(height);
   if (txProof) logdebug('found txproof data in cache for height', height);
   let ntzData = findNtzProofInCache(height);
@@ -325,37 +325,33 @@ class NtzUtxoValidation {
     this.peers = _peers;
     this.network = _network;
     this.utxos = _utxos;
-    this.inWait = new Map();
+    this.inWait = new Set();
     this.tried = new Set();
   }
 
-  _runLoop(maxcalls)  
+  _runLoop(maxoutstanding)  
   {
     let BreakException = {};
     try {
-      let count = 0;
-      this.utxos.forEach((utxo) => { 
-        if (this.inWait.size > 20) throw BreakException;
-        if (typeof utxo.ntzValid === 'undefined' && !this.inWait.has(utxo.txid))  {
-          //let p = new Promise(async (resolve, reject) => {
-          this.inWait.set(utxo.txid, true); //p;
+      this.utxos.forEach((utxo, i) => { 
+        //let o = ccutils.hashToHex(utxo.txid) + new String(utxo.vout);
+        if (typeof utxo.ntzValid === 'undefined' && !this.inWait.has(i))  {
+          this.inWait.add(i); 
           (async ()=>{ 
             try {
               let valid = await exports.validateTxUsingNtzsProof(this.peers, this.network, utxo.txid, utxo.height);
-              this.inWait.delete(utxo.txid); // not in wait any more
+              this.inWait.delete(i); // not in wait any more
               utxo.ntzValid = valid;
-              this.tried.add(utxo.txid);
+              this.tried.add(i);
             } catch(err) {
               logdebug('NtzUtxoValidation received error for height', utxo.height, err?.message);
-              this.inWait.delete(utxo.txid); 
+              this.inWait.delete(i); 
               if (!err.rateTimeout) {
-                this.tried.add(utxo.txid);
+                this.tried.add(i);
               }
-              //else
-              //  console.log('rateTimeout for height', utxo.height);
             } 
           })();
-          count ++;
+          if (this.inWait.size > maxoutstanding) throw BreakException;
         }
       });
     }
@@ -367,8 +363,6 @@ class NtzUtxoValidation {
   // calc utxos with ntzValidated
   getTried() 
   { 
-    //return this.utxos && 
-    //  this.utxos.length > 0 ? this.utxos.reduce((acc, cur)=>{ return acc + (typeof cur?.ntzTried != 'undefined' ? 1 : 0); }, 0) : 0; 
     return this.tried.size;
   }
 
@@ -379,24 +373,24 @@ class NtzUtxoValidation {
     }
 
     // validate in loop by using max calls at once not to be rejected by the rate limiter
-    let maxcalls = 1000;
-    this._runLoop(maxcalls);      
+    const maxperpeer = 7;  // like currently we are limited by at least 15 nspvs/sec or some more. 
+                           // For each validation we need 3 nspv calls, so 7 * 3 = 21 per peer seems okay not get rate limited too often 
+    let maxoutstanding = this.peers.peers.length * maxperpeer;
+    this._runLoop(maxoutstanding);      
     // wait for utxos to validate
     let tried = this.getTried();
 
     while (tried < this.utxos.length)  {  
-      //if (this.activeRequests() == 0)  {
       let active = this.activeRequests();
-      //if (active == 0)
-      //}
-      //else {
-      if (active > 0)  {
-        await sleep(1000);
-        if (active < 20)
-          this._runLoop(maxcalls);
-        console.log('validated utxos count=', tried, 'total count=', this.utxos.length, 'active reqs=', active);
+      if (active > maxoutstanding)  {
+        await sleep(1500);
+        //console.log('validated utxos count=', tried, 'total count=', this.utxos.length, 'active reqs=', active);
+        maxoutstanding = this.peers.peers.length * maxperpeer;
       }
-      this._runLoop(maxcalls); 
+      //await setImmediate(this._runLoop.bind(this), maxoutstanding);
+      await sleep(100);
+      if (active <= maxoutstanding)
+        this._runLoop(maxoutstanding);
       tried = this.getTried();
     }
   }
