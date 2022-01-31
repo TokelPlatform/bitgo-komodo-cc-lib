@@ -144,7 +144,7 @@ class Peer extends EventEmitter {
     //console.log('disconnect peer, events:', this.eventNames());
     this.removeAllListeners(); // clear incoming message processing
     logdebug("peer disconnected", this.getUrl())
-    console.log("peer disconnected", this.getUrl())
+    console.log("peer disconnected", this.getUrl(), err?.message)
   }
 
   clearTimers() {
