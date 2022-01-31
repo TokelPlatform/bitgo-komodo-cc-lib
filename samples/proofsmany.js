@@ -77,7 +77,7 @@ var params = {
 }
 
 var opts = {
-  numPeers: 8,
+  numPeers: 20,
   //hardLimit: 2,        // max peers
   //connectPlainWeb: true,  // use plain websockets
   //wsOpts: { rejectUnauthorized: false } 
@@ -109,7 +109,7 @@ if (!process.browser)
       //result = await ccutils.getUtxos(peers, "RWQrQd6MiuW5Eqqv9E8JE6arLQVZ4q8pSS", 0, 0); // tokel 17000 utxos
       result = await ccutils.getUtxos(peers, "RGTb3FySV8kNCp7BbHP2uR4G4Gjwdvqogo", 0, 0); // tokel 2645
       //result = await ccutils.getUtxos(peers, "RWtnNgmwtsiM35tYfWjf8xxgf8GFDZvEfg", 0, 0); // tokel 1
-      //result = await ccutils.getUtxos(peers, "R9SNVd4zmTAjrtWrpXebr8PGCEdkA9YZxj", 0, 0); // tokel
+      //result = await ccutils.getUtxos(peers, "R9SNVd4zmTAjrtWrpXebr8PGCEdkA9YZxj", 0, 0); // tokel 305 utxos
       //console.log('result=', result, 'utxo.length=', result?.utxos.length);
 
       //for(let i = 0; i < result?.utxos.length; i ++)
@@ -137,14 +137,13 @@ if (!process.browser)
 
       //
       let val = new ntzproofs.NtzUtxoValidation(peers, mynetwork, result.utxos);
-
       val.execute();
 
       // wait for utxos to validate
       while (val.getTried() < result.utxos.length)  {  
         await sleep(1000);
       }
-      console.log('total checked utxos=', val.getTried());
+      console.log('total checked utxos=', val.getTried(), " ntzValid", (result.utxos.length > 0 ? result.utxos.reduce((acc, cur)=>{ return acc + (typeof cur?.ntzValid != 'undefined' ? 1 : 0); }, 0) : 0) );
     }
     catch(err) {
       console.log('caught err=', err, 'code=', err?.code, 'message=', err?.message);
