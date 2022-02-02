@@ -18,6 +18,9 @@ var typeforce = require('typeforce');
 var typeforceNT = require('typeforce/nothrow');
 const OPS = require('bitcoin-ops');
 const BN = require('bn.js');
+const p2pkcltv = require('../src/templates/pubkey-cltv');
+const p2pkhcltv = require('../src/templates/pubkeyhash-cltv');
+
 
 const { splitArrayInChunks } = require('./helper')
 
@@ -266,6 +269,22 @@ function findCCProbeForSpk(ccProbes, spk)
   });
 }
 
+function updateCltvData(utxos)
+{
+  if (!Array.isArray(utxos)) return;
+  utxos.forEach((value) => {
+    if (value.script)  {
+      let decoded
+      if (p2pkcltv.output.check(value.script))
+        decoded = p2pkcltv.output.decode(value.script);
+      if (p2pkhcltv.output.check(value.script))
+        decoded = p2pkhcltv.output.decode(value.script);
+      if (decoded)
+        value.nLockTime = decoded?.nLockTime;
+    }
+  })
+}
+
 /**
  * returns utxos (unspent outputs) for an address
  * @param {*} peers PeerGroup object with NspvPeers ext
@@ -280,6 +299,7 @@ function getUtxos(peers, address, isCC, skipCount, maxrecords)
     peers.nspvGetUtxos(address, isCC, skipCount, maxrecords, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) {
+        updateCltvData(res.utxos);
         resolve(res);
       }
       else
@@ -816,4 +836,9 @@ exports.isOpReturnSpk = function(script)
 exports.isError = function(o)
 {
   return typeof(o) === 'object' && o.name === 'Error';
+}
+
+exports.isEmptyHash = function(hash)
+{
+  return !hash || Buffer.compare(Buffer.from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]), hash) == 0;
 }

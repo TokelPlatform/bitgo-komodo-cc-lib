@@ -1,8 +1,8 @@
 'use strict'
 
 const Debug = require('debug');
-const logdebug = Debug('net:nspv');
-const logerror = Debug('net:nspv:error');
+const logdebug = Debug('nspv');
+const logerror = Debug('nspv:error');
 
 const bcrypto = require('../src/crypto');
 const fastMerkleRoot = require('merkle-lib/fastRoot');
@@ -13,18 +13,55 @@ const ntzpubkeys = require('./ntzpubkeys');
 const Transaction = require('../src/transaction');
 const kmdblockindex = require('../src/kmdblockindex');
 const coins = require('../src/coins');
+const typeforce = require('typeforce');
+const types = require('../src/types');
+const map = require('bitcoin-ops/map');
+const { NspvError } = require('../net/nspvPeer');
+
+var txProofCache = new Map();
+var ntzProofCache = new Map();
+
+function addTxProofToCache(height, txproof)
+{
+  if (!txProofCache.has(height))
+    txProofCache.set(height, txproof);
+}
+function findTxProofInCache(height)
+{
+  return txProofCache.has(height) ? txProofCache[height] : null;
+}
+
+function addNtzProofToCache(height, ntz, ntzProof)
+{
+  if (!ntzProofCache.has(height)) {
+    ntzProofCache.set(height, { ntz : ntz, ntzProof : ntzProof });
+  }
+}
+function findNtzProofInCache(height)
+{
+  let found = null;
+  for (const [k, v] of ntzProofCache) {
+    if (height <= v.ntzProof.common.ntzedHeight && height > v.ntzProof.common.ntzedHeight - v.ntzProof.common.hdrs.length)  {
+      found = v;
+      break;
+    }
+  }
+  return found;
+}
 
 exports.nspvTxProof = nspvTxProof;
 function nspvTxProof(peers, txidhex, vout, height)
 {
   return new Promise((resolve, reject) => {
-    peers.nspvTxProof(txidhex, vout, height, {}, (err, res, peer) => {
-    //console.log('err=', err, 'res=', res);
-    if (!err) 
+    peers.nspvTxProof(txidhex, vout, height, { timeout: 1000 }, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err) {
+        res.peer = peer;
         resolve(res);
-    else
+      }
+      else
         reject(err);
-    });
+      });
   });
 }
 
@@ -32,12 +69,14 @@ exports.nspvNtzs = nspvNtzs;
 function nspvNtzs(peers, height)
 {
   return new Promise((resolve, reject) => {
-      peers.nspvNtzs(height, {}, (err, res, peer) => {
+    peers.nspvNtzs(height, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
-      if (!err) 
-          resolve(res);
+      if (!err)  {
+        res.peer = peer;
+        resolve(res);
+      }
       else
-          reject(err);
+        reject(err);
       });
     });
 }
@@ -53,10 +92,12 @@ function nspvNtzsProof(peers, ntzTxid)
 {
   return new Promise((resolve, reject) => {
     peers.nspvNtzsProof(ntzTxid, {}, (err, res, peer) => {
-    //console.log('err=', err, 'res=', res);
-    if (!err) 
+      //console.log('err=', err, 'res=', res);
+      if (!err)  {
+        res.peer = peer;
         resolve(res);
-    else
+      }
+      else
         reject(err);
     });
   });
@@ -73,11 +114,18 @@ exports.nspvNtzsProof = nspvNtzsProof;
 function nspvNtzsThenNtzProofs(peers, height)
 {
   return new Promise((resolve, reject) => {
-    peers.nspvNtzs(height, {}, (ntzErr, ntzsRes, peer) => {
+    peers.nspvNtzs(height, { timeout: 1000 }, (ntzErr, ntzsRes, peer) => {
       if (!ntzErr) {
-        peers.nspvNtzsProof(ntzsRes.ntz.txid, {}, (ntzsProofErr, ntzsProofRes, peer) => {
-          if (!ntzsProofErr) 
-            resolve({ ntzs: ntzsRes, ntzsProof: ntzsProofRes, nspvVersion: peer.nspvVersion });
+        ntzsRes.peer = peer;
+        if (ccutils.isEmptyHash(ntzsRes?.ntz?.txid))  {
+          reject(new NspvError('ntz data not found for height'));
+          return;
+        }
+        peers.nspvNtzsProof(ntzsRes.ntz.txid, { timeout: 1000 }, (ntzsProofErr, ntzsProofRes, peer) => {
+          if (!ntzsProofErr)  {
+            ntzsProofRes.peer = peer;
+            resolve({ ntz: ntzsRes, ntzProof: ntzsProofRes, nspvVersion: peer.nspvVersion });
+          }
           else
             reject(ntzsProofErr);
         });
@@ -93,88 +141,144 @@ function nspvNtzsThenNtzProofs(peers, height)
  * @param {*} peers 
  * @param {*} txid 
  * @param {*} height 
- * @returns object with vaidation result or null
+ * @returns object with validation result or null
  */
 exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
 {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, network);
   let txid = ccutils.castHashBin(_txid);
-  let promizeTxproof = nspvTxProof(peers, txid, 0, 0);
-  let promizeNtzsProof = nspvNtzsThenNtzProofs(peers, height);
+  typeforce('Number', height);
 
-  let results = await Promise.all([promizeTxproof, promizeNtzsProof]);
-  if (results.length < 2 || !results[0] || !results[1] || ccutils.isError(results[0]) || ccutils.isError(results[1]) )  {
-    logerror("bad results for proofs or ntzsProofs received", "results[0]", results[0], "results[1]", results[1] );
-    return false;
+  logdebug('getting tx proof and ntz data for height', height);
+  let txProof = findTxProofInCache(height);
+  if (txProof) logdebug('found txproof data in cache for height', height);
+  let ntzData = findNtzProofInCache(height);
+  if (ntzData) logdebug('found ntz data in cache for height', height);
+  let ntz;
+  let ntzProof;
+
+  let promises = new Array();
+  if (!txProof)
+    promises.push(nspvTxProof(peers, txid, 0, 0));
+
+  if (!ntzData)
+    promises.push(nspvNtzsThenNtzProofs(peers, height));
+  else  {
+    ntz = ntzData.ntz;
+    ntzProof = ntzData.ntzProof;
   }
 
-  let txProof = results[0];
-  if (results[1]?.nspvVersion == 5) return true;
-  let ntzs = results[1].ntzs;  // notarization txids, heights
-  let ntzsProof = results[1].ntzsProof;  // notarization txns and block headers
+  if (promises.length > 0)  {
 
-  if (!ntzs || !ntzsProof)  {
-    logerror("empty ntzs or ntzsProofs results received");
+    let results = await Promise.all(promises);
+    let nspvErr = results.find((v)=> { return ccutils.isError(v) ? true : false; });  // check if any errors returned
+    if (results.length < promises.length || nspvErr)  {
+      logerror("bad results for tx or ntzs proofs received, error=", nspvErr);
+      return false;
+    }
+    let i = 0;
+    if (!txProof) {
+      txProof = results[i];
+      i ++;
+    }
+    
+    if (!ntzData)  {
+      ntz = results[i].ntz;  // notarization txids, heights
+      ntzProof = results[i].ntzProof;  // notarization txns and block headers
+    }
+  }
+
+  if (!ntz || !ntzProof)  {
+    logerror("empty ntz or ntzsProofs results received");
     return false;
   }
   
-  /*
-  let hdrOffset = height - (ntzs.prevntz.height + 1);  // first height in the bracket is prevntz.height + 1
-  if (hdrOffset < 0 || hdrOffset > ntzs.nextntz.height)  {
-    logerror(`invalid notarization bracket found: [${ntzs.prevntz.height}, ${ntzs.nextntz.height}] for tx height: ${height}`);
-    return null;
-  } */
-  let hdrOffset = height - (ntzsProof.common.ntzedHeight - ntzsProof.common.hdrs.length) - 1; 
+  let ntzProofInvalid = false; 
+  try 
+  {
+    let hdrOffset = height - (ntzProof.common.ntzedHeight - ntzProof.common.hdrs.length) - 1; 
+    if (hdrOffset < 0 || hdrOffset >= ntzProof.common.hdrs.length)  {
+      logerror(`invalid header array offset ${hdrOffset} for notarization headers length ${ntzProof.common.hdrs.length}`);
+      //ntzProofInvalid = true; // gaps possible
+      throw new Error("invalid header offset in notarisation data for txid!");
+    }
 
-  if (hdrOffset < 0 || hdrOffset >= ntzsProof.common.hdrs.length)  {
-    logerror(`invalid header array offset ${hdrOffset} for notarization headers length ${ntzsProof.common.hdrs.length}`);
+    if (!txProof || !txProof.partialMerkleTree || !txProof.partialMerkleTree.merkleRoot)
+      throw new Error("proof (partial merkle tree) not found for txid!"); 
+
+    // validate tx against txproof (partial merkle tree)
+    let hashes = bmp.verify(txProof.partialMerkleTree);
+    if (hashes.length == 0 || Buffer.compare(hashes[0], txid) != 0 )  {
+      logerror("invalid tx proof for txid:",  ccutils.hashToHex(txid));
+      throw new Error("txid existence in the chain is not proved!");
+    }
+    // check txproof's merkle root is in notarized block
+    if (Buffer.compare(ntzProof.common.hdrs[hdrOffset].merkleRoot, txProof.partialMerkleTree.merkleRoot) != 0)   {
+      logerror("merkle root does not match notarization data for txid:",  ccutils.hashToHex(txid));
+      throw new Error("could not check merkle root against notarization data!");
+    }
+
+    // validate notarization transaction and its notary sigs:
+    let ntzTx = Transaction.fromBuffer(ntzProof.ntzTxBuf, network);
+    let ntzTxOpreturn = ntzpubkeys.NSPV_notarizationextract(false, true, ntzTx, ntz.ntz.timestamp);
+    if (ccutils.isError(ntzTxOpreturn)) {
+      ntzProofInvalid = true;  // cant decode ntz tx or check notary signatures
+      throw ntzTxOpreturn;
+    }
+    // check ntz data
+    if (Buffer.compare(ntzTxOpreturn.destTxid, ntz.ntz.destTxid) != 0)
+      throw new Error('notarisation data invalid (destTxid in ntz)');
+    if (ntzTxOpreturn.height !== ntz.ntz.height)
+      throw new Error('notarisation data invalid (height in ntz)');
+    if (ntzTxOpreturn.height !== ntzProof.common.ntzedHeight)
+      throw new Error('notarisation data invalid (height in ntzsproof)');
+    if (Buffer.compare(ntzTxOpreturn.blockhash, kmdblockindex.kmdHdrHash(ntzProof.common.hdrs[ntzProof.common.hdrs.length-1])) != 0)
+      throw new Error('notarisation data invalid (blockhash)');
+
+    if (ntzTx.outs.length != 2) {
+      ntzProofInvalid = true;
+      throw new Error('invalid notarisation tx outputs size');
+    }
+    // check mom
+    let ntzparsed = ntzpubkeys.NSPV_opretextract(false, ntzTx.outs[1].script);
+    //console.log(ntzparsed)
+    if (!ntzparsed)  {
+      ntzProofInvalid = true;
+      throw new Error('cannot parse notarisation tx opreturn');
+    }
+
+    // check mom
+    let leaves = [];
+    ntzProof.common.hdrs.slice().reverse().forEach(h => leaves.push(h.merkleRoot));
+    let mom = fastMerkleRoot(leaves, bcrypto.hash256);
+    if (Buffer.compare(mom, ntzparsed.MoM) !== 0)  {
+      ntzProofInvalid = true;
+      throw new Error('notarisation MoM invalid'); 
+    }
+
+    // check chain name
+    if (coins.getNetworkName(network) !== ntzparsed.symbol)  {
+      ntzProofInvalid = true;
+      throw new Error('notarisation chain name invalid');
+    }
+
+  } catch(e)  {
+    logdebug('could not validate txid with notarisation data, error=', e?.message);
+    if (ntzProofInvalid)  {
+      let err = Error(`peer disconnected due to bad ntz tx returned ${e?.message} from`, ntzProof.peer.getUrl());
+      err.ban = 1000; // ban this node forever
+      ntzProof.peer.disconnect(err);
+      if (peers.hasMethods()) {
+        logdebug('retrying txid validation with notarisation data, error=', e?.message);
+        return exports.validateTxUsingNtzsProof(peers, network, _txid, height);  // retry if there are connections left
+      }
+    }
     return false;
   }
-
-  if (!txProof || !txProof.partialMerkleTree || !txProof.partialMerkleTree.merkleRoot)
-    throw new Error("proof (partial merkle tree) not found for txid!"); 
-
-  // validate tx against txproof (partial merkle tree)
-  let hashes = bmp.verify(txProof.partialMerkleTree);
-  if (hashes.length == 0 || Buffer.compare(hashes[0], txid) != 0 )  {
-    logerror("invalid tx proof for txid:",  ccutils.hashToHex(txid));
-    throw new Error("txid existence in the chain is not proved!");
-  }
-  // check txproof's merkle root is in notarized block
-  if (Buffer.compare(ntzsProof.common.hdrs[hdrOffset].merkleRoot, txProof.partialMerkleTree.merkleRoot) != 0)   {
-    logerror("merkle root does not match notarization data for txid:",  ccutils.hashToHex(txid));
-    throw new Error("could not check merkle root against notarization data!");
-  }
-
-  // validate next notarization transaction and its notary sigs:
-  let ntzTx = Transaction.fromBuffer(ntzsProof.ntzTxBuf, network);
-  let ntzTxOpreturn = ntzpubkeys.NSPV_notarizationextract(false, true, ntzTx, ntzs.ntz.timestamp);
-  if (ccutils.isError(ntzTxOpreturn))
-    throw ntzTxOpreturn;
-  // check next ntz data
-  if (Buffer.compare(ntzTxOpreturn.destTxid, ntzs.ntz.destTxid) != 0)
-    throw new Error('notarisation data invalid (destTxid in ntz)');
-  if (ntzTxOpreturn.height !== ntzs.ntz.height)
-    throw new Error('notarisation data invalid (height in ntz)');
-  if (ntzTxOpreturn.height !== ntzsProof.common.ntzedHeight)
-    throw new Error('notarisation data invalid (height in ntzsproof)');
-  if (Buffer.compare(ntzTxOpreturn.blockhash, kmdblockindex.kmdHdrHash(ntzsProof.common.hdrs[ntzsProof.common.hdrs.length-1])) != 0)
-    throw new Error('notarisation data invalid (blockhash)');
-
-  // check mom
-  let ntzparsed = ntzpubkeys.NSPV_opretextract(false, ntzTx.outs[1].script);
-  //console.log(ntzparsed)
-
-  // check mom
-  let leaves = [];
-  ntzsProof.common.hdrs.slice().reverse().forEach(h => leaves.push(h.merkleRoot));
-  let mom = fastMerkleRoot(leaves, bcrypto.hash256);
-  if (Buffer.compare(mom, ntzparsed.MoM) !== 0)
-    throw new Error('notarisation MoM invalid'); 
-
-  // check chain name
-  if (coins.getNetworkName(network) !== ntzparsed.symbol)
-    throw new Error('notarisation chain name invalid');
-
+  // cache good proofs
+  addTxProofToCache(height, txProof);
+  addNtzProofToCache(height, ntz, ntzProof);
   return true;
 }
 
@@ -186,6 +290,8 @@ exports.validateTxUsingNtzsProof = async function(peers, network, _txid, height)
  */
 exports.validateTxUsingTxProof = async function(peers, _txid)
 {
+  typeforce('PeerGroup', peers);
+
   let txid = ccutils.castHashBin(_txid);
   let promizeTxproof = nspvTxProof(peers, txid, 0, 0);
 
@@ -208,3 +314,91 @@ exports.validateTxUsingTxProof = async function(peers, _txid)
   return true
 }
 
+class NtzUtxoValidation {
+
+  constructor(_peers, _network, _utxos)
+  {
+    typeforce('PeerGroup', _peers);
+    typeforce(types.Network, _network);
+    typeforce('Array', _utxos);
+
+    this.peers = _peers;
+    this.network = _network;
+    this.utxos = _utxos;
+    this.inWait = new Set();
+    this.tried = new Set();
+  }
+
+  _runLoop(maxoutstanding)  
+  {
+    let BreakException = {};
+    try {
+      this.utxos.forEach((utxo, i) => { 
+        //let o = ccutils.hashToHex(utxo.txid) + new String(utxo.vout);
+        if (typeof utxo.ntzValid === 'undefined' && !this.inWait.has(i))  {
+          this.inWait.add(i); 
+          (async ()=>{ 
+            try {
+              let valid = await exports.validateTxUsingNtzsProof(this.peers, this.network, utxo.txid, utxo.height);
+              this.inWait.delete(i); // not in wait any more
+              utxo.ntzValid = valid;
+              this.tried.add(i);
+            } catch(err) {
+              logdebug('NtzUtxoValidation received error for height', utxo.height, err?.message);
+              this.inWait.delete(i); 
+              if (!err.rateTimeout) {
+                this.tried.add(i);
+              }
+            } 
+          })();
+          if (this.inWait.size > maxoutstanding) throw BreakException;
+        }
+      });
+    }
+    catch(e) {
+      if (e !== BreakException) throw e;
+    }
+  }
+
+  // calc utxos with ntzValidated
+  getTried() 
+  { 
+    return this.tried.size;
+  }
+
+  async execute() 
+  {
+    let sleep = function(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // validate in loop by using max calls at once not to be rejected by the rate limiter
+    const maxperpeer = 7;  // like currently we are limited by at least 15 nspvs/sec or some more. 
+                           // For each validation we need 3 nspv calls, so 7 * 3 = 21 per peer seems okay not get rate limited too often 
+    let maxoutstanding = this.peers.peers.length * maxperpeer;
+    this._runLoop(maxoutstanding);      
+    // wait for utxos to validate
+    let tried = this.getTried();
+
+    while (tried < this.utxos.length)  {  
+      let active = this.activeRequests();
+      if (active > maxoutstanding)  {
+        await sleep(1500);
+        //console.log('validated utxos count=', tried, 'total count=', this.utxos.length, 'active reqs=', active);
+        maxoutstanding = this.peers.peers.length * maxperpeer;
+      }
+      //await setImmediate(this._runLoop.bind(this), maxoutstanding);
+      await sleep(100);
+      if (active <= maxoutstanding)
+        this._runLoop(maxoutstanding);
+      tried = this.getTried();
+    }
+  }
+
+  activeRequests()
+  {
+    return this.inWait.size;
+  }
+}
+
+exports.NtzUtxoValidation = NtzUtxoValidation;

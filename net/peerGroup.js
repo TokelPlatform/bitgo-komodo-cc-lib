@@ -1,5 +1,6 @@
 /**
- * Based on: Bitcoin P2P networking that works in Node and the browser (https://www.npmjs.com/package/bitcoin-net)                                                                       
+ * This source file is based on: 'Bitcoin P2P networking that works in Node and the browser' library (https://www.npmjs.com/package/bitcoin-net)
+ * The MIT License (MIT)
  */
 
 'use strict'
@@ -14,7 +15,6 @@ let net
 try { net = require('net') } catch (err) {}
 const wsstream = require('websocket-stream')
 //const http = require('http')
-//const Exchange = require('peer-exchange')
 const getBrowserRTC = require('get-browser-rtc')
 const once = require('once')
 const assign = require('object-assign')
@@ -27,9 +27,6 @@ const { AddrStates } = require('./addrstates')
 
 require('setimmediate')
 
-// pxp not supported
-//const DEFAULT_PXP_PORT = 8192 // default port for peer-exchange nodes
-
 class PeerGroup extends EventEmitter {
   constructor (params, opts) {
     utils.assertParams(params)
@@ -40,8 +37,6 @@ class PeerGroup extends EventEmitter {
     this.peers = []
     this._hardLimit = opts.hardLimit || false
     this.websocketPort = null
-    // pxp not supported:
-    this._connectPxpWeb = false // opts.connectWeb != null ? opts.connectWeb : process.browser
     this.connectTimeout = opts.connectTimeout != null
       ? opts.connectTimeout : 15 * 1000
     this.peerOpts = opts.peerOpts != null
@@ -77,23 +72,6 @@ class PeerGroup extends EventEmitter {
         webSeeds = webSeeds.concat(this._params.network.webSeeds)
 
       this.webAddrs = new AddrStates(webSeeds);
-
-      /* do not use pxp (save for possible use):
-      if (this._connectPxpWeb)  {
-        try {
-          this._exchange = Exchange(params.magic.toString(16),
-            assign({ wrtc, this.acceptIncoming }, opts.exchangeOpts))
-        } catch (err) {
-          return this._error(err)
-        }
-        this._exchange.on('error', this._error.bind(this))
-        this._exchange.on('connect', (stream) => {
-          this._onConnection(null, stream)
-        })
-        if (!process.browser && this.acceptIncoming) {
-          this._acceptWebsocket()
-        }
-      }*/
     }
     else {
       this.resolvedAddrs = new AddrStates([]); // init empty resolved
@@ -152,12 +130,14 @@ class PeerGroup extends EventEmitter {
     if (this.closed) return socket.destroy()
     let opts = assign({ socket }, this.peerOpts)
     let peer = new Peer(this._params, opts)
+    peer.addr = addr
 
-    // peer error callback
-    let onPeerError = (err) => {
+    // peer once error callback (during connection)
+    let onPeerConnError = (err) => {
+      //console.log('onPeerConnError error event received', peer.getUrl(), err?.message ? err?.message : err)
       err = err || Error('Connection error')
       logdebug(`peer connection error: ${err}`)
-      peer.removeListener('disconnect', onPeerError)
+      peer.removeListener('disconnect', onPeerConnError)
       peer.clearTimers()
       this.emit('connectError', err, peer)  // emit user's event
 
@@ -172,9 +152,10 @@ class PeerGroup extends EventEmitter {
     let onPeerReady = () => {
       if (this.closed) return peer.disconnect()
       // remove once listeners to replace with new ones
-      peer.removeListener('error', onPeerError)
-      peer.removeListener('disconnect', onPeerError)
-      this.addPeer(peer, addrstates, addr)
+      peer.removeListener('error', onPeerConnError)
+      //console.log('onPeerReady on peer error event onPeerConnError cleared', peer.getUrl())
+      peer.removeListener('disconnect', onPeerConnError)
+      this.addPeer(peer, addrstates)
 
       // set conn time
       if (addrstates)
@@ -184,8 +165,9 @@ class PeerGroup extends EventEmitter {
     }
 
     // wait for socket connection errors:
-    peer.once('error', onPeerError)
-    peer.once('disconnect', onPeerError)
+    peer.once('error', onPeerConnError) // Note: if an unhandled error ever happens consider peer.on() instead of peer.once() as there could be several 'error' events (peer handshake then nspv version not supported) 
+    //console.log('_onConnection on peer error event set onPeerConnError', peer.getUrl())
+    peer.once('disconnect', onPeerConnError)
     // socket connected:
     peer.once('ready', onPeerReady)
   }
@@ -205,15 +187,10 @@ class PeerGroup extends EventEmitter {
         getPeerArray.push(this._connectDNSPeer.bind(this))
       }
       // non-browser static peers connections
-      //if (this._tcpAddrs && this._freeAddrCount(this._tcpAddrs) > 0) {
       if (this.tcpAddrs && this.tcpAddrs.freeCount() > 0) {
         getPeerArray.push(this._connectStaticPeer.bind(this, onConnectionCb))
       }
     }
-    /* pxp not supported:
-    if (this._connectPxpWeb && !this.fConnectPlainWeb && this._exchange.peers.length > 0) {
-      getPeerArray.push(this._exchange.getNewPeerCustom.bind(this._exchange))
-    } */
     if (this.fConnectPlainWeb)  {
       if (this.webAddrs && this.webAddrs.freeCount() > 0) {
         getPeerArray.push(this._getNewPlainWebPeer.bind(this))
@@ -314,25 +291,6 @@ class PeerGroup extends EventEmitter {
     socket.unref()
   }
 
-  // pxp not supported (code saved for possible use)
-  // connects to the peer-exchange peers provided by the params
-  /*_connectPxpWebSeeds () {
-    this._webAddrs.forEach((elem) => {
-      let seed = elem.wsaddr
-      logdebug(`connecting to web seed: ${JSON.stringify(seed, null, '  ')}`)
-      let socket = wsstream(seed)
-      socket.on('error', (err) => this._error(err))
-      this._exchange.connect(socket, (err, peer) => {
-        if (err) {
-          logdebug(`error connecting to web seed (pxp): ${JSON.stringify(seed, null, '  ')} ${err.stack}`)
-          return
-        }
-        logdebug(`connected to web seed: ${JSON.stringify(seed, null, '  ')}`)
-        this.emit('webSeed', peer)
-      })
-    })
-  }*/
-
   // connects to a plain websocket 
   _connectPlainWebPeer (addr, onConnectionCb) {
     logdebug(`_connectPlainWebPeer: ${addr}`);
@@ -414,16 +372,6 @@ class PeerGroup extends EventEmitter {
     this.connecting = true
     if (onConnect) this.once('connect', onConnect)  // call user function here
 
-    /* pxp not supported
-    // first, try to connect to pxp web seeds so we can get web peers
-    // once we have a few, start filling peers via any random
-    // peer discovery method
-    if (this._connectPxpWeb && !this.fConnectPlainWeb && this._params.webSeeds && this._webAddrs.length) {
-      this.once('webSeed', () => this._fillPeers())    // connect after pxp discovery
-      return this._connectPxpWebSeeds()
-    }
-    */
-
     // if we aren't using web seeds, start filling with other methods
     this._fillPeers()
   }
@@ -448,19 +396,6 @@ class PeerGroup extends EventEmitter {
     logdebug('finished:', this.peers.length)
   }
 
-  /* pxp not supported
-  _acceptWebsocket (port, cb) {
-    if (process.browser) return cb(null)
-    if (!port) port = DEFAULT_PXP_PORT
-    this.websocketPort = port
-    let server = http.createServer()
-    wsstream.createServer({ server }, (stream) => {
-      this._exchange.accept(stream)
-    })
-    http.listen(port)
-    cb(null)
-  }*/
-
   _onWsAddr(message) {
     //logdebug('received wsaddr message=', message);
 
@@ -468,9 +403,8 @@ class PeerGroup extends EventEmitter {
       return;
 
     message.forEach((elem)=> {
-      // TODO: check nspv service bit
-      //this._addWebAddr(elem.address, elem.port)
-      this.wsAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
+      if (utils.getServices(elem?.services).NODE_NSPV) // check service bit
+        this.wsAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
     })
   }
 
@@ -481,14 +415,15 @@ class PeerGroup extends EventEmitter {
       return;
 
     message.forEach((elem)=> {
-      // TODO: check nspv service bit
-      this.tcpAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
+      if (utils.getServices(elem?.services).NODE_NSPV)
+        this.tcpAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
     })
+    this.tcpAddrs.shuffle();
   }
 
 
   // manually adds a Peer
-  addPeer (peer, addrstates, addr) {
+  addPeer (peer, addrstates) {
     if (this.closed) throw Error('Cannot add peers, PeerGroup is closed')
 
     this.peers.push(peer)
@@ -505,28 +440,33 @@ class PeerGroup extends EventEmitter {
     }
     peer.on('message', onMessage)
 
+    // peer disconnect regular listener  
     peer.once('disconnect', (err) => {
       let index = this.peers.indexOf(peer)
       this.peers.splice(index, 1)
-      peer.removeListener('message', onMessage)
+      peer.removeListener('message', onMessage)  
 
       // clear in-use state: 
       if (addrstates)
-        addrstates.setClear(addr, err)
+        addrstates.setClear(peer.addr, err)  // also sets ban on addr (if ban present in the error)
 
       logerror(`peer disconnected, peer.length = ${this.peers.length}, reason=${err}`)
       if (this.connecting) this._fillPeers()
       this.emit('disconnect', peer, err)
     })
+
+    // peer regular listener
     peer.on('error', (err) => {
-      logdebug(`peer.on error called ${err}`)
+      //console.log('addPeer: on peer error event received', peer.getUrl(), err.message)
+      logdebug(`peer.on error called ${err.message}`)
       this.emit('peerError', err)
       peer.disconnect(err)
 
       // clear in-use state: 
       if (addrstates)
-        addrstates.setClear(addr, err)
+        addrstates.setClear(peer.addr, err)
     })
+    //console.log('addPeer: on peer error event set', peer.getUrl())
 
     this.emit('peer', peer)
   }

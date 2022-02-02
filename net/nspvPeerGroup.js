@@ -32,8 +32,13 @@ class NspvPeerGroup extends PeerGroup {
         //this._startDownloadHeaders();
         //this.emit('downloadHeaders');
         //setImmediate(this._downloadHeaders.bind(this));
-        if (!this.periodicTimer)
-          this.periodicTimer = setInterval(this._periodic.bind(this), this.periodicInterval);
+        this.getAddr({}, ()=>{}); // call once 'getaddr'
+        
+        // periodic disabled as remote side will respond only to one getaddr, 
+        // then will be pushing addr when a new node connects to the net:
+        //if (!this.periodicTimer)
+        //  this.periodicTimer = setInterval(this._periodic.bind(this), this.periodicInterval);
+
         this.emit('nspvConnect');
       });  // redirect to nspvGroup listener
 
@@ -75,6 +80,7 @@ PeerGroup.prototype._downloadHeaders = function()   {
   });
 }
 
+/*
 PeerGroup.prototype._periodic = function()  {
 
   if (this.fConnectPlainWeb)  {
@@ -84,8 +90,8 @@ PeerGroup.prototype._periodic = function()  {
     this.getAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
     //this.getAddrTimer = setInterval(this.getAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getaddr interval 120 sec
   }
-
 }
+*/
 
 
 PeerGroup.prototype.nspvConnect = function(cb) {

@@ -64,11 +64,9 @@ var params = {
 }
 
 var opts = {
-  //connectWeb: true,     // use pxp websockets, not used
-  //wrtc: wrtc,          // not supported any more
   numPeers: 8,
   //hardLimit: 2,        // max peers
-  //connectPlainWeb: true,  // use plain websockets, no PXP
+  //connectPlainWeb: true,  // use plain websockets
   wsOpts: { rejectUnauthorized: false }  // enable self-signed certificates
 }
 

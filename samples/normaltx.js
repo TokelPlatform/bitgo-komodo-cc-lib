@@ -7,6 +7,8 @@ const Block = require('../src/block');
 const kmdmessages = require('../net/kmdmessages');
 const ccutils = require('../cc/ccutils');
 const cctokens = require('../cc/cctokensv2');
+const ntzproofs = require('../cc/ntzproofs');
+
 const ecpair = require('../src/ecpair');
 const address = require('../src/address');
 const BN = require('bn.js')
@@ -75,11 +77,9 @@ var params = {
 }
 
 var opts = {
-  //connectWeb: true,     // use websockets
-  //wrtc: wrtc,          // not supported any more
   numPeers: 8,
   //hardLimit: 2,        // max peers
-  //connectPlainWeb: true,  // use plain websockets, no PXP
+  //connectPlainWeb: true,  // use plain websockets
   //wsOpts: { rejectUnauthorized: false } 
 }
 
@@ -108,29 +108,31 @@ if (!process.browser)
       //console.log('txhex=', txhex);
 
       let result
+      // test getTxids
       //result = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
-      //let result = await ccutils.getTxids(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
-      //let result = await ccutils.getUtxos(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
+      //result = await ccutils.getTxids(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
+      //result = await ccutils.getTxids(peers, "CeyfG2RJpA8CxPLNyTEM8HYFTNgXAdHc8w", 0, 0, 0);
+      //result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
+      //result = await ccutils.getTxids(peers, "RLJYAu3C76CMjjW4PLZnk7LBLdc4Mv15oZ", 0, 0, 0);
+
+      // test getUtxos
+      //result = await ccutils.getUtxos(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
       //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
       /////result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfA", 0, 0, 0); // bad addr (zfQ->zfA)
       //result = await ccutils.getUtxos(peers, "RKHhQYybJuAeu4aoc3hhu2nCzLFivBx2D4", 0, 0, 0);
       //result = await ccutils.getUtxos(peers, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", 0, 0, 0);
       //result = await ccutils.getCCUtxos(peers, "RXnxmVxXXvxF8Fo9kstYeJFRbWvhsJV2u8", 0, 0);
       //result = await ccutils.getUtxos(peers, "RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu", 0, 0, 0);
-      //result = await ccutils.getTxids(peers, "CeyfG2RJpA8CxPLNyTEM8HYFTNgXAdHc8w", 0, 0, 0);
-      //result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
       //result = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
       //result = await ccutils.getUtxos(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0);
-      //console.log('result=', result);
-
-      
-      /*result = await ccutils.getTxids(peers, "RAAF8xJ7Ya9hferR3ibtQDJHBFCXY4CSJE", 0, 0, 0);
-      console.log('result=', result, result.txids.length);
-      result.txids.forEach(t => {
-        console.log(ccutils.hashToHex(t.txid), t.index, t.satoshis.toString(), t.height);
-      });*/
-      
-
+      //result = await ccutils.getUtxos(peers, "RUXbcRsdGo1W8KiErtY7RXaN6BXAkoWkYq", 0, 0);
+      //result = await ccutils.getUtxos(peers, "RN5w8gFZn3owmbhf9ES8EwU6jWQgzPPZkR", 0, 0); // tokel 22+ miner moved often
+      //result = await ccutils.getUtxos(peers, "RWQrQd6MiuW5Eqqv9E8JE6arLQVZ4q8pSS", 0, 0); // tokel 17000 utxos
+      result = await ccutils.getUtxos(peers, "RGTb3FySV8kNCp7BbHP2uR4G4Gjwdvqogo", 0, 0); // tokel 2645
+      //result = await ccutils.getUtxos(peers, "RWtnNgmwtsiM35tYfWjf8xxgf8GFDZvEfg", 0, 0); // tokel 1
+      //result = await ccutils.getUtxos(peers, "R9SNVd4zmTAjrtWrpXebr8PGCEdkA9YZxj", 0, 0); // tokel
+      console.log('result=', result, 'utxo.length=', result?.utxos.length);
+  
       /* check addresses in the getTxids result
        add txids in set (remove duplicates)
       let params = [ peers, mypk ];
@@ -153,6 +155,7 @@ if (!process.browser)
 
       // gettransactionsmany:
       //result = await ccutils.getTransactionsMany(peers, mypk, "cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad36577930b6", "0a1b489bf8f7c3ca9b29f8a1ecae0de8399e6ef06bd62786d3a8ad365779AAAA");
+      //result = await ccutils.getTransactionsMany(peers, mypk,"77036823bd324a8e6c79daba87fe2fcbcc7ce21a823e0b7e2706ef9f71232b49", "68a6ae4c286c91aef0aa243f1a00b692c94050ea079c70aca4cfb2a786650db4"); //tokel
       //console.log('result=', result);
 
       /*
@@ -185,6 +188,8 @@ if (!process.browser)
       });
       */
 
+      /*
+      nspv v7!!
       let result2 = await general.nspvGetTransactions(peers, false, 
         '69b8d6eaaa2af8a952c5df329961ecec00a32e9e58eebb8bb831fb8e845e1c25',   // tokel not exist
         'e932fdacaa16906e1ad70c4bfe52779094c565cec52c69b3182cbe081cf9f94b',   // tokel not exist
@@ -196,6 +201,7 @@ if (!process.browser)
       result2.txns.forEach(tx => {
         console.log("tx out len", tx.outs.length, "tx", tx );
       });
+      */
 
       // tokev2address:
       //let tokev2address = await cctokens.TokenV2Address(peers, mypk, mypk);
@@ -221,7 +227,7 @@ if (!process.browser)
       //console.log('txdecoded=', txdecoded);
     }
     catch(err) {
-      console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
+      console.log('caught err=', err, 'code=', err?.code, 'message=', err?.message);
     }
     peers.close();
     console.log('test finished');

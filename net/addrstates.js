@@ -5,7 +5,7 @@ const logdebug = Debug('nspv')
 const logerror = Debug('nspv:error');
 
 const { URL } = require('url');
-const { parseAddress } = require('./utils.js')
+const { parseAddress, shuffleArray } = require('./utils.js')
 
 const ADDRSTATE = {
 	FREE: 0,
@@ -136,6 +136,11 @@ class AddrStates {
 			})
 		}
 		return selected !== undefined ? selected.href : null;
+	}
+
+	shuffle()
+	{
+		shuffleArray(this.addresses);
 	}
 
 	static canUse(addrState) {

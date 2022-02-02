@@ -1,5 +1,6 @@
 /**
- * Based on: Bitcoin P2P networking that works in Node and the browser (https://www.npmjs.com/package/bitcoin-protocol)                                                                       
+ * This source file is based on: 'Bitcoin P2P networking that works in Node and the browser' library (https://www.npmjs.com/package/bitcoin-net)
+ * The MIT License (MIT)
  */
 
 'use strict'
@@ -13,16 +14,13 @@ const typeforce = require('typeforce');
 //const { types } = require('bitcoin-protocol');
 const types = require('../src/types');
 //const bigi = require('bigi');
+//const { assert } = require('sinon');
 const bn64 = require('../src/bn64');
-
-//const { validateTxUsingNtzsProof } = require('../cc/ntzproofs');
-
 
 //var typeforce = require('typeforce');
 //const { varBuffer } = require('bitcoin-protocol/src/types');
 //var typeforceNT = require('typeforce/nothrow');
 
-exports.NSPV_VERSION_5 = 0x0005;
 exports.NSPV_VERSION = 0x0006;
 
 exports.buffer8 = struct.Buffer(8)
@@ -168,7 +166,7 @@ let transaction = struct([
   {
     name: 'outs',
     type: struct.VarArray(varint, struct([
-      { name: 'value', type: struct.UInt64LE },
+      { name: 'value', type: exports.bigInt64LE },
       { name: 'script', type: exports.varBuffer }
     ]))
   },
@@ -219,7 +217,7 @@ let witnessTransaction = struct([
   {
     name: 'outs',
     type: struct.VarArray(varint, struct([
-      { name: 'value', type: struct.UInt64LE },
+      { name: 'value', type: exports.bigInt64LE },
       { name: 'script', type: exports.varBuffer }
     ]))
   }
@@ -599,7 +597,7 @@ let nspvTxProofResp = (function(){
     let respCode = bufferReader.readUInt8();
     let requestId = bufferReader.readUInt32();
     let txid = bufferReader.readSlice(32);
-    let unspentValue = struct.Int64LE.decode(bufferReader.buffer, bufferReader.offset);  // bufferReader.readUInt64();
+    let unspentValue = exports.bigInt64LE.decode(bufferReader.buffer, bufferReader.offset);  // bufferReader.readUInt64(), struct.Int64LE.decode(..)
     bufferReader.offset += 8;
     let height = bufferReader.readUInt32();
     let vout = bufferReader.readUInt32();
@@ -841,16 +839,13 @@ exports.nspvResp = (function () {
     return buffer.slice(offset, offset + bytes)
   }
 
-  function getEncodingType(code, expectVersion)
+  function getEncodingType(code)
   {
     let type;
     switch(code)
     {
       case NSPVMSGS.NSPV_INFORESP:
-        if (expectVersion == 5)
-          type = nspvInfoResp_v5;
-        else
-          type = nspvInfoResp;
+        type = nspvInfoResp;
         break;
       case NSPVMSGS.NSPV_UTXOSRESP:
         type = nspvUtxosResp;
@@ -885,9 +880,9 @@ exports.nspvResp = (function () {
     return type;
   }
 
-  function decode (buffer, offset = 0, end = buffer.length, expectVersion) {
+  function decode (buffer, offset = 0, end = buffer.length) {
     let respCode = buffer[0];
-    let type = getEncodingType(respCode, expectVersion);
+    let type = getEncodingType(respCode);
     if (type === undefined)
       return;
     let resp = type.decode(buffer, offset, end)

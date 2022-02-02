@@ -62,6 +62,38 @@ getSocketUrl(socket)
 }
 */
 
+const serviceBits = {
+  'NODE_NETWORK': 0,
+  'NODE_GETUTXO': 1,
+  'NODE_BLOOM': 2,
+  'NODE_WITNESS': 3,
+  'NODE_NETWORK_LIMITED': 10,
+  'NODE_NSPV': 30,
+}
+function getServices (buf) {
+  let services = {}
+    if (Buffer.isBuffer(buf))  {
+    for (let name in serviceBits) {
+      let byteIndex = Math.floor(serviceBits[name] / 8)
+      let byte = buf.readUInt32LE(byteIndex)
+      let bitIndex = serviceBits[name] % 8
+      if (byte & (1 << bitIndex)) {
+        services[name] = true
+      }
+    }
+  }
+  return services
+}
+
+function shuffleArray(array) {
+  for (var i = array.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = array[i];
+      array[i] = array[j];
+      array[j] = temp;
+  }
+}
+
 module.exports = {
   getRandom,
   parseAddress,
@@ -69,4 +101,6 @@ module.exports = {
   getBlockHash,
   getTxHash,
   sha256,
+  getServices,
+  shuffleArray,
 }
