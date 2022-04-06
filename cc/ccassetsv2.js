@@ -87,6 +87,63 @@ function decodeTokensAssetsV2OpReturn(spk)
   return tokenData;
 }
 
+/** 
+ * fetch a bid or ask order by its txid and decode its info and related asset
+ * @param {*} peers nspvPeerGroup object
+ * @param {*} mynetwork a network from networks.js chain params
+ * @param {*} txid txid of bid or ask order
+ */
+function tokenV2FetchOrder(peers, mynetwork, wif, txid) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+  typeforce('String', txid);
+
+  return new Promise(async (resolve, reject) => {
+    // TODO: this repeats a lot throught the file, we can surely turn it into a function
+    const mypair = ecpair.fromWIF(wif, mynetwork);
+    const mypk = mypair.getPublicKeyBuffer();
+    const mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
+
+    const txns = await ccutils.getTransactionsMany(peers, mypk, ccutils.castHashBin(txid));
+
+    if (!txns || !Array.isArray(txns.transactions) || txns.transactions.length != 1)
+      throw new Error("could not load order tx");
+
+    const ordertx = Transaction.fromHex(txns.transactions[0].tx, mynetwork);
+
+    if (ordertx.outs.length < 2)
+      throw new Error("invalid order tx (structure)");
+
+    const amount = new BN(ordertx.outs[0].valueZat);
+    const order = decodeTokensAssetsV2OpReturn(
+      ordertx.outs[ordertx.outs.length - 1].script
+    );
+
+    if (order.assetData.funcid !== "s" && order.assetData.funcid !== "b")
+      throw new Error("invalid order tx (funcid)");
+
+    const unitPrice = order.assetData.unitPrice;
+
+    if (!unitPrice)
+      throw new Error("invalid order tx (unitprice");
+
+    const type = order.assetData.funcid === "s" ? "ask" : "bid";
+
+    const originPk = Buffer.from(order.assetData.origpk).toString('hex');
+    const tokenId = Buffer.from(order.tokenid.reverse()).toString('hex');
+
+    const originNormalAddress = ccutils.pubkey2NormalAddressKmd(originPk);
+
+    const token = await cctokens.tokensInfoV2Tokel(peers, mynetwork, wif, tokenId)
+
+    if (!token)
+      throw new Error("invalid tokenid (bad token tx)");
+
+    resolve({ amount, type, unitPrice, token, originPk, originNormalAddress });
+  });
+}
+
 /**
  * create assets v2 ask tx
  * @param {*} peers nspvPeerGroup object
@@ -824,5 +881,5 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
 
 module.exports = {
   tokenv2ask, tokenv2bid, tokenv2fillask, tokenv2fillbid, tokenv2cancelask, tokenv2cancelbid,
-  assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
+  tokenV2FetchOrder, assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
 }

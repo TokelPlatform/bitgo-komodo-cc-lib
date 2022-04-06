@@ -30,5 +30,6 @@ module.exports = {
   ccbasic: require('../cc/ccbasic'),
   ccimp: require('../cc/ccimp'),
   cctokensv2: require('../cc/cctokensv2'),
+  ccassetsv2: require('../cc/ccassetsv2'),
   nspvConnect: require('../net/connect'),
 };
