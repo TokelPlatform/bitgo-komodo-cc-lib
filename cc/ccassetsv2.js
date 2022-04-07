@@ -91,13 +91,13 @@ function decodeTokensAssetsV2OpReturn(spk)
  * fetch a bid or ask order by its txid and decode its info and related asset
  * @param {*} peers nspvPeerGroup object
  * @param {*} mynetwork a network from networks.js chain params
- * @param {*} txid txid of bid or ask order
+ * @param {*} orderid txid of bid or ask order
  */
-function tokenV2FetchOrder(peers, mynetwork, wif, txid) {
+function tokenV2FetchOrder(peers, mynetwork, wif, orderid) {
   typeforce('PeerGroup', peers);
   typeforce(types.Network, mynetwork);
   typeforce('String', wif);
-  typeforce('String', txid);
+  typeforce('String', orderid);
 
   return new Promise(async (resolve, reject) => {
     // TODO: this repeats a lot throught the file, we can surely turn it into a function
@@ -105,7 +105,7 @@ function tokenV2FetchOrder(peers, mynetwork, wif, txid) {
     const mypk = mypair.getPublicKeyBuffer();
     const mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
 
-    const txns = await ccutils.getTransactionsMany(peers, mypk, ccutils.castHashBin(txid));
+    const txns = await ccutils.getTransactionsMany(peers, mypk, ccutils.castHashBin(orderid));
 
     if (!txns || !Array.isArray(txns.transactions) || txns.transactions.length != 1)
       throw new Error("could not load order tx");
@@ -140,7 +140,7 @@ function tokenV2FetchOrder(peers, mynetwork, wif, txid) {
     if (!token)
       throw new Error("invalid tokenid (bad token tx)");
 
-    resolve({ amount, type, unitPrice, token, originPk, originNormalAddress });
+    resolve({ orderid, amount, type, unitPrice, token, originPk, originNormalAddress });
   });
 }
 
