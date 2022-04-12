@@ -115,7 +115,6 @@ function tokenV2FetchOrder(peers, mynetwork, wif, orderid) {
     if (ordertx.outs.length < 2)
       throw new Error("invalid order tx (structure)");
 
-    const amount = new BN(ordertx.outs[0].valueZat);
     const order = decodeTokensAssetsV2OpReturn(
       ordertx.outs[ordertx.outs.length - 1].script
     );
@@ -127,6 +126,8 @@ function tokenV2FetchOrder(peers, mynetwork, wif, orderid) {
 
     if (!unitPrice)
       throw new Error("invalid order tx (unitprice");
+
+    const amount = ordertx.outs[0].value.div(unitPrice);
 
     const type = order.assetData.funcid === "s" ? "ask" : "bid";
 
