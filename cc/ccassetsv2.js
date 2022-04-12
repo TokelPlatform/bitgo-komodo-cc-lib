@@ -122,12 +122,12 @@ function tokenV2FetchOrder(peers, mynetwork, wif, orderid) {
     if (order.assetData.funcid !== "s" && order.assetData.funcid !== "b")
       throw new Error("invalid order tx (funcid)");
 
-    const unitPrice = order.assetData.unitPrice;
+    const bnUnitPrice = order.assetData.unitPrice;
 
-    if (!unitPrice)
+    if (!bnUnitPrice)
       throw new Error("invalid order tx (unitprice");
 
-    const amount = ordertx.outs[0].value.div(unitPrice);
+    const bnAmount = ordertx.outs[0].value.div(bnUnitPrice);
 
     const type = order.assetData.funcid === "s" ? "ask" : "bid";
 
@@ -141,7 +141,7 @@ function tokenV2FetchOrder(peers, mynetwork, wif, orderid) {
     if (!token)
       throw new Error("invalid tokenid (bad token tx)");
 
-    resolve({ orderid, amount, type, unitPrice, token, originPk, originNormalAddress });
+    resolve({ orderid, bnAmount, type, bnUnitPrice, token, originPk, originNormalAddress });
   });
 }
 
