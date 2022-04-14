@@ -122,14 +122,13 @@ function tokenV2FetchOrder(peers, mynetwork, wif, orderid) {
     if (order.assetData.funcid !== "s" && order.assetData.funcid !== "b")
       throw new Error("invalid order tx (funcid)");
 
+    const type = order.assetData.funcid === "s" ? "ask" : "bid";
     const bnUnitPrice = order.assetData.unitPrice;
 
     if (!bnUnitPrice)
       throw new Error("invalid order tx (unitprice");
 
-    const bnAmount = ordertx.outs[0].value.div(bnUnitPrice);
-
-    const type = order.assetData.funcid === "s" ? "ask" : "bid";
+    const bnAmount = type === "bid" ? ordertx.outs[0].value.div(bnUnitPrice) : ordertx.outs[0].value;
 
     const originPk = Buffer.from(order.assetData.origpk).toString('hex');
     const tokenId = Buffer.from(order.tokenid.reverse()).toString('hex');
