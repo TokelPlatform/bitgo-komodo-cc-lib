@@ -53,6 +53,21 @@ async function create_normaltx(_wif, _destaddress, _satoshi, _network, _peers) {
   return tx.toHex();
 }
 
+
+async function calcMedianPastTime(peers)
+{
+  let info = await ccutils.nspvGetInfo(peers, 0);
+  // step -20 blocks: 
+  let infoback20 = await ccutils.nspvGetInfo(peers, info.height - 20);
+  let headers = await ccutils.nspvGetHeaders(peers, infoback20.header.prevHash)
+  //console.log('headers:', headers.length);
+  let times = [];
+  for (let i = headers.length - 1; i >= 0 && headers.length - i <= 11; i --)
+    times.push(headers[i].header.timestamp);
+  times.sort(function(a, b) { return a - b; });
+  return times.length > 0 ? times[(times.length-1)/2] : 0;  
+}
+
 async function makeNormalTx(wif, destaddress, amount, network, peers) 
 {
   typeforce(types.BN, amount);
@@ -73,6 +88,10 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
   if (txbuilder.tx.version >= 3)
     txbuilder.setVersionGroupId(tx.versionGroupId);
 
+  if (txbuilder.tx.locktime == 0)  { // until createTxAndAddNormalInputs starts to fill 
+    txbuilder.tx.locktime = await calcMedianPastTime(peers)
+  }
+
   // parse txwutxos.previousTxns and add them as vins to the created tx
   let added = ccutils.addInputsFromPreviousTxns(txbuilder, tx, txwutxos.previousTxns, network);
   if (added.lt(amountfee))
@@ -81,7 +100,8 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
   txbuilder.addOutput(destaddress, amount);
   let myaddress = ccutils.pubkey2NormalAddressKmd(mypair.getPublicKeyBuffer());  // pk to kmd address
   const change = added.sub(amountfee);
-  txbuilder.addOutput(myaddress, change);  // change
+  if (change.gt(ccutils.BN_MYDUST) )
+    txbuilder.addOutput(myaddress, change);  // change
 
   if (txbuilder.tx.version >= 4)
     txbuilder.setExpiryHeight(tx.expiryHeight);
@@ -91,7 +111,7 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
 }
 
 /**
- * get transactions by txids. Remote peer would not return respinses more than MAX_PROTOCOL_MESSAGE_SIZE (8MB)
+ * get transactions by txids. Remote peer would not return responses more than MAX_PROTOCOL_MESSAGE_SIZE (8MB)
  * this request is a replacement for nspvGetTransactionsMany
  * @param {*} peers 
  * @param {*} mempool check mempool 
