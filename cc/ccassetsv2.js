@@ -26,6 +26,7 @@ const typeforce = require('typeforce');
 const typeforceNT = require('typeforce/nothrow');
 const bscript = require("../src/script");
 
+const markerfee = 10000;
 
 const assetsv2GlobalPk = "0345d2e7ab018619da6ed58ccc0138c5f58a7b754bd8e9a1a9d2b811c5fe72d467";
 const assetsv2GlobalPrivkey = Buffer.from([0x46, 0x58, 0x3b, 0x18, 0xee, 0x16, 0x63, 0x51, 0x6f, 0x60, 0x6e, 0x09, 0xdf, 0x9d, 0x27, 0xc8, 0xa7, 0xa2, 0x72, 0xa5, 0xd4, 0x6a, 0x9b, 0xcb, 0xd5, 0x4f, 0x7d, 0x1c, 0xb1, 0x2e, 0x63, 0x21]);
@@ -302,7 +303,6 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, bnUnits, tokenid, bnUnitP
   //ccbasic.cryptoconditions = await ccimp;  // lets load it in the topmost call
 
   const txfee = 10000;
-  const markerfee = 10000;
   const bnNormalAmount = new BN(txfee + markerfee);
 
   if (bnUnitPrice.lt(BN_0))
@@ -380,7 +380,6 @@ async function makeTokenV2BidTx(peers, mynetwork, wif, bnUnits, tokenid, bnUnitP
   //ccbasic.cryptoconditions = await ccimp;  // lets load it in the topmost call
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
-  const markerfee = 10000;
 
   if (bnUnitPrice.lt(BN_0))
     throw new Error("invalid token price");
@@ -471,7 +470,6 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, bnFil
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
-  const markerfee = 10000;
   const bnPaidAmount = bnUnitPrice.mul(new BN(bnFillUnits));
   const bnNormalAmount = new BN(txfee).add(bnPaidAmount).add( new BN( bnAskTokens.sub(bnFillUnits).gt(BN_0) ? markerfee : 0 ));  //txfee + paidAmount + (askTokens - fillUnits > 0 ? markerfee : 0);
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
@@ -593,8 +591,7 @@ async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, bnFil
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
-  const markerfee = 10000;
-  const bnNormalAmount = new BN(txfee).add(bnPaidAmount).add( bnBidTokens.sub(bnFillUnits).gt(BN_0) ? new BN(markerfee) : BN_0 );
+  const bnNormalAmount = new BN(txfee).add( bnBidTokens.sub(bnFillUnits).gt(BN_0) ? new BN(markerfee) : BN_0 );  // no marker if the order is fully filled 
 
   const assetsGlobalPk = Buffer.from(assetsv2GlobalPk, 'hex');
 
@@ -657,7 +654,7 @@ if (tokensChange != 0LL)
     txbuilder.addOutput(bidCreatorAddress, bnBidAmount.sub(bnPaidAmount));  // if no tokens remaining or dust then send back to bidder
   }
   
-  txbuilder.addOutput(mynormaladdress, bnPaidAmount.sub(bnRoyaltyValue));  // purchased coins for tokens
+  txbuilder.addOutput(mynormaladdress, bnPaidAmount.sub(bnRoyaltyValue));  // purchased coins for tokens without royalty
   if (bnRoyaltyValue.gt(BN_0))  {
     let tokenCreatorAddress = ccutils.pubkey2NormalAddressKmd(tokenData.origpk);
     txbuilder.addOutput(tokenCreatorAddress, bnRoyaltyValue);  // royalty to token creator
@@ -678,7 +675,7 @@ if (tokensChange != 0LL)
   }
 
   if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
-    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
+    txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // normal change
 
   txbuilder.addOutput(cctokens.encodeTokensV2OpReturn(tokenid, 
                                 encodeAssetsV2Data('B', bidData.assetData.unitPrice, bidData.assetData.origpk, bidData.assetData.expiryHeight)), 0); // make opreturn
@@ -697,7 +694,9 @@ if (tokensChange != 0LL)
 async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 {
   const txfee = 10000;
-  const bnNormalAmount = new BN(txfee);
+  // const bnNormalAmount = (new BN(txfee)).sub(new BN(markerfee));  // marker fee as txfee: enable when createTxAndAddNormalInputs allows 0 amount
+  const bnNormalAmount = (new BN(txfee));  
+
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();
@@ -788,7 +787,8 @@ async function makeTokenV2CancelAskTx(peers, mynetwork, wif, tokenid, askid)
 async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
 {
   const txfee = 10000;
-  const bnNormalAmount = new BN(txfee);
+  //const bnNormalAmount = (new BN(txfee)).sub(new BN(markerfee));  // marker fee as txfee: enable when createTxAndAddNormalInputs allows 0 amount
+  const bnNormalAmount = (new BN(txfee));  // marker fee as txfee: enable when createTxAndAddNormalInputs allows 0 amount
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
   let mypk = mypair.getPublicKeyBuffer();

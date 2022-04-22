@@ -432,14 +432,13 @@ function addInputsFromPreviousTxns(txbuilder, tx, prevTxnsHex, network)
   let bnAdded = new BN(0);
   for(let i = 0; i < tx.ins.length; i ++) {
     let prevTxHex = prevTxnsHex.find((txHex) => {
-        // let r = Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
-        // logdebug('prevtx getHash()=', Transaction.fromHex(txHex, network).getHash().toString('hex'), 'tx.ins[i].hash=', tx.ins[i].hash.toString('hex'), 'equals=', r);
         return Transaction.fromHex(txHex, network).getHash().equals(tx.ins[i].hash);
     });
     if (prevTxHex !== undefined) {
       let prevTx = Transaction.fromBuffer(Buffer.from(prevTxHex, 'hex'), network);
       bnAdded.iadd(prevTx.outs[tx.ins[i].index].value);
-      txbuilder.addInput(prevTx, tx.ins[i].index, tx.ins[i].sequence, prevTx.outs[tx.ins[i].index].script);
+      // 0xFFFFFFFE to allow time lock:
+      txbuilder.addInput(prevTx, tx.ins[i].index, 0xFFFFFFFE, prevTx.outs[tx.ins[i].index].script);
     }
   }
   return bnAdded;
@@ -642,6 +641,29 @@ function nspvBroadcast(peers, txid, txhex)
 
   return new Promise((resolve, reject) => {
     peers.nspvBroadcast(txid, txhex, {}, (err, res, peer) => {
+    if (!err) 
+        resolve(res);
+    else
+        reject(err);
+    });
+  });
+}
+
+exports.nspvGetHeaders = nspvGetHeaders;
+/**
+ * calls GetHeaders from a nspv peer
+ * @param {*} peers 
+ * @param {*} rloc starting header
+ * @returns 
+ */
+function nspvGetHeaders(peers, loc)
+{
+  typeforce('PeerGroup', peers);
+  typeforce(typeforce.oneOf('String', 'Buffer'), loc);
+
+  let locbin = exports.castHashBin(loc);
+  return new Promise((resolve, reject) => {
+    peers.getHeaders([locbin], {}, (err, res, peer) => {
     if (!err) 
         resolve(res);
     else
