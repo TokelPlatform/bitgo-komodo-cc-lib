@@ -88,10 +88,65 @@ function decodeTokensAssetsV2OpReturn(spk)
   return tokenData;
 }
 
+/**
+ * fetch orders posted towards a specific token (both bids and asks)
+ * @param {*} peers nspvPeerGroup object
+ * @param {*} mynetwork a network from networks.js chain params
+ * @param {*} wif generate keypair from
+ * @param {*} tokenid txid of token to look for
+ */
+function tokenV2Orders(peers, mynetwork, wif, tokenid) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+
+  // TODO: this repeats a lot throught the file, we can surely turn it into a function
+  const mypair = ecpair.fromWIF(wif, mynetwork);
+  const mypk = mypair.getPublicKeyBuffer();
+  // const mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
+
+  return new Promise((resolve, reject) => {
+    peers.nspvRemoteRpc("tokenv2orders", mypk, tokenid, {}, (err, res, peer) => {
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });  
+}
+
+
+/**
+ * fetch orders posted by my address
+ * @param {*} peers nspvPeerGroup object
+ * @param {*} mynetwork a network from networks.js chain params
+ * @param {*} wif generate keypair from
+ */
+function myTokenV2Orders(peers, mynetwork, wif) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce('String', wif);
+
+  // TODO: this repeats a lot throught the file, we can surely turn it into a function
+  const mypair = ecpair.fromWIF(wif, mynetwork);
+  const mypk = mypair.getPublicKeyBuffer();
+  // const mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
+
+  return new Promise((resolve, reject) => {
+    peers.nspvRemoteRpc("mytokenv2orders", mypk, undefined, {}, (err, res, peer) => {
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });  
+}
+
 /** 
  * fetch a bid or ask order by its txid and decode its info and related asset
  * @param {*} peers nspvPeerGroup object
  * @param {*} mynetwork a network from networks.js chain params
+ * @param {*} wif generate keypair from
  * @param {*} orderid txid of bid or ask order
  */
 function tokenV2FetchOrder(peers, mynetwork, wif, orderid) {
@@ -880,6 +935,6 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
 
 
 module.exports = {
-  tokenv2ask, tokenv2bid, tokenv2fillask, tokenv2fillbid, tokenv2cancelask, tokenv2cancelbid,
-  tokenV2FetchOrder, assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
+  tokenv2ask, tokenv2bid, tokenv2fillask, tokenv2fillbid, tokenv2cancelask, tokenv2cancelbid, myTokenV2Orders,
+  tokenV2Orders, tokenV2FetchOrder, assetsv2GlobalPk, assetsv2GlobalPrivkey, assetsv2GlobalAddress, EVAL_ASSETSV2
 }
