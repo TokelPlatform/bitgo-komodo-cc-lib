@@ -19,6 +19,7 @@ const typeforce = require('typeforce');
 //require('../net/nspvPeer');  // init peer.js too
 const general = require('../cc/general.js')
 const connect = require('../net/connect.js')
+const bscript = require("../src/script");
 
 
 const networks = require('../src/networks');
@@ -28,7 +29,8 @@ const networks = require('../src/networks');
 //const mynetwork = networks.TKLTEST; 
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.DIMXY24;
-const mynetwork = networks.TOKEL; 
+const mynetwork = networks.DIMXY28;
+//const mynetwork = networks.TOKEL; 
 
 // not used for plan websockets, only for PXP which is not supported
 //var defaultPort = 1111
@@ -89,6 +91,8 @@ const mywif2 = 'UuKUSQHnRGk4CDbRnbLRrJHq5Dwx58qR9Q9K2VpJjn3APXLurNcu';
 const mywif3 = 'Usr24VoC3h4cSfSrFiGJkWLYwmkM1VnsBiMyWZvrF6QR5ZQ6Fbuu'; //  "address": "RXTUtWXgkepi8f2ohWLL9KhtGKRjBV48hT",
 const mywif4 = 'UvksaDo9CTFfmYNcc6ykmAB28k3dfgFcufRLFVcNuNJH4yJf2K9F'; // 03b1e5feb25fa411911d21310716249f14712cead2cdfce62dd66a0c3702262c60 RYPvTE2bECHz17W7k7NaVJFAhNSEFf2grb 
 
+var OPS = require('bitcoin-ops')
+
 if (!process.browser) 
 {
   connect(params, opts)
@@ -100,14 +104,54 @@ if (!process.browser)
       let mypk = mypair.getPublicKeyBuffer();
       // tests:
       
+      let scriptpkh = bscript.compile([ Buffer.from('cbbe6862','hex'), OPS.OP_CHECKLOCKTIMEVERIFY, OPS.OP_DROP, OPS.OP_DUP, OPS.OP_HASH160,  Buffer.from('71be4fa8b728659d0cffba7619a7177202b74521', 'hex'), OPS.OP_EQUALVERIFY, OPS.OP_CHECKSIG ])
+      let addrpkh = address.fromOutputScript(scriptpkh, mynetwork)
+      console.log('addrpkh=', addrpkh)
+
+      let scriptpk = bscript.compile([ Buffer.from('cbbe6862','hex'), OPS.OP_CHECKLOCKTIMEVERIFY, OPS.OP_DROP, Buffer.from('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 'hex'), OPS.OP_CHECKSIG ])
+      let addrpk = address.fromOutputScript(scriptpk, mynetwork)
+      console.log('addrpk=', addrpk)
+
       // make a normal tx
       //let txhex = await general.create_normaltx(mywif2, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN((88+15.4+5)*100000000), mynetwork, peers);  // amount in satoshi
       //let txhex = await general.create_normaltx(mywif, "RAsjA3jDLMGMNAtkx7RyPiqvkrmJPqCzfQ", new BN(5000), mynetwork, peers);
       //let txhex = await general.create_normaltx(mywif3, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(30.9 * 100000000), mynetwork, peers);  // amount in satoshi
       //let txhex = await general.create_normaltx(mywif, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", new BN(0.9 * 100000000), mynetwork, peers);  // amount in satoshi
-      //console.log('txhex=', txhex);
 
       let result
+      //result = await ccutils.getUtxos(peers, "R9gPDtRGsPPARV2CFaQNinsewM2n4WYGSu", 0, 0); // tokel 
+      result = await ccutils.getUtxos(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0);  
+      console.log(/*'result=', result,*/ 'utxo.length=', result?.utxos.length);
+      let i = 0;
+      for(const utxo of result.utxos) {
+        let isUnlocked = await general.isUtxoTimeUnlocked(peers, utxo)
+        i ++
+        console.log(i, 'amount', utxo.satoshis.toString(), "nLockTime=", utxo.nLockTime, ' isUtxoTimeUnlocked=', isUnlocked)
+      }
+
+
+      /*let loc = Buffer.from("0000000215b33a67cd939b2586ac8fe3bfc8bf54ffc23e7db9fe7f95b874e2f0", 'hex');
+      console.log('loc', ccutils.hashToHex(loc));
+      peers.getHeaders([loc], {}, (err, headers) => {
+        if (headers) {
+          console.log("received headers", headers.length);
+          //if (headers.length)
+          //  locnew = kmdblockindex.kmdHdrHash(headers[headers.length-1].header);
+        }
+      });*/
+      
+
+
+      //let txhex = await general.create_normaltx(mywif, "R9gPDtRGsPPARV2CFaQNinsewM2n4WYGSu", new BN(2.469034 * 100000000 - 10000), mynetwork, peers);  // amount in satoshi
+      //let txhex = await general.create_normaltx(mywif, "RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu", new BN(100 * 100000000), mynetwork, peers);  // amount in satoshi
+      // console.log('txhex=', txhex);
+
+      // sleep to insert delay between nspv calls to bypass the old nspv rate limiter
+      let sleep = function(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+      //await sleep(11000)
+
       // test getTxids
       //result = await ccutils.getTxids(peers, "RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef", 0, 0, 0);
       //result = await ccutils.getTxids(peers, "RUXnkW5xrGJe4MG8B7YzM7YhuSoE44RVTe", 0, 0, 0);
@@ -128,11 +172,12 @@ if (!process.browser)
       //result = await ccutils.getUtxos(peers, "RUXbcRsdGo1W8KiErtY7RXaN6BXAkoWkYq", 0, 0);
       //result = await ccutils.getUtxos(peers, "RN5w8gFZn3owmbhf9ES8EwU6jWQgzPPZkR", 0, 0); // tokel 22+ miner moved often
       //result = await ccutils.getUtxos(peers, "RWQrQd6MiuW5Eqqv9E8JE6arLQVZ4q8pSS", 0, 0); // tokel 17000 utxos
-      result = await ccutils.getUtxos(peers, "RGTb3FySV8kNCp7BbHP2uR4G4Gjwdvqogo", 0, 0); // tokel 2645
+      //result = await ccutils.getUtxos(peers, "RGTb3FySV8kNCp7BbHP2uR4G4Gjwdvqogo", 0, 0); // tokel 2645
       //result = await ccutils.getUtxos(peers, "RWtnNgmwtsiM35tYfWjf8xxgf8GFDZvEfg", 0, 0); // tokel 1
       //result = await ccutils.getUtxos(peers, "R9SNVd4zmTAjrtWrpXebr8PGCEdkA9YZxj", 0, 0); // tokel
-      console.log('result=', result, 'utxo.length=', result?.utxos.length);
-  
+      //console.log('result=', result, 'utxo.length=', result?.utxos.length);
+
+
       /* check addresses in the getTxids result
        add txids in set (remove duplicates)
       let params = [ peers, mypk ];
