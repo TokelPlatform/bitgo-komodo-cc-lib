@@ -7,8 +7,6 @@ var networks = require('./networks')
 var typeforce = require('typeforce')
 var types = require('./types')
 var bcrypto = require('./crypto')
-var bcrypto = require('./crypto')
-
 
 function fromBase58Check (address) {
   var payload = bs58check.decode(address)
