@@ -54,25 +54,35 @@ async function create_normaltx(_wif, _destaddress, _satoshi, _network, _peers) {
   return tx.toHex();
 }
 
-
+let lastHeaders = null;
+var lastHeadersTimestamp = 0;
+// calculate last 11 block median timestamp to get next tx.nLockTime
 async function calcMedianPastTime(peers)
 {
-  let info = await ccutils.nspvGetInfo(peers, 0);
-  // step -20 blocks: 
-  let infoback20 = await ccutils.nspvGetInfo(peers, info.height - 20 >= 1 ? info.height - 20 : 1);
-  let headers = await ccutils.nspvGetHeaders(peers, infoback20.header.prevHash)
-  //console.log('headers:', headers.length);
+  if (!lastHeaders || Date.now() > lastHeadersTimestamp + 1000)  {  // one request per sec
+    let info = await ccutils.nspvGetInfo(peers, 0);
+    // step -20 blocks: 
+    let infoback20 = await ccutils.nspvGetInfo(peers, info.height - 20 >= 1 ? info.height - 20 : 1);
+    lastHeaders = await ccutils.nspvGetHeaders(peers, infoback20.header.prevHash)
+    lastHeadersTimestamp = Date.now();
+  }
   let times = [];
-  for (let i = headers.length - 1; i >= 0 && headers.length - i <= 11; i --)
-    times.push(headers[i].header.timestamp);
-  times.sort(function(a, b) { return a - b; });
+  for (let i = lastHeaders.length - 1; i >= 0 && lastHeaders.length - i <= 11; i --)
+    times.push(lastHeaders[i].header.timestamp);
+  times.sort(function(a, b) { return a - b; });  
   return times.length > 0 ? times[(times.length-1)/2] : 0;  
 }
 
+let lastInfo = null;
+var lastInfoTimestamp = 0;
+// get chain tip height
 async function getChainHeight(peers)
 {
-  let info = await ccutils.nspvGetInfo(peers, 0);
-  return info.height;  
+  if (!lastInfo || Date.now() > lastInfoTimestamp + 1000)  {  // one request per sec
+    lastInfo = await ccutils.nspvGetInfo(peers, 0);
+    lastInfoTimestamp = Date.now();
+  }
+  return lastInfo.height;  
 }
 
 async function makeNormalTx(wif, destaddress, amount, network, peers) 
@@ -96,7 +106,7 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
     txbuilder.setVersionGroupId(tx.versionGroupId);
 
   if (txbuilder.tx.locktime == 0)  { // until createTxAndAddNormalInputs starts to fill 
-    txbuilder.tx.locktime = await calcMedianPastTime(peers)
+    txbuilder.tx.locktime = await calcMedianPastTime(peers)  // do we need also height-locked txns?
   }
 
   // parse txwutxos.previousTxns and add them as vins to the created tx
