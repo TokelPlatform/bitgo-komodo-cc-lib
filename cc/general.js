@@ -15,6 +15,7 @@ const types = require('../src/types');
 const typeforce = require('typeforce');
 const BN = require('bn.js')
 
+const LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
 
 /**
  * Receives any string(WIF/seed phrase) and returns WIF.
@@ -58,7 +59,7 @@ async function calcMedianPastTime(peers)
 {
   let info = await ccutils.nspvGetInfo(peers, 0);
   // step -20 blocks: 
-  let infoback20 = await ccutils.nspvGetInfo(peers, info.height - 20);
+  let infoback20 = await ccutils.nspvGetInfo(peers, info.height - 20 >= 1 ? info.height - 20 : 1);
   let headers = await ccutils.nspvGetHeaders(peers, infoback20.header.prevHash)
   //console.log('headers:', headers.length);
   let times = [];
@@ -66,6 +67,12 @@ async function calcMedianPastTime(peers)
     times.push(headers[i].header.timestamp);
   times.sort(function(a, b) { return a - b; });
   return times.length > 0 ? times[(times.length-1)/2] : 0;  
+}
+
+async function getChainHeight(peers)
+{
+  let info = await ccutils.nspvGetInfo(peers, 0);
+  return info.height;  
 }
 
 async function makeNormalTx(wif, destaddress, amount, network, peers) 
@@ -141,8 +148,24 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
  }
 */
 
+async function isUtxoTimeUnlocked(peers, utxo)
+{
+  if (utxo?.nLockTime) {
+    if (utxo?.nLockTime >= LOCKTIME_THRESHOLD) {
+      let txLockTime = await calcMedianPastTime(peers);
+      return txLockTime >= utxo?.nLockTime  ? true : false;
+    }
+    else {
+      let txHeight = await getChainHeight(peers) + 1;
+      return txHeight >= utxo?.nLockTime  ? true : false;
+    }
+  }
+  return true;
+}
+
 exports.keyToWif = keyToWif;
 exports.getSeedPhrase = getSeedPhrase;
 exports.create_normaltx = create_normaltx;
+exports.isUtxoTimeUnlocked = isUtxoTimeUnlocked;
 //exports.nspvGetTransactions = nspvGetTransactions; // for ver007
 
