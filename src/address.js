@@ -7,6 +7,8 @@ var networks = require('./networks')
 var typeforce = require('typeforce')
 var types = require('./types')
 var bcrypto = require('./crypto')
+var bcrypto = require('./crypto')
+
 
 function fromBase58Check (address) {
   var payload = bs58check.decode(address)
@@ -69,9 +71,19 @@ function fromOutputScript (outputScript, network) {
   if (btemplates.witnessPubKeyHash.output.check(outputScript)) return toBech32(bscript.compile(outputScript).slice(2, 22), 0, network.bech32)
   if (btemplates.witnessScriptHash.output.check(outputScript)) return toBech32(bscript.compile(outputScript).slice(2, 34), 0, network.bech32)
 
+    // dimxy added for cltv:
+  if (btemplates.pubKeyHashCLTV.output.check(outputScript)) {
+    decoded = btemplates.pubKeyHashCLTV.output.decode(outputScript);
+    return toBase58Check(decoded.pubKeyHash, network.pubKeyHash)
+  }
+  if (btemplates.pubKeyCLTV.output.check(outputScript)) {
+    decoded = btemplates.pubKeyCLTV.output.decode(outputScript);
+    return toBase58Check(bcrypto.hash160(decoded.pubKey), network.pubKeyHash)
+  }
+
   // dimxy added for cc:
   if (!network.cryptoconditionHash)
-    throw new Error(bscript.toASM(outputScript) + ' not cc enabled network (no cryptoconditionHash)')
+    throw new Error(bscript.toASM(outputScript) + ' not cc enabled network (no cryptoconditionHash prefix)')
 
   if (btemplates.cryptoconditions.output.check(outputScript)) return toBase58Check(bcrypto.hash160(btemplates.cryptoconditions.output.decode(outputScript)), network.cryptoconditionHash)
   // does the same but for readability
