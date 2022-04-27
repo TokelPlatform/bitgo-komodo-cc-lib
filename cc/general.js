@@ -105,9 +105,10 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
   if (txbuilder.tx.version >= 3)
     txbuilder.setVersionGroupId(tx.versionGroupId);
 
-  if (txbuilder.tx.locktime == 0)  { // until createTxAndAddNormalInputs starts to fill 
-    txbuilder.tx.locktime = await calcMedianPastTime(peers)  // do we need also height-locked txns?
-  }
+  if (tx.locktime == 0)  // if createTxAndAddNormalInputs did not set this value 
+    txbuilder.setLockTime(await calcMedianPastTime(peers));  // do we need also height-locked txns?
+  else 
+    txbuilder.setLockTime(tx.locktime);
 
   // parse txwutxos.previousTxns and add them as vins to the created tx
   let added = ccutils.addInputsFromPreviousTxns(txbuilder, tx, txwutxos.previousTxns, network);
