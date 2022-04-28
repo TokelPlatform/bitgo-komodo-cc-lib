@@ -21,6 +21,7 @@ const decodeTransactionData = (tx, header, network) => {
         asm: bscript.toASM(out.script),
       }
     } catch (e) {
+      console.log('transaction id: ', decoded.getHash().reverse().toString('hex'));
       console.log(e); 
       return {
         ...out,
@@ -29,9 +30,11 @@ const decodeTransactionData = (tx, header, network) => {
       }
     }
   })
-  return {
+
+  return {  
     time: decodedHeader.timestamp,
     txid: decoded.getHash().reverse().toString('hex'),
+    lockedTime: decoded.locktime,
     ins: decoded.ins.map(one => {
       const txid = one.hash.reverse().toString('hex')
       return {
@@ -86,10 +89,10 @@ INS
 ]
  */
 
-const parseTransactionData = (tx) => {
+const parseTransactionData = (tx, requestedAddress) => {
   try {
     // skip C-index addresses since those are CC transactions
-    const sumOuts = tx.outs.reduce((a, b) => isCindexAddress(b.address) ? a : a.add(b.value), new BN());
+    let sumOuts = tx.outs.reduce((a, b) => isCindexAddress(b.address) ? a : a.add(b.value), new BN());
     
     let sumIns = 0
     // probably there is a better way to find the current fee
@@ -107,7 +110,9 @@ const parseTransactionData = (tx) => {
 
     const senders = getSenders(tx);
     const recipients = getRecipients(tx);
-  
+    let change = new BN();
+    // 
+
     // find the change receiving address
     let changeReceivingAddress = null;
     senders.forEach(addr => {
@@ -117,12 +122,15 @@ const parseTransactionData = (tx) => {
     })
 
     // calculate change
-    let change = new BN();
     if (changeReceivingAddress) {
       const txToAddress = tx.outs.find(s => s.address === changeReceivingAddress)
       if (txToAddress) {
         change = new BN(txToAddress.value);
       }
+      // if we didnt find who receives the change, the transaction could have been done using CLI and the change went to another address that belongs to user
+      // In that case we have another chance to figure out the transaction value, it is to try and see if the requested address is in the list of receivers
+    } else if (recipients.indexOf(requestedAddress) !== -1) {
+      sumOuts = new BN(tx.outs.find(a => a.address === requestedAddress).value);
     }
     
     return {

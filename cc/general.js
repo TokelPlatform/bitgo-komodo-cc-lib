@@ -41,6 +41,11 @@ const keyToWif = (key, network) => {
   }
 };
 
+const getAddress = (key, network) => {
+  const e = ecpair.fromPublicKeyBuffer(Buffer.from(key), network)
+  return e.getAddress();
+}
+
 const getSeedPhrase = (strength) => bip39.generateMnemonic(strength);
 
 async function create_normaltx(_wif, _destaddress, _satoshi, _network, _peers) {
@@ -178,5 +183,6 @@ exports.keyToWif = keyToWif;
 exports.getSeedPhrase = getSeedPhrase;
 exports.create_normaltx = create_normaltx;
 exports.isUtxoTimeUnlocked = isUtxoTimeUnlocked;
+exports.getAddress = getAddress
 //exports.nspvGetTransactions = nspvGetTransactions; // for ver007
 

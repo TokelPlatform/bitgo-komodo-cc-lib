@@ -28,6 +28,7 @@ const Debug = require('debug')
 const logdebug = Debug('cc')
 
 const networks = require('../src/networks');
+const { getAddress } = require('./general');
 
 exports.finalizeCCtx = finalizeCCtx;
 exports.createTxAndAddNormalInputs = createTxAndAddNormalInputs;
@@ -574,6 +575,8 @@ function getTransactionsMany(peers, mypk, ...args)
       });
     }
 
+    const requestedAddress = getAddress(mypk, network);
+
     decodedTxs = decodedTxs.map(tx => {
       const parsedTx = {
         ...tx,
@@ -587,7 +590,7 @@ function getTransactionsMany(peers, mypk, ...args)
       if (isCcTransaction(parsedTx)) {
         return null;
       }
-      const { recipients, senders, fees, value } = parseTransactionData(parsedTx);
+      const { recipients, senders, fees, value } = parseTransactionData(parsedTx, requestedAddress);
       return {
         recipients,
         senders,
