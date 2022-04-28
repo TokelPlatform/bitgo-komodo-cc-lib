@@ -161,7 +161,7 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, priceCoins, exp
   typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
   typeforce(typeforce.oneOf('String', types.Hash256bit), askid);
   typeforce(typeforce.oneOf(types.Satoshi, types.BN), units);
-  typeforce(typeforce.oneOf(types.Satoshi, undefined), price);
+  typeforce(typeforce.oneOf('Number', undefined), price);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
 	let _askid = ccutils.castHashBin(askid);
@@ -188,7 +188,7 @@ async function tokenv2ask(peers, mynetwork, wif, units, tokenid, priceCoins, exp
   typeforce(typeforce.oneOf('String', types.Hash256bit), tokenid);
   typeforce(typeforce.oneOf('String', types.Hash256bit), bidid);
   typeforce(typeforce.oneOf(types.Satoshi, types.BN), units);
-  typeforce(typeforce.oneOf(types.Satoshi, undefined), price);
+  typeforce(typeforce.oneOf('Number', undefined), price);
 
 	let _tokenid = ccutils.castHashBin(tokenid);
 	let _bidid = ccutils.castHashBin(bidid);
