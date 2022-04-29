@@ -15,6 +15,7 @@ const types = require('../src/types');
 const typeforce = require('typeforce');
 const BN = require('bn.js')
 
+const LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
 
 /**
  * Receives any string(WIF/seed phrase) and returns WIF.
@@ -40,6 +41,11 @@ const keyToWif = (key, network) => {
   }
 };
 
+const getAddress = (key, network) => {
+  const e = ecpair.fromPublicKeyBuffer(Buffer.from(key), network)
+  return e.getAddress();
+}
+
 const getSeedPhrase = (strength) => bip39.generateMnemonic(strength);
 
 async function create_normaltx(_wif, _destaddress, _satoshi, _network, _peers) {
@@ -53,19 +59,35 @@ async function create_normaltx(_wif, _destaddress, _satoshi, _network, _peers) {
   return tx.toHex();
 }
 
-
+let lastHeaders = null;
+var lastHeadersTimestamp = 0;
+// calculate last 11 block median timestamp to get next tx.nLockTime
 async function calcMedianPastTime(peers)
 {
-  let info = await ccutils.nspvGetInfo(peers, 0);
-  // step -20 blocks: 
-  let infoback20 = await ccutils.nspvGetInfo(peers, info.height - 20);
-  let headers = await ccutils.nspvGetHeaders(peers, infoback20.header.prevHash)
-  //console.log('headers:', headers.length);
+  if (!lastHeaders || Date.now() > lastHeadersTimestamp + 1000)  {  // one request per sec
+    let info = await ccutils.nspvGetInfo(peers, 0);
+    // step -20 blocks: 
+    let infoback20 = await ccutils.nspvGetInfo(peers, info.height - 20 >= 1 ? info.height - 20 : 1);
+    lastHeaders = await ccutils.nspvGetHeaders(peers, infoback20.header.prevHash)
+    lastHeadersTimestamp = Date.now();
+  }
   let times = [];
-  for (let i = headers.length - 1; i >= 0 && headers.length - i <= 11; i --)
-    times.push(headers[i].header.timestamp);
-  times.sort(function(a, b) { return a - b; });
+  for (let i = lastHeaders.length - 1; i >= 0 && lastHeaders.length - i <= 11; i --)
+    times.push(lastHeaders[i].header.timestamp);
+  times.sort(function(a, b) { return a - b; });  
   return times.length > 0 ? times[(times.length-1)/2] : 0;  
+}
+
+let lastInfo = null;
+var lastInfoTimestamp = 0;
+// get chain tip height
+async function getChainHeight(peers)
+{
+  if (!lastInfo || Date.now() > lastInfoTimestamp + 1000)  {  // one request per sec
+    lastInfo = await ccutils.nspvGetInfo(peers, 0);
+    lastInfoTimestamp = Date.now();
+  }
+  return lastInfo.height;  
 }
 
 async function makeNormalTx(wif, destaddress, amount, network, peers) 
@@ -88,9 +110,10 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
   if (txbuilder.tx.version >= 3)
     txbuilder.setVersionGroupId(tx.versionGroupId);
 
-  if (txbuilder.tx.locktime == 0)  { // until createTxAndAddNormalInputs starts to fill 
-    txbuilder.tx.locktime = await calcMedianPastTime(peers)
-  }
+  if (tx.locktime == 0)  // if createTxAndAddNormalInputs did not set this value 
+    txbuilder.setLockTime(await calcMedianPastTime(peers));  // do we need also height-locked txns?
+  else 
+    txbuilder.setLockTime(tx.locktime);
 
   // parse txwutxos.previousTxns and add them as vins to the created tx
   let added = ccutils.addInputsFromPreviousTxns(txbuilder, tx, txwutxos.previousTxns, network);
@@ -141,8 +164,25 @@ async function makeNormalTx(wif, destaddress, amount, network, peers)
  }
 */
 
+async function isUtxoTimeUnlocked(peers, utxo)
+{
+  if (utxo?.nLockTime) {
+    if (utxo?.nLockTime >= LOCKTIME_THRESHOLD) {
+      let txLockTime = await calcMedianPastTime(peers);
+      return txLockTime >= utxo?.nLockTime  ? true : false;
+    }
+    else {
+      let txHeight = await getChainHeight(peers) + 1;
+      return txHeight >= utxo?.nLockTime  ? true : false;
+    }
+  }
+  return true;
+}
+
 exports.keyToWif = keyToWif;
 exports.getSeedPhrase = getSeedPhrase;
 exports.create_normaltx = create_normaltx;
+exports.isUtxoTimeUnlocked = isUtxoTimeUnlocked;
+exports.getAddress = getAddress
 //exports.nspvGetTransactions = nspvGetTransactions; // for ver007
 
