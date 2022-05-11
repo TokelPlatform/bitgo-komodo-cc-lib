@@ -121,6 +121,17 @@ const parseTransactionData = (tx, requestedAddress) => {
       }
     })
 
+    // If I m not the one receiving change, I am prolly the receiver
+    if ((changeReceivingAddress !== requestedAddress) && recipients.indexOf(requestedAddress) !== -1) {
+      sumOuts = new BN(tx.outs.find(a => a.address === requestedAddress).value);
+      return {
+        fees,
+        value: sumOuts,
+        senders,
+        recipients
+      }
+    }
+    
     // calculate change
     if (changeReceivingAddress) {
       const txToAddress = tx.outs.find(s => s.address === changeReceivingAddress)
