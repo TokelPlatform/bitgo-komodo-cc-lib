@@ -184,5 +184,6 @@ exports.getSeedPhrase = getSeedPhrase;
 exports.create_normaltx = create_normaltx;
 exports.isUtxoTimeUnlocked = isUtxoTimeUnlocked;
 exports.getAddress = getAddress
+exports.getChainHeight = getChainHeight;
 //exports.nspvGetTransactions = nspvGetTransactions; // for ver007
 

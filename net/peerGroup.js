@@ -368,7 +368,6 @@ class PeerGroup extends EventEmitter {
 
   // initializes the PeerGroup by creating peer connections
   connect (onConnect) {
-    logdebug('connect called')
     this.connecting = true
     if (onConnect) this.once('connect', onConnect)  // call user function here
 
@@ -397,20 +396,22 @@ class PeerGroup extends EventEmitter {
   }
 
   _onWsAddr(message) {
-    //logdebug('received wsaddr message=', message);
+    // logdebug('received wsaddr message=', message);
 
     if (!Array.isArray(message))
       return;
 
     message.forEach((elem)=> {
-      if (utils.getServices(elem?.services).NODE_NSPV) // check service bit
-        this.wsAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
+      let serv = utils.getServices(elem?.services)
+      if (serv.NODE_NSPV && serv.NODE_WEBSOCKETS)  {  // check service bits
+        let proto = serv.NODE_WEBSOCKETS_TLS ? "wss" : "ws";
+        this.webAddrs.add(`${proto}://${elem.address}:${elem.port}`);
+      }
     })
   }
 
   _onAddr(message) {
-    //logdebug('received addr message=', message);
-
+    // logdebug('received addr message=', message);
     if (!Array.isArray(message))
       return;
 

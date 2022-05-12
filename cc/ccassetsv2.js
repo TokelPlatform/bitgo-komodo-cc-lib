@@ -3,6 +3,7 @@
 const assert = require('assert');
 const TransactionBuilder = require('../src/transaction_builder');
 const Transaction = require('../src/transaction');
+const general = require('../cc/general');
 const OPS = require('bitcoin-ops');
 const BN = require('bn.js');
 let BN_0 = new BN(0);
@@ -34,7 +35,7 @@ const assetsv2GlobalAddress = "CeKqrjLjD5WgBETbSeLaJJc1NDKHTdLwUf";
 const EVAL_ASSETSV2 = 0xF6;
 
 const TKLROYALTY_DIVISOR = 1000;
-const ASSETS_NORMAL_DUST = new BN(500);
+const BN_ASSETS_NORMAL_DUST = new BN(500);
 const ASSETS_EXPIRY_DEFAULT = 4 * 7 * 24 * 60;
 
 function encodeAssetsV2Data(funcid, unitPrice, origpk, expiryHeight)
@@ -87,6 +88,21 @@ function decodeTokensAssetsV2OpReturn(spk)
   }
   return tokenData;
 }
+
+// check if either royalty or paid_value is dust in fill ask
+// nOutputValue is the total amount of paid_value + royalty
+function AssetsFillOrderIsDust(royaltyFract, bnOutputValue)
+{
+    // nOutputValue is sum of paid_value + royalty_value
+    // check whether any of them is assets' dust (calc min of royalty and paid_value, compare with assets' dust):
+    if (bnOutputValue.div( new BN(TKLROYALTY_DIVISOR) ).mul( new BN( Math.min(royaltyFract, TKLROYALTY_DIVISOR - royaltyFract) ) ).lte( new BN(BN_ASSETS_NORMAL_DUST) ))  {
+        // decide who should receive nOutputValue if one of values is dust
+        let isRoyaltyDust = royaltyFract < TKLROYALTY_DIVISOR / 2 ? true : false;
+        return { isOrderDust : true, isRoyaltyDust : isRoyaltyDust };
+    }
+    return { isOrderDust : false };
+}
+
 
 /**
  * create assets v2 ask tx
@@ -421,9 +437,23 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, bnFil
   const royaltyFract = tokenData.tokeldata && tokenData.tokeldata.royalty ? tokenData.tokeldata.royalty : 0;
   //let royaltyValue = royaltyFract > 0 ? paidAmount / TKLROYALTY_DIVISOR * royaltyFract : 0;
   let bnRoyaltyValue = royaltyFract > 0 ? bnPaidAmount.div(new BN(TKLROYALTY_DIVISOR)).mul(new BN(royaltyFract)) : BN_0;
-  //if (royaltyFract > 0 && paidAmount - royaltyValue <= ASSETS_NORMAL_DUST / royaltyFract * TKLROYALTY_DIVISOR - ASSETS_NORMAL_DUST)  // if value paid to seller less than when the royalty is minimum
-  if (royaltyFract > 0 && bnPaidAmount.sub(bnRoyaltyValue).lte(ASSETS_NORMAL_DUST.div(new BN(royaltyFract)).mul(new BN(TKLROYALTY_DIVISOR)).sub(ASSETS_NORMAL_DUST)) ) // if value paid to seller less than when the royalty is minimum
-      bnRoyaltyValue = BN_0;
+  //console.log('calculated bnRoyaltyValue=', bnRoyaltyValue.toString());
+  //let height = await general.getChainHeight(peers) + 1;
+  let isDust;
+  /* wrong dust check:
+  if (royaltyFract > 0 && bnPaidAmount.sub(bnRoyaltyValue).lte( BN_ASSETS_NORMAL_DUST.div(new BN(royaltyFract)).mul(new BN(TKLROYALTY_DIVISOR)).sub(BN_ASSETS_NORMAL_DUST) ) )  // if value paid to seller less than when the royalty is minimum
+  {
+    bnRoyaltyValue = BN_0;
+    isDust = { isOrderDust : true, isRoyaltyDust : true };
+  }
+  else 
+    isDust = { isOrderDust : false };  */
+  // fixed dust calc: 
+  isDust = AssetsFillOrderIsDust(royaltyFract, bnPaidAmount);
+  if (isDust.isOrderDust) 
+    bnRoyaltyValue = BN_0;
+  
+  //console.log('isDust', isDust)
 
   //console.log("makeTokenV2FillAskTx bnNormalAmount=", bnNormalAmount.toString());
   let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount);
@@ -440,45 +470,33 @@ async function makeTokenV2FillAskTx(peers, mynetwork, wif, tokenid, askid, bnFil
     throw new Error("insufficient normal inputs (" + bnAdded.toString() + ")")
 
   txbuilder.addInput(asktx, askVout);
-
-/*
- // vout.0 tokens remainder to unspendable cc addr:
- mtx.vout.push_back(T::MakeTokensCC1vout(A::EvalCode(), orig_assetoshis - fillunits, GetUnspendable(cpAssets, NULL)));  // token remainder on cc global addr
-
- //vout.1 purchased tokens to self token single-eval or dual-eval token+nonfungible cc addr:
- mtx.vout.push_back(T::MakeTokensCC1vout(T::EvalCode(), fillunits, mypk));					
- mtx.vout.push_back(CTxOut(paid_nValue - royaltyValue, CScript() << origpubkey << OP_CHECKSIG));		//vout.2 coins to ask originator's normal addr
- if (royaltyValue > 0)    {   // note it makes the vout even if roaltyValue is 0
-     mtx.vout.push_back(CTxOut(royaltyValue, CScript() << ownerpubkey << OP_CHECKSIG));	// vout.3 royalty to token owner
-     LOGSTREAMFN(ccassets_log, CCLOG_DEBUG1, stream << "royaltyFract=" << royaltyFract << " royaltyValue=" << royaltyValue << " paid_nValue - royaltyValue=" << paid_nValue - royaltyValue << std::endl);
- }
-
- if (orig_assetoshis - fillunits > 0) // we dont need the marker if order is filled
-     mtx.vout.push_back(T::MakeCC1of2vout(A::EvalCode(), ASSETS_MARKER_AMOUNT, origpubkey, GetUnspendable(cpAssets, NULL)));    //vout.3(4 if royalty) marker to origpubkey (for my tokenorders?)
-*/
   
   let globalccSpk = ccutils.makeCCSpkV2MofN([cctokens.EVAL_TOKENSV2, EVAL_ASSETSV2], [assetsGlobalPk], 1);
-  txbuilder.addOutput(globalccSpk, bnAskTokens - bnFillUnits);    // send remaining tokens on global assets pk
+  txbuilder.addOutput(globalccSpk, bnAskTokens.sub(bnFillUnits));    // send remaining tokens on global assets pk
+  //console.log('fillask bnAskTokens - bnFillUnits=', bnAskTokens.sub(bnFillUnits).toString(),' bnAskTokens', bnAskTokens.toString(), 'bnFillUnits', bnFillUnits.toString(), 'diff=', bnAskTokens.sub(bnFillUnits).toString())
 
   let myccSpk = ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(cctokens.EVAL_TOKENSV2, 1,1, [mypk], cctokens.encodeTokensV2Data(tokenid)));
   txbuilder.addOutput(myccSpk, bnFillUnits);  // purchased tokens
 
   let askCreatorAddress = ccutils.pubkey2NormalAddressKmd(askData.assetData.origpk);
-  txbuilder.addOutput(askCreatorAddress, bnPaidAmount - bnRoyaltyValue);  // coins to ask creator
+  let tokenCreatorAddress = ccutils.pubkey2NormalAddressKmd(tokenData.origpk);
+  let normalDest = (royaltyFract > 0 && isDust.isOrderDust && !isDust.isRoyaltyDust) ? tokenCreatorAddress : askCreatorAddress; // if dust and not royalty dust send all to token creator
+  txbuilder.addOutput(normalDest, bnPaidAmount.sub(bnRoyaltyValue));  // coins to ask creator
+  //console.log('fillask bnPaidAmount - bnRoyaltyValue=', bnPaidAmount.sub(bnRoyaltyValue).toString(), ' bnPaidAmount', bnPaidAmount.toString(), 'corrected bnRoyaltyValue', bnRoyaltyValue.toString(), 'diff=', bnPaidAmount.sub(bnRoyaltyValue).toString())
 
-  if (bnRoyaltyValue > 0)  {
-    let tokenCreatorAddress = ccutils.pubkey2NormalAddressKmd(tokenData.origpk);
+  if (bnRoyaltyValue.gt(BN_0))  {
     txbuilder.addOutput(tokenCreatorAddress, bnRoyaltyValue);  // royalty to token creator
   }
 
   if (bnAskTokens.sub(bnFillUnits).gt(BN_0))  {
-    let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [mypk, assetsGlobalPk], 1);
+    let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [askData.assetData.origpk, assetsGlobalPk], 1);
     txbuilder.addOutput(markerccSpk, markerfee);  // 1of2 marker for mytokenorders
   }
 
   if (bnAdded.sub(bnNormalAmount).gt(ccutils.BN_MYDUST))
     txbuilder.addOutput(mynormaladdress, bnAdded.sub(bnNormalAmount));  // change
 
+  //console.log('unitPrice=', askData.assetData.unitPrice.toString(), 'paid_price=', bnPaidAmount.div(bnFillUnits).toString())
   txbuilder.addOutput(cctokens.encodeTokensV2OpReturn(tokenid,
                                 encodeAssetsV2Data('S', askData.assetData.unitPrice, askData.assetData.origpk, askData.assetData.expiryHeight)), 0); // make opreturn
 
@@ -528,9 +546,16 @@ async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, bnFil
   const bnBidTokens = bnBidAmount.div(bidData.assetData.unitPrice);   // current bid's tokens quantity
   const bnPaidAmount = bnUnitPrice.mul(bnFillUnits);
   const royaltyFract = tokenData.tokeldata && tokenData.tokeldata.royalty ? tokenData.tokeldata.royalty : 0;
+
   let bnRoyaltyValue = royaltyFract > 0 ? bnPaidAmount.div(new BN(TKLROYALTY_DIVISOR)).mul(new BN(royaltyFract)) : BN_0;
-  if (bnRoyaltyValue.lte(ASSETS_NORMAL_DUST)) // check for dust
-      bnRoyaltyValue = BN_0;
+  // old-style incorrect check if dust:
+  //if (bnRoyaltyValue.lte(BN_ASSETS_NORMAL_DUST)) // check for dust
+  //    bnRoyaltyValue = BN_0;
+  // fixed calc: 
+  let isDust = AssetsFillOrderIsDust(royaltyFract, bnPaidAmount);
+  if (isDust.isOrderDust) {
+    bnRoyaltyValue = BN_0;
+  }
 
   const txbuilder = new TransactionBuilder(mynetwork);
   const txfee = 10000;
@@ -566,29 +591,7 @@ async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, bnFil
   if (bnCCAdded.lt(bnFillUnits))
     throw new Error("insufficient token inputs (" + bnCCAdded.toString() + ")");
 
-  
-/*
-if (orig_units - fill_units > 0 || bid_amount - paid_amount <= ASSETS_NORMAL_DUST) { // bidder has coins for more tokens or only dust is sent back to global address
-    mtx.vout.push_back(T::MakeCC1vout(A::EvalCode(), bid_amount - paid_amount, unspendableAssetsPk));     // vout0 coins remainder or the dust is sent back to cc global addr
-    if (bid_amount - paid_amount <= ASSETS_NORMAL_DUST)
-        LOGSTREAMFN(ccassets_log, CCLOG_DEBUG1, stream << "dust detected (bid_amount - paid_amount)=" << (bid_amount - paid_amount) << std::endl);
-}
-else
-    mtx.vout.push_back(CTxOut(bid_amount - paid_amount, CScript() << ParseHex(HexStr(origpubkey)) << OP_CHECKSIG));     // vout0 if no more tokens to buy, send the remainder to originator
-mtx.vout.push_back(CTxOut(paid_amount - royaltyValue, CScript() << ParseHex(HexStr(mypk)) << OP_CHECKSIG));	// vout1 coins to mypk normal 
-if (royaltyValue > 0)   { // note it makes vout even if roaltyValue is 0
-    mtx.vout.push_back(CTxOut(royaltyValue, CScript() << ParseHex(HexStr(ownerpubkey)) << OP_CHECKSIG));  // vout2 trade royalty to token owner
-    LOGSTREAMFN(ccassets_log, CCLOG_DEBUG1, stream << "royaltyFract=" << royaltyFract << " royaltyValue=" << royaltyValue << " paid_amount - royaltyValue=" << paid_amount - royaltyValue << std::endl);
-}
-mtx.vout.push_back(T::MakeTokensCC1vout(T::EvalCode(), fill_units, pubkey2pk(origpubkey)));	  // vout2(3) single-eval tokens sent to the originator
-if (orig_units - fill_units > 0)  // order is not finished yet
-    mtx.vout.push_back(T::MakeCC1of2vout(A::EvalCode(), ASSETS_MARKER_AMOUNT, origpubkey, unspendableAssetsPk));                    // vout3(4 if royalty) marker to origpubkey
-
-if (tokensChange != 0LL)
-    mtx.vout.push_back(T::MakeTokensCC1vout(T::EvalCode(), tokensChange, mypk));  // change in single-eval tokens
-*/
-
-  if (bnBidTokens.sub(bnFillUnits).gt(BN_0) || bnBidAmount.sub(bnPaidAmount).lte(ASSETS_NORMAL_DUST)) {
+  if (bnBidTokens.sub(bnFillUnits).gt(BN_0) || bnBidAmount.sub(bnPaidAmount).lte(BN_ASSETS_NORMAL_DUST)) {
     let globalccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [assetsGlobalPk], 1);
     txbuilder.addOutput(globalccSpk, bnBidAmount.sub(bnPaidAmount));    // send coin remainder on global assets pk
   }
@@ -597,9 +600,10 @@ if (tokensChange != 0LL)
     txbuilder.addOutput(bidCreatorAddress, bnBidAmount.sub(bnPaidAmount));  // if no tokens remaining or dust then send back to bidder
   }
   
-  txbuilder.addOutput(mynormaladdress, bnPaidAmount.sub(bnRoyaltyValue));  // purchased coins for tokens without royalty
+  let tokenCreatorAddress = ccutils.pubkey2NormalAddressKmd(tokenData.origpk);
+  let normalDest = (royaltyFract > 0 && isDust.isOrderDust && !isDust.isRoyaltyDust) ? tokenCreatorAddress : mynormaladdress; // if dust and not royalty dust send all to token creator
+  txbuilder.addOutput(normalDest, bnPaidAmount.sub(bnRoyaltyValue));  // purchased coins for tokens without royalty
   if (bnRoyaltyValue.gt(BN_0))  {
-    let tokenCreatorAddress = ccutils.pubkey2NormalAddressKmd(tokenData.origpk);
     txbuilder.addOutput(tokenCreatorAddress, bnRoyaltyValue);  // royalty to token creator
   }
 
@@ -607,7 +611,7 @@ if (tokensChange != 0LL)
   txbuilder.addOutput(bidderCCSpk, bnFillUnits);  // tokens to bidder
 
   if (bnBidTokens.sub(bnFillUnits).gt(BN_0))  {
-    let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [mypk, assetsGlobalPk], 1);
+    let markerccSpk = ccutils.makeCCSpkV2MofN(EVAL_ASSETSV2, [bidData.assetData.origpk, assetsGlobalPk], 1);
     txbuilder.addOutput(markerccSpk, markerfee);  // 1of2 marker for mytokenorders
   }
 
@@ -790,7 +794,7 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
     throw new Error("invalid bid tx (structure: funcid, outs.length)");
 
 /*
-  if (bidamount > ASSETS_NORMAL_DUST)  
+  if (bidamount > BN_ASSETS_NORMAL_DUST)  
       mtx.vout.push_back(CTxOut(bidamount, CScript() << ParseHex(HexStr(origpubkey)) << OP_CHECKSIG));
   else {
       // send dust back to global addr
@@ -799,7 +803,7 @@ async function makeTokenV2CancelBidTx(peers, mynetwork, wif, tokenid, bidid)
   }
 */
 
-  if (bnBidAmount.gt(ASSETS_NORMAL_DUST)) {
+  if (bnBidAmount.gt(BN_ASSETS_NORMAL_DUST)) {
     let bidCreatorAddress = ccutils.pubkey2NormalAddressKmd(bidData.assetData.origpk);
     txbuilder.addOutput(bidCreatorAddress, bnBidAmount);  // remaining coins to bid creator
   } else {

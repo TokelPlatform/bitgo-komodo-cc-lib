@@ -120,7 +120,8 @@ class Peer extends EventEmitter {
       })
     }
 
-    logdebug(`connecting from localaddr: ${socket.localAddress}:${socket.localPort}`)
+    //logdebug(`connecting from localaddr: ${socket.localAddress}:${socket.localPort}`)
+    logdebug(`connecting from localaddr: ${utils.getSocketLocalUrl(socket)}`)
 
     // set up ping interval and initial pings
     this.once('ready', () => {
@@ -145,7 +146,7 @@ class Peer extends EventEmitter {
     //console.log('disconnect peer, events:', this.eventNames());
     this.removeAllListeners(); // clear incoming message processing
     logdebug("peer disconnected", this.getUrl())
-    console.log("peer disconnected", this.getUrl(), err?.message)
+    //console.log("peer disconnected", this.getUrl(), err?.message)
   }
 
   clearTimers() {
@@ -424,14 +425,15 @@ class Peer extends EventEmitter {
     this.getHeaders(req.locator, req.opts, req.cb)
   }
 
-  _isWebSocketPeer()
+  /*_isWebSocketPeer()
   {
     return this?.socket?.socket instanceof ws;
-  }
+  } */
 
   
   getUrl()
   {
+  /*
     let remotep = '';
     if (this._isWebSocketPeer())
       return this.socket.socket.url;
@@ -441,7 +443,8 @@ class Peer extends EventEmitter {
       if (this.socket.remotePort)
           remotep += ':' + this.socket.remotePort
     }
-    return remotep
+    return remotep */
+    return utils.getSocketUrl(this.socket);
   }
   
 }
