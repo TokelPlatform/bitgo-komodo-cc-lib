@@ -178,5 +178,6 @@ exports.keyToWif = keyToWif;
 exports.getSeedPhrase = getSeedPhrase;
 exports.create_normaltx = create_normaltx;
 exports.isUtxoTimeUnlocked = isUtxoTimeUnlocked;
+exports.getChainHeight = getChainHeight;
 //exports.nspvGetTransactions = nspvGetTransactions; // for ver007
 

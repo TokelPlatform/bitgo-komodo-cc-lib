@@ -350,7 +350,6 @@ function createTxAndAddNormalInputs(peers, mypk, amount)
         "${amount}" 
       ]
     }`;*/
-
     peers.nspvRemoteRpc("createtxwithnormalinputs", mypk, bnAmount.toString(), {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
