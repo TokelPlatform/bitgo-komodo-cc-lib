@@ -40,27 +40,45 @@ function getTxHash (tx) {
   return sha256(sha256(txBytes))
 }
 
-/*
-isWebSocket(socket)
+
+function isWebSocket(socket)
 {
   return socket?.socket instanceof ws;
 }
-getSocketUrl(socket)
+function getSocketUrl(socket)
 {
-  let remotep = '';
+  let remoteUrl = '';
   if (socket !== undefined) {
     if (isWebSocket(socket))
-      return socket.socket.url;
+      return socket?.socket?.url;
     else {
-      if (socket.remoteAddress)
-          remotep += socket.remoteAddress
-      if (socket.remotePort)
-          remotep += ':' + socket.remotePort
+      if (socket?.remoteAddress)
+        remoteUrl += socket.remoteAddress
+      if (socket?.remotePort)
+        remoteUrl += ':' + socket.remotePort
     }
   }
-  return remotep
+  return remoteUrl
 }
-*/
+
+function getSocketLocalUrl(socket)
+{
+  let localUrl = '';
+  if (socket !== undefined) {
+    if (isWebSocket(socket))  {
+      if (socket?.socket?._socket?.localAddress)
+        localUrl += socket.socket._socket.localAddress
+      if (socket?.socket?._socket?.localPort)
+        localUrl += ':' + socket.socket?._socket.localPort    }
+    else {
+      if (socket?.localAddress)
+        localUrl += socket.localAddress
+      if (socket?.localPort)
+        localUrl += ':' + socket.localPort
+    }
+  }
+  return localUrl
+}
 
 const serviceBits = {
   'NODE_NETWORK': 0,
@@ -69,6 +87,8 @@ const serviceBits = {
   'NODE_WITNESS': 3,
   'NODE_NETWORK_LIMITED': 10,
   'NODE_NSPV': 30,
+  'NODE_WEBSOCKETS': 31,
+  'NODE_WEBSOCKETS_TLS': 32
 }
 function getServices (buf) {
   let services = {}
@@ -103,4 +123,6 @@ module.exports = {
   sha256,
   getServices,
   shuffleArray,
+  getSocketUrl,
+  getSocketLocalUrl
 }
