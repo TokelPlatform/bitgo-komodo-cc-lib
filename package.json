@@ -1,6 +1,6 @@
 {
   "name": "@tokel/nspv-js",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Client-side Bitcoin JavaScript library with Komodo cryptocondions support",
   "main": "./src/index.js",
   "engines": {
