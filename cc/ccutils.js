@@ -131,25 +131,47 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
 /**
  * Creates a frequently used M of N cryptocondition
  * @param {*} evalcode 
- * @param {*} pubkeys array of pubkeys 
+ * @param {*} dests array of pubkeys or addresses
  * @param {*} M M-value
  * @param {*} opdrop optional opdrop data to be added with OP_DROP
  */
- function makeCCCondMofN(evalcodes, pubkeys, M) {
+ function makeCCCondMofN(evalcodes, dests, M) {
   typeforce(typeforce.oneOf(types.arrayOf(types.UInt8),types.UInt8), evalcodes);
-  typeforce(typeforce.oneOf(types.arrayOf('Buffer'), types.arrayOf('String')), pubkeys);
+  typeforce(typeforce.oneOf(types.arrayOf('Buffer'), types.arrayOf('String')), dests);
   typeforce(types.UInt32, M);
 
   let _evalcodes = Array.isArray(evalcodes) ? evalcodes : [evalcodes];
 
   let subconds = [];
-  for (let i = 0; i < pubkeys.length; i ++)  {
-      let secpcond = {  
-        type:	"secp256k1-sha-256",
-        publicKey:	Buffer.isBuffer(pubkeys[i]) ? pubkeys[i].toString('hex') : pubkeys[i]  // assume buffer or string
-      };
-      subconds.push(secpcond);
-  }
+  dests.forEach(d => {
+    let secpcond;
+    if (Buffer.isBuffer(d) ) {
+      if (d.length == 33) {
+        secpcond = {  
+          type:	"secp256k1-sha-256",
+          publicKey:	d.toString('hex')  
+        };
+      } else {
+        secpcond = {  
+          type:	"secp256k1hash-sha-256",
+          publicKeyHash:	d.toString('hex')  
+        }
+      }
+    } else {
+      if (d.length == 66) {
+        secpcond = {  
+          type:	"secp256k1-sha-256",
+          publicKey:	d  
+        };
+      } else {
+        secpcond = {  
+          type:	"secp256k1hash-sha-256",
+          publicKeyHash:	address.fromBase58Check(d).hash.toString('hex')  
+        }
+      }
+    }
+    subconds.push(secpcond);
+  }); 
 
   let subfulfillments = [];
   _evalcodes.forEach(evalcode => subfulfillments.push( {
@@ -174,13 +196,14 @@ exports.makeCCCondMofN = makeCCCondMofN;
 /**
  * Creates an spk in cc v2 format (mixed mode) for a frequently used M of N cryptocondition
  * @param {*} evalcode 
- * @param {*} pubkeys array of pubkeys 
- * @param {*} M M-value
+ * @param {*} dests array of pubkeys or addresses
+ * @param {*} M M-value in MofN
  * @param {*} opdrop optional opdrop data to be added with OP_DROP
+ * @param {*} ccSubver cc spk subversion
  */
- function makeCCSpkV2MofN(evalcodes, pubkeys, M, opdrop) {
+ function makeCCSpkV2MofN(evalcodes, pubkeys, M, opdrop, ccSubver) {
   let cond = makeCCCondMofN(evalcodes, pubkeys, M);
-  return ccbasic.makeCCSpkV2(cond, opdrop);
+  return ccbasic.makeCCSpkV2(cond, opdrop, ccSubver);
 }
 exports.makeCCSpkV2MofN = makeCCSpkV2MofN;
 
@@ -488,10 +511,12 @@ function getRawTransaction(peers, mypk, txid)
  * ...
  * @returns a promise to get the txns in hex
  */
-function getTransactionsMany(peers, mypk, ...args)
+function getTransactionsMany(peers, pubkey, ...args)
 {
   typeforce('PeerGroup', peers);
-  typeforce('Buffer', mypk);
+  typeforce(typeforce.oneOf('Buffer', 'String'), pubkey);
+
+  let pubkeybin = typeof pubkey == 'string' ? pubkey.toString('hex') : pubkey;
 
   let txids = [];
   for(let i = 0; i < args.length; i ++) {
@@ -501,7 +526,7 @@ function getTransactionsMany(peers, mypk, ...args)
   }
 
   return new Promise((resolve, reject) => {
-    peers.nspvRemoteRpc("gettransactionsmany", mypk, txids, {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("gettransactionsmany", pubkeybin, txids, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -520,12 +545,16 @@ function getTransactionsMany(peers, mypk, ...args)
  * ...
  * @returns a promise to get the txns in hex
  */
- async function getTransactionsManyDecoded(peers, network, mypk, args)
+ async function getTransactionsManyDecoded(peers, network, pubkey, args)
  {
+  typeforce('PeerGroup', peers);
+  typeforce(typeforce.oneOf('Buffer', 'String'), pubkey);
+  let pubkeybin = typeof pubkey == 'string' ? pubkey.toString('hex') : pubkey;
+
    try {
     let decodedTxs = [];
     let inTransactionsIds = [];
-    const txs = await getTransactionsMany(peers, mypk, ...args);
+    const txs = await getTransactionsMany(peers, pubkeybin, ...args);
     txs.transactions.forEach( tx => {
       const decoded = decodeTransactionData(tx.tx, tx.blockHeader, network)
       if (!decoded) {
@@ -533,7 +562,7 @@ function getTransactionsMany(peers, mypk, ...args)
       }
       decodedTxs.push(decoded);
       // Empty ids are for transactions which are VINS for mining transactions
-      let txids = decoded.ins.filter(one => one.txid !== EMPTY_TXID  ? one.txid : false)
+      let txids = decoded.ins.filter(one => one.txid !== EMPTY_TXID ? one.txid : false)
       txids = txids.map(one => one.txid);
       if (txids.length > 0) {
         inTransactionsIds.push(txids)
