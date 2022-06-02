@@ -205,7 +205,7 @@ if (!process.browser)
       // console.log('result=', result, 'utxo.length=', result?.utxos.length);
 
       //
-      // a tool to get addresses in the getTxids result (to verify it)
+      // tool to get addresses in the getTxids result (to verify it)
       // add the txids in set (to remove duplicates)
       //
       /* let params = [ peers, mypk ];
@@ -297,6 +297,14 @@ if (!process.browser)
       */
       // let txdecoded = await ccutils.getTransactionsManyDecoded(peers, mynetwork, mypk, ["cce11829d3589cb930ededbf6c0da5cd6d38ac860717308d345f151e7666b54a"]);
       // console.log('txdecoded=', txdecoded);
+
+      /*
+      ** Sample to get spent info for a tx
+      */
+      let txid = '759a8f86d42970c7b95fe2ec2b00929a1313241dd4779b9259942c9d540b86fc';
+      let vout = 1;
+      let result = await ccutils.nspvGetSpentInfo(peers, txid, vout);
+      console.log('result=', result, 'spent txid=', ccutils.hashToHex(result?.txProof?.txid), 'spent vini=', result?.spentVini);
     }
     catch(err) {
       console.log('caught err=', err, 'code=', err?.code, 'message=', err?.message);
