@@ -661,7 +661,7 @@ exports.nspvBroadcast = nspvBroadcast;
  * @param {*} peers 
  * @param {*} txid 
  * @param {*} txhex tx encoded as hex
- * @returns 
+ * @returns promise to get broadcast result
  */
 function nspvBroadcast(peers, txid, txhex)
 {
@@ -684,7 +684,7 @@ exports.nspvGetHeaders = nspvGetHeaders;
  * calls GetHeaders from a nspv peer
  * @param {*} peers 
  * @param {*} rloc starting header
- * @returns 
+ * @returns promise to get headers
  */
 function nspvGetHeaders(peers, loc)
 {
@@ -694,6 +694,30 @@ function nspvGetHeaders(peers, loc)
   let locbin = exports.castHashBin(loc);
   return new Promise((resolve, reject) => {
     peers.getHeaders([locbin], {}, (err, res, peer) => {
+    if (!err) 
+        resolve(res);
+    else
+        reject(err);
+    });
+  });
+}
+
+exports.nspvGetSpentInfo = nspvGetSpentInfo;
+/**
+ * broadcast a tx
+ * @param {*} peers 
+ * @param {*} txid txid to get spent info
+ * @param {*} vout vout of tx to get spent info
+ * @returns promise to get spent info @see 
+ */
+function nspvGetSpentInfo(peers, txid, vout)
+{
+  typeforce('PeerGroup', peers);
+  typeforce(typeforce.oneOf('String', 'Buffer'), txid);
+  typeforce('Number', vout);
+
+  return new Promise((resolve, reject) => {
+    peers.nspvGetSpentInfo(txid, vout, {}, (err, res, peer) => {
     if (!err) 
         resolve(res);
     else

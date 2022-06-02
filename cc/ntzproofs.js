@@ -301,12 +301,12 @@ exports.validateTxUsingTxProof = async function(peers, _txid)
     return false;
   }
 
-  let txProof = results[0];
-  if (!txProof || !txProof.partialMerkleTree || !txProof.partialMerkleTree.merkleRoot)
-    throw new Error("invalid merkle root object in proof!"); 
+  let r = results[0];
+  if (!r.txProof || !r.txProof.partialMerkleTree || !r.txProof.partialMerkleTree.merkleRoot)
+    throw new Error("invalid txproof object!"); 
 
   // validate tx against txproof (partial merkle tree)
-  let hashes = bmp.verify(txProof.partialMerkleTree);
+  let hashes = bmp.verify(r.txProof.partialMerkleTree);
   if (hashes.length == 0 || Buffer.compare(hashes[0], txid) != 0 )  {
     logerror("invalid tx proof for txid:",  ccutils.hashToHex(txid));
     throw new Error("txid existence in the chain is not proved!");

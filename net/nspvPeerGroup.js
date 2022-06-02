@@ -123,6 +123,10 @@ PeerGroup.prototype.nspvGetTxidsV2 = function(address, isCC, beginHeight, endHei
   this._request('nspvGetTxidsV2', address, isCC, beginHeight, endHeight, opts, cb)
 }
 
+PeerGroup.prototype.nspvGetSpentInfo = function(txid, vout, opts, cb) {
+  this._request('nspvGetSpentInfo', txid, vout, opts, cb)
+}
+
 PeerGroup.prototype.nspvRemoteRpc = function(rpcMethod, mypk, params, opts, cb) {
   this._request('nspvRemoteRpc', rpcMethod, mypk, params, opts, cb)
 }

@@ -313,6 +313,8 @@ const NSPVMSGS = {
   NSPV_NTZSPROOFRESP: 0x07,
   NSPV_TXPROOF: 0x08,
   NSPV_TXPROOFRESP: 0x09,
+  NSPV_SPENTINFO: 0x0a,
+  NSPV_SPENTINFORESP: 0x0b,
   NSPV_BROADCAST: 0x0c,
   NSPV_BROADCASTRESP: 0x0d,
   NSPV_TXIDS: 0x0e,
@@ -616,7 +618,7 @@ let nspvTxProofReq = (function(){
   return { encode, decode, encodingLength }
 })();
 
-let nspvTxProofResp = (function(){
+exports.txProofExtra = (function(){
   function encode(value, buffer, offset) {
     // not used, only decode
   }
@@ -627,11 +629,11 @@ let nspvTxProofResp = (function(){
   function decode(buffer, offset = 0, end = buffer.length) {
     let slicedBuffer = buffer.slice(offset, end);
     let bufferReader = new bufferutils.BufferReader(slicedBuffer);
-    let respCode = bufferReader.readUInt8();
-    let requestId = bufferReader.readUInt32();
+    //let respCode = bufferReader.readUInt8();
+    //let requestId = bufferReader.readUInt32();
     let txid = bufferReader.readSlice(32);
     let unspentValue = exports.bigInt64LE.decode(bufferReader.buffer, bufferReader.offset);  // bufferReader.readUInt64(), struct.Int64LE.decode(..)
-    bufferReader.offset += 8;
+    bufferReader.offset += exports.bigInt64LE.encodingLength();
     let height = bufferReader.readUInt32();
     let vout = bufferReader.readUInt32();
     let txlen = bufferReader.readUInt32();
@@ -645,13 +647,22 @@ let nspvTxProofResp = (function(){
     let pmt = null;
     if (txprooflen > 0)
       pmt = exports.txProof.decode(txproofbuf);
+    
+    let hashBlock = exports.buffer32.decode(bufferReader.buffer, bufferReader.offset);
+    bufferReader.offset += exports.buffer32.encodingLength();
     decode.bytes = bufferReader.offset; 
 
-    return { respCode, requestId, txid, unspentValue, height, vout, tx, partialMerkleTree: pmt };
+    return { /*respCode, requestId,*/ txid, unspentValue, height, vout, tx, partialMerkleTree: pmt, hashBlock };
   }
   return { encode, decode, encodingLength }
 })();
 
+// tx proof response 
+let nspvTxProofResp = struct([
+  { name: 'respCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'txProof', type: exports.txProofExtra }
+]);
 
 // custom parser for ntz req/resp nspv msgs
 let nspvNtzsReq = (function(){
@@ -766,7 +777,7 @@ let nspvNtzsProofResp = (function(){
   return { encode, decode, encodingLength };
 })();
 
-// get transactions req
+// get transactions req (nspv v007)
 let nspvTransactionsReq = struct([
   { name: 'reqCode', type: struct.UInt8 },
   { name: 'requestId', type: struct.UInt32LE },
@@ -774,10 +785,29 @@ let nspvTransactionsReq = struct([
   { name: 'txids', type: struct.VarArray(varint, exports.buffer32) }
 ]);
 
+// transactions response (nspv 007) 
 let nspvTransactionsResp = struct([
   { name: 'respCode', type: struct.UInt8 },
   { name: 'requestId', type: struct.UInt32LE },
   { name: 'txns', type: struct.VarArray(varint, exports.kmdtransaction) }
+]);
+
+// tx spent info req
+let nspvSpentInfoReq = struct([
+  { name: 'reqCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'vout', type: struct.UInt32LE },
+  { name: 'txid', type: exports.buffer32 }
+]);
+
+// tx spent info response 
+let nspvSpentInfoResp = struct([
+  { name: 'respCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'txProof', type: exports.txProofExtra },
+  { name: 'txid', type:  exports.buffer32 },
+  { name: 'vout', type: struct.UInt32LE },
+  { name: 'spentVini', type: struct.UInt32LE }
 ]);
 
 // error may be returned to any request:
@@ -829,6 +859,9 @@ exports.nspvReq = (function () {
         break;
       case NSPVMSGS.NSPV_TXIDS_V2:
         type = nspvTxidsV2Req;
+        break;
+      case NSPVMSGS.NSPV_SPENTINFO:
+        type = nspvSpentInfoReq;
         break;
       case NSPVMSGS.NSPV_REMOTERPC:
         type = nspvRemoteRpcReq;
@@ -903,6 +936,9 @@ exports.nspvResp = (function () {
         break;
       case NSPVMSGS.NSPV_TXIDSRESP_V2:
         type = nspvTxidsV2Resp;
+        break;
+      case NSPVMSGS.NSPV_SPENTINFORESP:
+        type = nspvSpentInfoResp;
         break;
       case NSPVMSGS.NSPV_REMOTERPCRESP:
         type = nspvRemoteRpcResp;
