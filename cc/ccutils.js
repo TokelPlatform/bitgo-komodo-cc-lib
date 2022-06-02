@@ -32,6 +32,7 @@ exports.getNormalUtxos = getNormalUtxos;
 exports.getCCUtxos = getCCUtxos;
 exports.getUtxos = getUtxos;
 exports.getTxids = getTxids;
+exports.getTxidsV2 = getTxidsV2;
 exports.hex2Base64 = hex2Base64;
 exports.byte2Base64 = byte2Base64;
 exports.addInputsFromPreviousTxns = addInputsFromPreviousTxns;
@@ -350,6 +351,30 @@ function getTxids(peers, address, isCC, skipCount, maxrecords)
     });
   });
 }
+
+/**
+ * returns array with txids relevant to an address: tx outputs (spent and unspent) and spending txids (from this address)
+ * @param {*} peers PeerGroup object with NspvPeers additions
+ * @param {*} address address to get txids from
+ * @param {*} isCC get txids with normal (isCC is 0) or cc (isCC is 1) utxos on this address
+ * @param {*} beginHeight begin height to search txids from 
+ * @param {*} endHeight to search txids up to
+ * @returns a promise returning object containing nspv params and a 'txids' array with txid, index and amount props. 
+ * Note that txids with negative amount denote spending transactions, and the 'index' property means input's index
+ * for txids with positive amounts those are tx outputs
+ */
+ function getTxidsV2(peers, address, isCC, beginHeight, endHeight)
+ {
+   return new Promise((resolve, reject) => {
+     peers.nspvGetTxidsV2(address, isCC, beginHeight, endHeight, {}, (err, res, peer) => {
+       //console.log('err=', err, 'res=', res);
+       if (!err)
+         resolve(res);
+       else
+         reject(err);
+     });
+   });
+ }
 
 /**
  * create a tx and adds normal inputs for equal or more than the amount param 

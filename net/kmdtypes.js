@@ -321,6 +321,8 @@ const NSPVMSGS = {
   NSPV_REMOTERPCRESP: 0x15,  
   NSPV_TRANSACTIONS: 0x16,
   NSPV_TRANSACTIONSRESP: 0x17, 
+  NSPV_TXIDS_V2: 0x18,
+  NSPV_TXIDSRESP_V2: 0x19,
   NSPV_ERRORRESP: 0xff,  
 };
 
@@ -344,6 +346,8 @@ exports.nspvMsgName = function(code)  {
     case NSPVMSGS.NSPV_REMOTERPCRESP: return 'NSPV_REMOTERPCRESP';  
     case NSPVMSGS.NSPV_TRANSACTIONS: return 'NSPV_TRANSACTIONS';
     case NSPVMSGS.NSPV_TRANSACTIONSRESP: return 'NSPV_TRANSACTIONSRESP';  
+    case NSPVMSGS.NSPV_TXIDS_V2: return 'NSPV_TXIDS_V2';
+    case NSPVMSGS.NSPV_TXIDSRESP_V2: return 'NSPV_TXIDSRESP_V2';
     case NSPVMSGS.NSPV_ERRORRESP: return 'NSPV_ERRORRESP';
     default: return 'unknown';  
   }
@@ -538,6 +542,35 @@ let nspvTxidsResp = struct([
   { name: 'skipcount', type: struct.UInt32LE },
   { name: 'coinaddr', type: bufferaddr }
 ]);
+
+let nspvTxidsV2Req = struct([
+  { name: 'reqCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  { name: 'coinaddr', type: struct.VarString(struct.UInt8, 'ascii')  },  // simply UInt8 as komodod currently checks only 1 byte len
+  { name: 'CCflag', type: struct.UInt8 },
+  { name: 'beginHeight', type: struct.UInt32LE },
+  { name: 'endHeight', type: struct.UInt32LE }
+]);
+
+let nspvTxidsV2Resp = struct([
+  { name: 'respCode', type: struct.UInt8 },
+  { name: 'requestId', type: struct.UInt32LE },
+  {
+    name: 'txids',
+    type: struct.VarArray(struct.UInt16LE, struct([
+      { name: 'txid', type: exports.buffer32 },
+      { name: 'satoshis', type: exports.bigInt64LE },
+      { name: 'index', type: struct.UInt32LE },
+      { name: 'height', type: struct.UInt32LE },
+    ]))
+  },
+  { name: 'nodeheight', type: struct.UInt32LE },
+  { name: 'filter', type: struct.UInt32LE },
+  { name: 'CCflag', type: struct.UInt16LE },
+  { name: 'skipcount', type: struct.UInt32LE },
+  { name: 'coinaddr', type: bufferaddr }
+]);
+
 
 // same as kmdmessages.merkleblock but formats flags as array as bitcoin-merkle-proof lib wants it
 exports.txProof = (function(){
@@ -794,6 +827,9 @@ exports.nspvReq = (function () {
       case NSPVMSGS.NSPV_TXIDS:
         type = nspvTxidsReq;
         break;
+      case NSPVMSGS.NSPV_TXIDS_V2:
+        type = nspvTxidsV2Req;
+        break;
       case NSPVMSGS.NSPV_REMOTERPC:
         type = nspvRemoteRpcReq;
         break;
@@ -864,6 +900,9 @@ exports.nspvResp = (function () {
         break;
       case NSPVMSGS.NSPV_TXIDSRESP:
         type = nspvTxidsResp;
+        break;
+      case NSPVMSGS.NSPV_TXIDSRESP_V2:
+        type = nspvTxidsV2Resp;
         break;
       case NSPVMSGS.NSPV_REMOTERPCRESP:
         type = nspvRemoteRpcResp;

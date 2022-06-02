@@ -119,6 +119,10 @@ PeerGroup.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, op
   this._request('nspvGetTxids', address, isCC, skipCount, filter, opts, cb)
 }
 
+PeerGroup.prototype.nspvGetTxidsV2 = function(address, isCC, beginHeight, endHeight, opts, cb) {
+  this._request('nspvGetTxidsV2', address, isCC, beginHeight, endHeight, opts, cb)
+}
+
 PeerGroup.prototype.nspvRemoteRpc = function(rpcMethod, mypk, params, opts, cb) {
   this._request('nspvRemoteRpc', rpcMethod, mypk, params, opts, cb)
 }
