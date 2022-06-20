@@ -575,11 +575,11 @@ function getTransactionsMany(peers, pubkey, ...args)
  * ...
  * @returns a promise to get the txns in hex
  */
- async function getTransactionsManyDecoded(peers, network, pubkey, args)
+ async function getTransactionsManyDecoded(peers, network, mypk, args)
  {
   typeforce('PeerGroup', peers);
-  typeforce(typeforce.oneOf('Buffer', 'String'), pubkey);
-  let pubkeybin = typeof pubkey == 'string' ? pubkey.toString('hex') : pubkey;
+  typeforce(typeforce.oneOf('Buffer', 'String'), mypk);
+  let pubkeybin = typeof mypk == 'string' ? mypk.toString('hex') : mypk;
 
    try {
     let decodedTxs = [];
