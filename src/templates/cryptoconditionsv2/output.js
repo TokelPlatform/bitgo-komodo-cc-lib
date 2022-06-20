@@ -10,8 +10,8 @@ function check (script) {
 }
 check.toJSON = function () { return 'cryptoconditions output' }
 
-function encode (condition) {
-  return ccbasic.makeCCSpkV2(condition)
+function encode (condition, ccSubver) {
+  return ccbasic.makeCCSpkV2(condition, ccSubver)
 }
 
 function decode (script) {
