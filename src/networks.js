@@ -489,7 +489,7 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    protocolVersion: 170009,
+    protocolVersion: 170010,
     messages: kmdmessages.kmdMessages,
     magic:  0xbbef08d7,
     // to connect over p2p:
@@ -498,7 +498,8 @@ module.exports = {
     staticPeers: [
       '167.99.114.240:19259',
       '164.132.225.134:19259',
-      '195.201.20.230:19259'
+      '195.201.20.230:19259',
+      // 'localhost:19259',
     ],
     // to connect over websockets:
     webSeeds: [
