@@ -15,7 +15,10 @@ const networks = require('../src/networks');
 //const mynetwork = networks.dimxy19;
 //const mynetwork = networks.tok6; 
 //const mynetwork = networks.TKLTEST; 
-const mynetwork = networks.TOKEL; 
+const mynetwork = networks.TKLTEST2; 
+//const mynetwork = networks.TOKEL; 
+//const mynetwork = networks.DIMXY31; 
+
 
 
 var params = {
@@ -47,10 +50,12 @@ if (!process.browser)
         console.log('peers.peers.length=', peers.peers.length);
       }*/
 
-      // tests:
+      // Samples:
       
+      //
+      // get txproof for txid on TOKEL net (set mynetwork to TOKEL):
+      //
       /*
-      // get txproof for txid:
       let txid = 'fcaf0d4ca6c7392fe67474738da9f51acacd74bd31ae29260085ec9254020768'  // tokel h=10000
       let ht = 10000;
 
@@ -69,6 +74,10 @@ if (!process.browser)
       //let ntzsproofresp = await ntzsproofs.nspvNtzsProof(peers, ntzresp.ntz.txid);
       //console.log('ntzsproofresp=', ntzsproofresp);
       
+      //
+      // Sample to validate several txids on TOKEL (set mynetwork to TOKEL) 
+      //
+      /* ***
       let txid1 = '22eca5965bc69361183653aa69fdcdc4f90a3b4a7b39c96e36d042478ff54e34'; 
       let ht1 = 120000;
       let ntzvalid1 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid1, ht1);
@@ -85,7 +94,6 @@ if (!process.browser)
         console.log("bad height=", e.message);
       }
 
-      
       // ht = notarised ht, +/-1
       let txid3 = '5ab764cfd72ecdebf5bb817d02713d48fc103be91ae8fdf7ce56386ada73d1ab'; 
       let ht3 = 119998;
@@ -128,11 +136,19 @@ if (!process.browser)
       let ht9 = 119995;
       let ntzvalid9 = await ntzsproofs.validateTxUsingNtzsProof(peers, mynetwork, txid9, ht9);
       console.log("ntzvalid9=", ntzvalid9);
+      *** */
     
-      //let txproofvalid = await ntzsproofs.validateTxUsingTxProof(peers, txid);
-      //console.log("txproof valid=", txproofvalid);
+      /*
+      ** Sample to validate tx using txProofs
+      */
+      let txid = '759a8f86d42970c7b95fe2ec2b00929a1313241dd4779b9259942c9d540b86fc'
+      let txproofvalid = await ntzsproofs.validateTxUsingTxProof(peers, txid);
+      console.log("txproof valid=", txproofvalid);
 
-      /* download headers
+      //
+      // download headers
+      //
+      /* *** 
       let locnew = Buffer.from("0c750b86967a5873b3c3f4ba46f1188b731a82327799aa888598582aa61f654b", 'hex');
       let loc = Buffer.from([]);
       let getHeaders = function()
@@ -149,8 +165,7 @@ if (!process.browser)
           });
         }
       }
-      let ghInt = setInterval(getHeaders, 10);   */
-
+      let ghInt = setInterval(getHeaders, 10); *** */
 
     }
     catch(err) {

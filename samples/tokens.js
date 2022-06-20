@@ -9,6 +9,8 @@ const Transaction = require('../src/transaction');
 const Block = require('../src/block');
 const address = require('../src/address');
 const connect = require('../net/connect.js')
+const bufferutils = require("../src/bufferutils");
+
 
 // create peer group
 const NspvPeerGroup = require('../net/nspvPeerGroup');
@@ -21,8 +23,10 @@ const networks = require('../src/networks');
 //const mynetwork = networks.dimxy23;
 //const mynetwork = networks.DIMXY24;
 // const mynetwork = networks.dimxy25;
-const mynetwork = networks.TKLTEST;
+//const mynetwork = networks.TKLTEST;
+const mynetwork = networks.TKLTEST2;
 //const mynetwork = networks.TOKEL;
+//const mynetwork = networks.DIMXY31;
 
 
 
@@ -31,12 +35,16 @@ const mynetwork = networks.TKLTEST;
 // to init the cryptoconditions wasm lib before cc usage
 // (this is due to wasm delayed loading specifics)
 const ccbasic = require('../cc/ccbasic');
-var ccimp = require('../cc/ccimp');   // you will need to do a call like:
-                                      // ccbasic.cryptoconditions = await ccimp;
-                                      // to init the cryptoconditions wasm lib before cc usage (this is due to wasm delayed loading specifics)
+
+var ccimp = require('../cc/ccimp'); 
+// Note: 
+// to init the cryptoconditions wasm lib before the first cc usage (this is due to wasm delayed loading specifics)
+// you will need to do a call:
+// ccbasic.cryptoconditions = await ccimp;
+                                      
 
 
-// additional seeds:
+// additional seeds if needed:
 // (default seeds are in the mynetwork object)
 /*
 to connect over p2p:
@@ -75,15 +83,18 @@ var opts = {
   wsOpts: { rejectUnauthorized: false }  // enable self-signed certificates
 }
 
-//var peers;
-
-// Example test calls running under nodejs
+// sample keys:
 const mytokencreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
 const mytokentransferwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
 //const mydestpubkey = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
 const mydestpubkey = "034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc";
+const deadpubkey = "02deaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaa";
+
 //const mytokenid = "2bea503a491cae096b0c2af48d504e4fbd7c4747f49eddbb5d2723d6287769f8";
-const mytokenid = "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a";
+//const mytokenid = "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a";
+//const mytokenid = "884278724ef2a5207715b9250654dd1bb287b699aaf7da099c259a078ff3dfc4"; // tkltest
+const mytokenid = "07137df1a483dbefd378136d674dac22084732483246c003598200b6e5b086fb" // dimxy31
+let mypk = "035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db";
 
 // sleep to insert delay between nspv calls to bypass the old nspv rate limiter
 function sleep(ms) {
@@ -93,6 +104,8 @@ function sleep(ms) {
 
 if (!process.browser) 
 {
+  // Example test calls running under nodejs
+
   connect(params, opts)
   .then(async (peers) => {
   
@@ -101,73 +114,78 @@ if (!process.browser)
       // load cryptoconditions lib
       ccbasic.cryptoconditions = await ccimp;
 
-      // Several tests (uncomment needed):
-      
-      // test get blocks from peer (TODO: update for kmd block and transactions support) : 
-      // var hashes = [  bufferutils.reverseBuffer(Buffer.from("099751509c426f89a47361fcd26a4ef14827353c40f42a1389a237faab6a4c5d", 'hex')) ];
-      // let blocks = peers.getBlocks(hashes, {});
-      // console.log('blocks:', blocks);
+      //
+      // Several token samples 
+      // (uncomment needed one and change mytokenid to your tokenid):
+      //
 
-      // test get normal utxos from an address:
-      //let utxos = await ccutils.getNormalUtxos(peers, faucetcreateaddress);
-      //console.log('utxos=', utxos);
+      /*
+      ** Sample how to make a token create transaction
+      */
+      // let tx = await cctokens.tokensv2Create(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
+      // console.log('txhex=', tx.toHex());  // use sendrawtransaction rpc to send the created tx
 
-      // it should be at least 1 sec between the same type nspv requests (here it is NSPV_UTXOS)
-      //await sleep(1100)
-
-      // get cc utxos:
-      //let ccutxos = await ccutils.getCCUtxos(peers, faucetGlobalAddress);
-      //console.log('cc utxos=', ccutxos); 
-
-      // make cc token create tx
-      //let tx = await cctokens.tokensv2Create(peers, mynetwork, mytokencreatewif, "MYNFT", "MyDesc", 1, "000101010201010301");
-      //console.log('txhex=', tx.toHex());
-
-      // make cc token transfer tx
+      /*
+      ** Sample to make a token transfer tx to a pubkey
+      */
       //let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, mydestpubkey, 1);
       //console.log('txhex=', tx.toHex());
 
-      // make tx with normal inputs for the specified amount
-      // not used let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 100000000*190000);
-      //console.log('txwnormals=', txwnormals);
-
-      // tokev2address:
-      //let tokev2address = await cctokens.tokenV2Address(peers, mypk, mypk);
-      //console.log('tokev2address=', tokev2address);
-
-      // test key:
-      const mywif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
-      let mypair = ecpair.fromWIF(mywif, mynetwork);
-      let mypk = mypair.getPublicKeyBuffer();
+      /*
+      ** Sample to make a token transfer tx to an R-address
+      */
+      // let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mypk, mytokenid, 'RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef', 1);
+      // console.log('txhex=', tx.toHex());
 
       /*
-      // isTokenV2Output test:
-      //let getxns = await ccutils.getTransactionsMany(peers, mypk, "35ff378351468c43afcc1cea830f706d44979de024a59948ce7ccf4c086c1000"); // tokentransfer
-      //let nvout = 0;
-      //let getxns = await ccutils.getTransactionsMany(peers, mypk, "d45689a1b667218c8ed400ff5603b5e7b745df8ef39c3c1b27f74a1fed6f630a"); // tokencreate
-      //let nvout = 1;
-      //let getxns = await ccutils.getTransactionsMany(peers, mypk, "7ede39c986198aadc354436dad9ecd768a14a3b6b4626d2b193e1e9e2f356528"); // non-token
-      //let nvout = 0;
-      let getxns = await ccutils.getTransactionsMany(peers, mypk, "f24e159ba9dce0ecdbe9e066518da063ea2028da01b9b09b97e13d81b345743c"); // tokencreatetokel
-      let nvout = 1;
-      let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
-      let tokendata = cctokens.isTokenV2Output(tx, nvout);
-      console.log(`IsTokenV2Output(tx,${nvout})=`, tokendata, "tokenid=", (tokendata ? ccutils.hashToHex(tokendata.tokenid) : null)); 
+      ** Sample how to burn a token
       */
+      // let tx = await cctokens.tokensv2Transfer(peers, mynetwork, mytokencreatewif, mytokenid, deadpubkey, 1);
+      // console.log('txhex=', tx.toHex());
 
-      // validateTokensV2Many test
-      //let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, ["035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db"], 1 ), mynetwork)
-      //let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, ["02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e"], 1), mynetwork)
-      //console.log("getting cc outputs for indexkey=", ccindexkey);
-      //let ccoutputs = await ccutils.getCCUtxos(peers, ccindexkey, 0, 0);
-      //let ccoutputs = await ccutils.getCCUtxos(peers, "RJkivfMQjLxfHyVHs1EY43Lr71YvLbZPL9", 0, 0);  // empty address
-      //let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
-      let ccoutputs_validated = await cctokens.getTokensForPubkey(mynetwork, peers, Buffer.from("02c00f9800cfd2eeb1775729d3783357b1db193448712076bf746f7b5058a3241e", 'hex'), 0 ,0);
-      console.log("ccoutputs_validated=", ccoutputs_validated);
+      
+      /*
+      ** Sample how to check if a utxo is a token by calling isTokenV2Output()
+      ** it attaches a 'tokendata' object to the utxo, if this is a valid token
+      */
+      // let txid =  "f24e159ba9dce0ecdbe9e066518da063ea2028da01b9b09b97e13d81b345743c";
+      // let nvout = 1;
+      // let getxns = await ccutils.getTransactionsMany(peers, mypk, txid);
+      // let tx = Transaction.fromHex(getxns.transactions[0].tx, mynetwork);
+      // let tokendata = cctokens.isTokenV2Output(tx, nvout);
+      // console.log(`IsTokenV2Output(tx,${nvout})=`, tokendata, "tokenid=", (tokendata?.tokenid ? ccutils.hashToHex(tokendata.tokenid) : null)); 
+    
+      /*
+      ** Sample how to get utxos sent to a R-address
+      */
+      // let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, ["RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu"], 1, undefined, ccbasic.CCSUBVERS.CC_MIXED_MODE_SECHASH_SUBVER_1), mynetwork); // get index key
+      // let ccoutputs = await ccutils.getCCUtxos(peers, ccindexkey, 0, 0);  // make nspv request
+      // ccoutputs.forEach(u => { console.log('utxo satoshis=', u.satoshis.toString(), 'txid=', ccutils.hashToHex(u.txid), 'vout=', u.vout, 'funcid=', u?.tokendata?.funcid, 'tokenid=', u?.tokendata?.tokenid ? ccutils.hashToHex(u?.tokendata?.tokenid) : '' ) });
 
-      /*let ccoutputs = await ccutils.getCCUtxos(peers, "CWeCaQoWXi9ehiefmGbHFxhnLzvy8CYLQ2", 0, 0);
-      let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
-      console.log("ccoutputs_validated=", ccoutputs_validated);*/
+      /*
+      ** Sample how to get all token utxos for a pubkey and its R-address,
+      ** this function actually does several nspv requests for index keys obtained from the pubkey and R-address
+      ** it is also validates token utxos with validateTokensV2Many
+      */
+      let tokenutxos = await cctokens.getAllTokensV2ForPubkey(peers, mynetwork, mypk, 0, 0);
+      tokenutxos.forEach(u => { console.log('utxo satoshis=', u.satoshis.toString(), 'txid=', ccutils.hashToHex(u.txid), 'vout=', u.vout, 'funcid=', u?.tokendata?.funcid, 'tokenid=', u?.tokendata?.tokenid ? ccutils.hashToHex(u?.tokendata?.tokenid) : '' ) });
+
+      /*
+      ** sample how to load and validate token utxos
+      ** get an old-style cc index key for a pubkey:
+      */
+      /* get cc index key for a pubkey: */
+      // let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(cctokens.EVAL_TOKENSV2, ["035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db"], 1 ), mynetwork)
+      /* load utxos: */
+      // let ccoutputs = await ccutils.getCCUtxos(peers, ccindexkey, 0, 0);  
+      /* call validation function that checks that utxo is a valid token. In this case it would attach a 'tokendata' object to the utxo: */
+      // let ccoutputs_validated = await cctokens.validateTokensV2Many(mynetwork, peers, mypk, ccoutputs.utxos);
+      // ccoutputs_validated.forEach(u => { console.log('utxo satoshis=', u.satoshis.toString(), 'txid=', ccutils.hashToHex(u.txid), 'vout=', u.vout, 'funcid=', u?.tokendata?.funcid, 'tokenid=', u?.tokendata?.tokenid ? ccutils.hashToHex(u?.tokendata?.tokenid) : '' ) });
+
+      // sleep call 
+      // in case you are making too many nspv requests per sec of the same type (here it is NSPV_UTXOS)
+      // insert this between calls:
+      // await sleep(1100)
 
     }
     catch(err) {
