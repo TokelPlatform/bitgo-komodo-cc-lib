@@ -3,6 +3,8 @@
 const Debug = require('debug')
 const logdebug = Debug('nspv')
 const logerror = Debug('nspv:error');
+const typeforce = require('typeforce');
+const types = require('../src/types');
 
 const { URL } = require('url');
 const { parseAddress, shuffleArray } = require('./utils.js')
@@ -27,6 +29,8 @@ class AddrStates {
 	 * @returns added or existing element
 	 */
 	add(p) {
+		typeforce(typeforce.oneOf('String', 'URL'), p);
+
 		let url = typeof p === 'string' ? parseAddress(p) : p;
 		let found = this.addresses.find((elem) => { return elem.url.href === url.href })
 		if (found === undefined) {
@@ -37,6 +41,8 @@ class AddrStates {
 	}
 
 	find(p) {
+		typeforce(typeforce.oneOf('String', 'URL'), p);
+
 		let url = typeof p === 'string' ? parseAddress(p) : p;
 		return this.addresses.find((elem) => { return elem.url.href === url.href });
 	}
@@ -48,6 +54,8 @@ class AddrStates {
 	}
 
 	setInUse(p) {
+		typeforce(typeforce.oneOf('String', 'URL'), p);
+
 		let url = typeof p === 'string' ? parseAddress(p) : p;
 		let a;
 		if ((a = this.addresses.find((elem) => { return elem.url.href === url.href })) !== undefined) {
@@ -58,6 +66,8 @@ class AddrStates {
 	}
 
 	setClear(p, err) {
+		typeforce(typeforce.oneOf('String', 'URL'), p);
+
 		let url = typeof p === 'string' ? parseAddress(p) : p;
 		let a;
 		if ((a = this.addresses.find((elem) => { return elem.url.href === url.href })) !== undefined) {
@@ -71,6 +81,8 @@ class AddrStates {
 	}
 
 	setConnected(p) {
+		typeforce(typeforce.oneOf('String', 'URL'), p);
+
 		let url = typeof p === 'string' ? parseAddress(p) : p;
 		let a;
 		if ((a = this.addresses.find((elem) => { return elem.url.href === url.href })) !== undefined) {
@@ -81,6 +93,8 @@ class AddrStates {
 	}
 
 	setDisabled(p) {
+		typeforce(typeforce.oneOf('String', 'URL'), p);
+
 		let url = typeof p === 'string' ? new URL(p) : p;
 		let a;
 		if ((a = this.addresses.find((elem) => { return elem.url.href === url.href })) !== undefined) {
