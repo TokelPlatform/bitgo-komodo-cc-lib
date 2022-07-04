@@ -2,6 +2,7 @@ const url = require('url')
 const ws = require('ws')
 const encodeHeader = require('bitcoin-protocol').types.header.encode
 const encodeTx = require('bitcoin-protocol').types.transaction.encode
+const ip = require('ip')
 
 // TODO: create-hash package
 const { createHash } = require('crypto')
@@ -45,39 +46,33 @@ function isWebSocket(socket)
 {
   return socket?.socket instanceof ws;
 }
-function getSocketUrl(socket)
+function getSocketHost(socket)
 {
-  let remoteUrl = '';
   if (socket !== undefined) {
-    if (isWebSocket(socket))
-      return socket?.socket?.url;
-    else {
-      if (socket?.remoteAddress)
-        remoteUrl += socket.remoteAddress
-      if (socket?.remotePort)
-        remoteUrl += ':' + socket.remotePort
-    }
+    return isWebSocket(socket) ? socket?.socket?.url : myMakeUrl(socket?.remoteAddress, socket?.remotePort).host
   }
-  return remoteUrl
+  return ''
 }
 
-function getSocketLocalUrl(socket)
+function getSocketLocalHost(socket)
 {
-  let localUrl = '';
   if (socket !== undefined) {
-    if (isWebSocket(socket))  {
-      if (socket?.socket?._socket?.localAddress)
-        localUrl += socket.socket._socket.localAddress
-      if (socket?.socket?._socket?.localPort)
-        localUrl += ':' + socket.socket?._socket.localPort    }
-    else {
-      if (socket?.localAddress)
-        localUrl += socket.localAddress
-      if (socket?.localPort)
-        localUrl += ':' + socket.localPort
-    }
+    if (isWebSocket(socket))  
+      return myMakeUrl(socket?.socket?._socket?.localAddress, socket?.socket?._socket?.localPort).host
+    else 
+      return myMakeUrl(socket?.localAddress, socket?.localPort).host
   }
-  return localUrl
+  return ''
+}
+
+// make URL from opt addr port and protocol
+function myMakeUrl(addr, port, protocol)
+{
+  protocol = protocol ? protocol : 'x:'
+  let hostname = ip.isV6Format(addr) && !ip.isV4Format(addr) ? `[${addr}]` : addr  // !ip.isV4Format means ipv6
+  let u = new url.URL(`${protocol}//${hostname}`)
+  u.port = port
+  return u
 }
 
 const serviceBits = {
@@ -123,6 +118,7 @@ module.exports = {
   sha256,
   getServices,
   shuffleArray,
-  getSocketUrl,
-  getSocketLocalUrl
+  getSocketHost,
+  getSocketLocalHost,
+  myMakeUrl
 }

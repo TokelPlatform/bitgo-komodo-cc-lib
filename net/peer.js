@@ -82,7 +82,7 @@ class Peer extends EventEmitter {
     // TODO?: maybe this should error if we try to write after close?
     if (!this.socket.writable) return
     this._encoder.write({ command, payload })
-    logdebug("sent cmd", this._formatCommand(command, payload), "to url", this.getUrl())
+    logdebug("sent cmd", this._formatCommand(command, payload), "to url", this.getHost())
   }
 
   connect (socket) {
@@ -113,7 +113,7 @@ class Peer extends EventEmitter {
     if (this.handshakeTimeout) {
       this._handshakeTimer = setTimeout(() => {
         this._handshakeTimer = null
-        this._error(new Error(`Peer handshake timed out ${this.getUrl()}`))
+        this._error(new Error(`Peer handshake timed out ${this.getHost()}`))
       }, this.handshakeTimeout)
       this.once('ready', () => {
         this.clearTimers()
@@ -121,7 +121,7 @@ class Peer extends EventEmitter {
     }
 
     //logdebug(`connecting from localaddr: ${socket.localAddress}:${socket.localPort}`)
-    logdebug(`connecting from localaddr: ${utils.getSocketLocalUrl(socket)}`)
+    logdebug(`connecting from localaddr: ${utils.getSocketLocalHost(socket)}`)
 
     // set up ping interval and initial pings
     this.once('ready', () => {
@@ -145,8 +145,8 @@ class Peer extends EventEmitter {
     this.emit('disconnect', err)
     //console.log('disconnect peer, events:', this.eventNames());
     this.removeAllListeners(); // clear incoming message processing
-    logdebug("peer disconnected", this.getUrl())
-    //console.log("peer disconnected", this.getUrl(), err?.message)
+    logdebug("peer disconnected", this.getHost())
+    //console.log("peer disconnected", this.getHost(), err?.message)
   }
 
   clearTimers() {
@@ -176,7 +176,7 @@ class Peer extends EventEmitter {
   _registerListeners () {
     this._decoder.on('error', this._error.bind(this))
     this._decoder.on('data', (message) => {
-      logdebug("received cmd", this._formatCommand(message.command, message.payload), "from url", this.getUrl())
+      logdebug("received cmd", this._formatCommand(message.command, message.payload), "from url", this.getHost())
       this.emit('message', message)                     // forward received messages to PeerGroup.OnMessage()
       this.emit(message.command, message.payload)       // forward messages to Peer processors
     })
@@ -431,20 +431,9 @@ class Peer extends EventEmitter {
   } */
 
   
-  getUrl()
+  getHost()
   {
-  /*
-    let remotep = '';
-    if (this._isWebSocketPeer())
-      return this.socket.socket.url;
-    else if (this.socket) {
-      if (this.socket.remoteAddress)
-          remotep += this.socket.remoteAddress
-      if (this.socket.remotePort)
-          remotep += ':' + this.socket.remotePort
-    }
-    return remotep */
-    return utils.getSocketUrl(this.socket);
+    return utils.getSocketHost(this.socket);
   }
   
 }
