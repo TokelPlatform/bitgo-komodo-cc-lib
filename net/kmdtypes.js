@@ -534,7 +534,7 @@ let nspvTxidsResp = struct([
     type: struct.VarArray(struct.UInt16LE, struct([
       { name: 'txid', type: exports.buffer32 },
       { name: 'satoshis', type: exports.bigInt64LE },
-      { name: 'index', type: struct.UInt32LE },
+      { name: 'index', type: struct.UInt32LE },  // means vin index or vout index depending on whether satoshis is negative or positive  
       { name: 'height', type: struct.UInt32LE },
     ]))
   },
@@ -562,7 +562,7 @@ let nspvTxidsV2Resp = struct([
     type: struct.VarArray(struct.UInt16LE, struct([
       { name: 'txid', type: exports.buffer32 },
       { name: 'satoshis', type: exports.bigInt64LE },
-      { name: 'index', type: struct.UInt32LE },
+      { name: 'index', type: struct.UInt32LE },  // means vin index or vout index depending on whether satoshis is negative or positive  
       { name: 'height', type: struct.UInt32LE },
     ]))
   },
