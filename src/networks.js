@@ -529,7 +529,7 @@ module.exports = {
     },
     coin: coins.ZEC,
     komodoAssetNet: true,
-    protocolVersion: 170009,
+    protocolVersion: 170010,
     messages: kmdmessages.kmdMessages,
     magic:  0x86c2fdd0,
   
