@@ -15,6 +15,7 @@ const networks = require('../src/networks');
 const script = require("../src/script");
 const ecpair = require('../src/ecpair');
 const varuint = require('varuint-bitcoin');
+const crypto = require('../src/crypto');
 
 const types = require('../src/types');
 const typeforce = require('typeforce');
@@ -390,9 +391,9 @@ async function makeTokensV2CreateTx(peers, mynetwork, wif, name, desc, bnAmount,
 //}
 
 // make token transfer tx
-async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, bnTokenAmount) 
+async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _dest, bnTokenAmount) 
 {
-  typeforce(typeforce.oneOf(types.Buffer, types.String), _destpk);
+  typeforce(typeforce.oneOf(types.Buffer, types.String), _dest);
 
   // init lib cryptoconditions
   // ccbasic.cryptoconditions = await ccimp;  // maybe move this in start code? (but we dont bother a user with this)
@@ -404,9 +405,9 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, b
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
 
-  let destpk = Buffer.isBuffer(_destpk) ? _destpk : Buffer.from(_destpk, 'hex');
-  if (!ccutils.isValidPubKey(destpk))
-    throw new Error("invalid destination pubkey");
+  let dest = !Buffer.isBuffer(_dest) ? _dest : Buffer.from(_dest, 'hex'); // pk may be bin
+  //if (!ccutils.isValidPubKey(dest))
+  //  throw new Error("invalid destination pubkey");
 
   let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, bnNormalAmount);
   let sourcetx1 = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'), mynetwork);
@@ -428,8 +429,15 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, b
   if (bnCCAdded.lt(bnTokenAmount))
     throw new Error("insufficient token inputs (" + bnCCAdded.toString() + ")");
 
-  // create tokens cc to dest address
-  let destccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [destpk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [destpk], encodeTokensV2Data(tokenid)));
+  // create tokens cc to dest pubkey or address
+  let vPubkeysOrEmpty  
+  let ccSubver = ccbasic.CCSUBVERS.CC_MIXED_MODE_SECHASH_SUBVER_1;
+  if (ccutils.isValidPubKey(dest))  {
+    vPubkeysOrEmpty = [dest]
+    ccSubver = ccbasic.CCSUBVERS.CC_MIXED_MODE_SUBVER_0
+  }
+  let opdrop = ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, vPubkeysOrEmpty, encodeTokensV2Data(tokenid));  // vpubkeys empty for destinations r-addresses
+  let destccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [dest], 1, opdrop, ccSubver);
   if (destccSpk == null)  
     throw new Error('could not create tokens cc spk for destination');
   
@@ -438,9 +446,18 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _destpk, b
   // create tokens to my address for cc change and spending probe
   if (bnCCAdded.sub(bnTokenAmount).gt(BN_0))
   {
-    let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk], 1, ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, [mypk], encodeTokensV2Data(tokenid)));
+    let vMyPubkeysOrEmpty
+    let mydest
+    if (ccutils.isValidPubKey(dest)) {
+      mydest = mypk;
+      vMyPubkeysOrEmpty = [dest];
+    }
+    else 
+      mydest = ccutils.pubkey2NormalAddressKmd(mypk);
+    let opdrop = ccbasic.makeOpDropData(EVAL_TOKENSV2, 1,1, vMyPubkeysOrEmpty, encodeTokensV2Data(tokenid));
+    let myccSpk = ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mydest], 1, opdrop, ccSubver);
     if (myccSpk == null)  
-      throw new Error('could not create tokens cc spk for mypk');
+      throw new Error('could not create tokens cc spk for self');
 
     txbuilder.addOutput(myccSpk, bnCCAdded.sub(bnTokenAmount));
   }
@@ -669,22 +686,30 @@ function isTokenV2Output(tx, nvout)
 }
 
 /**
- * Loads transactions from ccoutputs objects and validates if they are valid tokens
+ * Loads transactions for the passed ccutxos and checks if they are valid tokens
  * @param {*} mynetwork 
  * @param {*} peers 
  * @param {*} mypk 
  * @param {*} ccutxos - the 'utxos' nested array from the getCCUtxos() result ('result.utxos')
- * @returns ccutxosOut array extended with 'tokenid' property if it is a valid token
+ * @returns ccutxosOut array extended with a 'tokendata' object if it is a valid token utxo 
+ * (note: for 't' transactions ccutxosOut item also contains tokenid, for 'c' transactions tokenid is the txid itself)
  */
-async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
+async function validateTokensV2Many(mynetwork, peers, pubkey, ccutxos)
 {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce(typeforce.oneOf('Buffer', 'String'), pubkey);
+
+  let pubkeybin = typeof pubkey == 'string' ? pubkey.toString('hex') : pubkey;
+
   if (Array.isArray(ccutxos)) {
-    let params = [ peers, mypk ];
+    let params = [ peers, pubkeybin ];
     ccutxos.forEach(output => {
       params.push(output.txid);
     });
 
     let ccutxosOut = [];
+    // load transactions for the utxos
     let returnedtxns = await ccutils.getTransactionsMany(...params); // maybe simply put txids in array?
     if (returnedtxns && Array.isArray(returnedtxns.transactions)) {
       returnedtxns.transactions.forEach(e => {
@@ -708,14 +733,73 @@ async function validateTokensV2Many(mynetwork, peers, mypk, ccutxos)
 }
 
 /**
- * Returns validated tokens for the given pubkey
+ * calls nspv to get token utxos for the given pubkey
+ * also checks if utxos are valid tokens
+ * returns validated
  */
-async function getTokensForPubkey(mynetwork, peers, mypk, skipCount, maxrecords) {
+async function getTokensForPubkey(mynetwork, peers, pubkey, skipCount, maxrecords) {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce(typeforce.oneOf('Buffer', 'String'), pubkey);
+
   //ccbasic.cryptoconditions = await ccimp;
-  let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [mypk.toString('hex')], 1 ), mynetwork)
+  let ccindexkey = address.fromOutputScript(ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [pubkey.toString('hex')], 1 ), mynetwork)
   const ccutxos = await ccutils.getCCUtxos(peers, ccindexkey, skipCount, maxrecords);
   if (ccutxos.utxos.length > 0) {
-    const validated = await validateTokensV2Many(mynetwork, peers, mypk, ccutxos.utxos);
+    const validated = await validateTokensV2Many(mynetwork, peers, pubkey, ccutxos.utxos);
+    return validated;
+  }
+  return [];
+}
+
+/**
+ * get available cc index keys for a pubkey (old-style and R-address)
+ * @param {*} pubkey 
+ * @param {*} mynetwork 
+ * @returns 
+ */
+function getTokenV2IndexKeys(pubkey, mynetwork)
+{
+  typeforce(typeforce.oneOf('Buffer', 'String'), pubkey);
+  typeforce(types.Network, mynetwork);
+
+  let pkbin = Buffer.isBuffer(pubkey) == 'string' ? Buffer.from(pubkey, 'hex') : pubkey;
+  let pkhex = typeof pubkey == 'string' ? pubkey : pubkey.toString('hex');
+  let normaladdr = address.toBase58Check(crypto.hash160(pkbin), mynetwork.pubKeyHash);
+
+  let ccindexkey1 = address.fromOutputScript(ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [pkhex], 1, undefined, ccbasic.CCSUBVERS.CC_MIXED_MODE_SUBVER_0), mynetwork)
+  let ccindexkey2 = address.fromOutputScript(ccutils.makeCCSpkV2MofN(EVAL_TOKENSV2, [normaladdr], 1, undefined, ccbasic.CCSUBVERS.CC_MIXED_MODE_SECHASH_SUBVER_1), mynetwork)
+  
+  return [ccindexkey1, ccindexkey2]
+}
+
+/**
+ * Get token utxos for a pubkey, 
+ * including utxos from all cc indexkey for the pubkey (old-style and R-address)
+ * returns validated token utxos (with validateTokensV2Many() function)
+ * @param {*} peers 
+ * @param {*} mynetwork 
+ * @param {*} pubkey 
+ * @param {*} skipCount 
+ * @param {*} maxRecords 
+ * @returns utxos array
+ */
+async function getAllTokensV2ForPubkey(peers, mynetwork, pubkey, skipCount, maxRecords)  {
+  typeforce('PeerGroup', peers);
+  typeforce(types.Network, mynetwork);
+  typeforce(typeforce.oneOf('Buffer', 'String'), pubkey);
+
+  let indexkeys = getTokenV2IndexKeys(pubkey, mynetwork)
+  let calls = []
+  indexkeys.forEach(indexkey => {
+    calls.push( ccutils.getCCUtxos(peers, indexkey, skipCount, maxRecords) );
+  })
+  let aResults = await Promise.all(calls);
+  let ccutxos = [];
+  aResults.forEach(r => { ccutxos = ccutxos.concat(r.utxos) });
+
+  if (ccutxos.length > 0) {
+    const validated = await validateTokensV2Many(mynetwork, peers, pubkey, ccutxos);
     return validated;
   }
   return [];
@@ -729,4 +813,5 @@ module.exports = {
   encodeTokensCreateV2OpReturn, encodeTokensV2Data, encodeTokensV2OpReturn, 
   decodeTokensV2OpReturn, decodeTokensV2Data,
   tokensv2GlobalPk, tokensv2GlobalPrivkey, tokensv2GlobalAddress, EVAL_TOKENSV2,
+  getTokenV2IndexKeys, getAllTokensV2ForPubkey
 }

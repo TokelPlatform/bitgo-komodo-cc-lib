@@ -7,6 +7,13 @@ const bscript = require("../src/script");
 const Debug = require('debug')
 const logdebug = Debug('cc')
 
+const CCSUBVERS = {
+  CC_OLD_V1_SUBVER               : -1,
+  CC_MIXED_MODE_SUBVER_0         : 0,
+  CC_MIXED_MODE_SECHASH_SUBVER_1 : 1
+};
+exports.CCSUBVERS = CCSUBVERS;
+
 //const ccutils = require('../../cc/ccutils');
 
 //const types = require('../src/types');
@@ -88,11 +95,11 @@ function readCCSpk(spk) {
         throw new Error("cryptoconditions lib not available");
     let condbin = parseCCSpk(spk).cc;
     if (Buffer.isBuffer(condbin) && condbin.length > 0) {
-        //logdebug("readCCSpk condbin=", condbin.toString('hex'));
+        //console.log("readCCSpk condbin=", condbin.toString('hex'));
         let cond;
-        if (condbin[0] ==  'M'.charCodeAt(0)) { // mixed mode
+        if (condbin[0] == 0x4d || condbin[0] == 0x4e) { // mixed mode
             //logdebug("readCCSpk sliced=", condbin.slice(1, condbin.length));
-            cond = exports.cryptoconditions.js_read_fulfillment_binary_mixed(condbin.slice(1, condbin.length));
+            cond = exports.cryptoconditions.js_read_fulfillment_binary_mixed(Uint8ClampedArray.from(condbin.slice(1, condbin.length)));
         }
         else
             cond = exports.cryptoconditions.js_read_ccondition_binary(Uint8ClampedArray.from(condbin));
@@ -163,7 +170,7 @@ function makeCCSpk(cond, opDropData) {
 exports.makeCCSpk = makeCCSpk;
 
 /**
- * serialises condition as ASN.1 in the v2 mixed mode format
+ * calls the cryptocondition lib to serialise the condition as ASN.1 in the v2 mixed mode format
  * @param {*} cond condition
  * @returns serialised condition
  */
@@ -185,18 +192,29 @@ exports.ccConditionBinaryV2 = ccConditionBinaryV2;
  * makes scriptPubKey from a cryptocondition and optional opdrop data in CC v2 mixed mode format
  * @param {*} cond cryptocondition
  * @param {*} opDropData script chunk to add as OP_DROP data
+ * @param {*} subver cc spk mixed mode additional subversion
  * @returns scriptPubKey
  */
-function makeCCSpkV2(cond, opDropData) {
+function makeCCSpkV2(cond, opDropData, ccSubver) {
 
     if (exports.cryptoconditions === undefined)
         throw new Error("cryptoconditions lib not available");
 
-    let anon = exports.cryptoconditions.js_cc_threshold_to_anon(cond);
-    if (anon == null)
-        return Buffer.from([]);
+    if (typeof ccSubver === 'undefined')
+      ccSubver = CCSUBVERS.CC_MIXED_MODE_SUBVER_0;
 
-    let ccbin = exports.cryptoconditions.js_cc_fulfillment_binary_mixed(anon);
+    //console.log("js_cc_threshold_to_anon cond=", JSON.stringify(cond))
+    let targetcond
+    if (ccSubver < CCSUBVERS.CC_MIXED_MODE_SECHASH_SUBVER_1) {
+      targetcond = exports.cryptoconditions.js_cc_threshold_to_anon(cond);  // for old style conditions do to_anon
+      if (targetcond == null)
+        return Buffer.from([]);
+    } 
+    else
+      targetcond = cond
+
+    let prefix = Buffer.from([0x4d + ccSubver])
+    let ccbin = exports.cryptoconditions.js_cc_fulfillment_binary_mixed(targetcond);
     //logdebug("makeCCSpkV2 ccbin=", ccbin);
     if (ccbin == null)
         return Buffer.from([]);
@@ -210,9 +228,9 @@ function makeCCSpkV2(cond, opDropData) {
         let spk;
         if (opDropData === undefined)
             // 'M' - prefix indicating a cc version 2 ('mixed mode) follows
-            spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS]); 
+            spk = bscript.compile([Buffer.concat([prefix, Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS]); 
         else
-            spk = bscript.compile([Buffer.concat([Buffer.from('M'), Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS, opDropData, OPS.OP_DROP]);
+            spk = bscript.compile([Buffer.concat([prefix, Buffer.from(ccbin)]), CCOPS.OP_CRYPTOCONDITIONS, opDropData, OPS.OP_DROP]);
         return spk;
     }
     return Buffer.from([]);
@@ -229,7 +247,7 @@ exports.makeCCSpkV2 = makeCCSpkV2;
  * @returns 
  */
 function makeOpDropData(evalCode, m, n, vPubKeys, vData) {
-    let version = 2; // v2 means support pubkeys in verus data
+    let version = vPubKeys ? 2 : 1; // v2 means support of pubkeys in verus-style opdrop data
     let vParams = bscript.compile([version, evalCode, m, n]);
     let opDropArr = [];
     opDropArr.push(vParams);
@@ -290,5 +308,7 @@ function readCCScriptSig(script) {
     return undefined;
 }
 exports.readCCScriptSig = readCCScriptSig;
+
+
 
 

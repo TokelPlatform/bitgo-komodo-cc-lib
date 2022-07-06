@@ -19,7 +19,7 @@ class NspvPeerGroup extends PeerGroup {
   constructor (params, opts) {
     super(params, opts)
 
-    this.periodicInterval = 120 * 1000;
+    this.periodicInterval = 120 * 1000; 
     this.periodicTimer = null;
     this.headersSynced = false;
 
@@ -32,12 +32,18 @@ class NspvPeerGroup extends PeerGroup {
         //this._startDownloadHeaders();
         //this.emit('downloadHeaders');
         //setImmediate(this._downloadHeaders.bind(this));
-        this.getAddr({}, ()=>{}); // call once 'getaddr'
-        
-        // periodic disabled as remote side will respond only to one getaddr, 
-        // then will be pushing addr when a new node connects to the net:
-        //if (!this.periodicTimer)
-        //  this.periodicTimer = setInterval(this._periodic.bind(this), this.periodicInterval);
+
+        if (!this.fConnectPlainWeb)  {
+        // for p2p getaddr periodic is not used as a remote node will respond only to one getaddr, 
+        // but server nodes will be pushing addr updates themselves when a new node connects to the net:
+          this.getAddr({}, ()=>{}); // call once 'getaddr'
+          logdebug('Note that on p2p connections getaddr would return only 23% of nodes. Use websockets to get all nodes')
+        }
+        else {
+          this.getWsAddr({}, ()=>{}); // call once 'getwsaddr'
+          if (!this.periodicTimer)
+            this.periodicTimer = setInterval(this._periodic.bind(this), this.periodicInterval);
+        }
 
         this.emit('nspvConnect');
       });  // redirect to nspvGroup listener
@@ -80,18 +86,18 @@ PeerGroup.prototype._downloadHeaders = function()   {
   });
 }
 
-/*
-PeerGroup.prototype._periodic = function()  {
 
+PeerGroup.prototype._periodic = function()  {
   if (this.fConnectPlainWeb)  {
     this.getWsAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
     //this.getAddrTimer = setInterval(this.getWsAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getwsaddr interval 120 sec
   } else {
-    this.getAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
+    // go not call repeatedly getaddr as only first is responded
+    //this.getAddr({}, ()=>{})                                    // empty opts and cb to pass through _request()
     //this.getAddrTimer = setInterval(this.getAddr.bind(this, {}, ()=>{}), this.getAddrInterval)  // set getaddr interval 120 sec
   }
 }
-*/
+
 
 
 PeerGroup.prototype.nspvConnect = function(cb) {
@@ -111,6 +117,14 @@ PeerGroup.prototype.nspvGetUtxos = function(address, isCC, skipCount, filter, op
 
 PeerGroup.prototype.nspvGetTxids = function(address, isCC, skipCount, filter, opts, cb) {
   this._request('nspvGetTxids', address, isCC, skipCount, filter, opts, cb)
+}
+
+PeerGroup.prototype.nspvGetTxidsV2 = function(address, isCC, beginHeight, endHeight, opts, cb) {
+  this._request('nspvGetTxidsV2', address, isCC, beginHeight, endHeight, opts, cb)
+}
+
+PeerGroup.prototype.nspvGetSpentInfo = function(txid, vout, opts, cb) {
+  this._request('nspvGetSpentInfo', txid, vout, opts, cb)
 }
 
 PeerGroup.prototype.nspvRemoteRpc = function(rpcMethod, mypk, params, opts, cb) {
