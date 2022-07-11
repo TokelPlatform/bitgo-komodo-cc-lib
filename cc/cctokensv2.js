@@ -158,7 +158,7 @@ async function tokensv2CreateTokel(peers, mynetwork, wif, name, desc, satoshi, j
  * @param {*} mynetwork a network from networks.js chain definitions
  * @param {*} wif 
  * @param {*} tokenidhex tokenid in hex to transfer
- * @param {*} destpk destination pubkey
+ * @param {*} destpk destination pubkey (will be converted to R-address) or R-address
  * @param {*} satoshi token amount to transfer (must be 1 for Tokel NFT)
  * @returns promise to create transfer tx
  */
@@ -405,7 +405,14 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _dest, bnT
   let mypk = mypair.getPublicKeyBuffer();
   let mynormaladdress = ccutils.pubkey2NormalAddressKmd(mypk);
 
-  let dest = !Buffer.isBuffer(_dest) ? _dest : Buffer.from(_dest, 'hex'); // pk may be bin
+  let dest
+  let destpk = Buffer.isBuffer(_dest) ? _dest : Buffer.from(_dest, 'hex'); // pk may be bin
+  // convert to R-address
+  if (ccutils.isValidPubKey(destpk))
+    dest = ccutils.pubkey2NormalAddressKmd( destpk )
+  else
+    dest = _dest //assume R address
+
   //if (!ccutils.isValidPubKey(dest))
   //  throw new Error("invalid destination pubkey");
 
@@ -471,7 +478,9 @@ async function makeTokensV2TransferTx(peers, mynetwork, wif, tokenid, _dest, bnT
     txbuilder.setExpiryHeight(sourcetx1.expiryHeight);
 
   let probeCond = ccutils.makeCCCondMofN([EVAL_TOKENSV2], [mypk], 1);
-  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeCond}]);
+  let probeCondRaddr = ccutils.makeCCCondMofN([EVAL_TOKENSV2], [ccutils.pubkey2NormalAddressKmd(mypk)], 1);
+
+  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeCond}, {cond: probeCondRaddr}]);
   return txbuilder.build();
 }
 

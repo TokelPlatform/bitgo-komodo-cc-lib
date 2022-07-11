@@ -328,7 +328,8 @@ async function makeTokenV2AskTx(peers, mynetwork, wif, bnUnits, tokenid, bnUnitP
     txbuilder.setExpiryHeight(sourcetx1.expiryHeight);
 
   let probeCond = ccutils.makeCCCondMofN([cctokens.EVAL_TOKENSV2], [mypk], 1);
-  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeCond}]);
+  let probeCondRaddr = ccutils.makeCCCondMofN([cctokens.EVAL_TOKENSV2], [ccutils.pubkey2NormalAddressKmd(mypk)], 1);
+  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeCond}, {cond: probeCondRaddr}]);
   return txbuilder.build();
 }
 
@@ -631,9 +632,10 @@ async function makeTokenV2FillBidTx(peers, mynetwork, wif, tokenid, bidid, bnFil
     txbuilder.setExpiryHeight(sourcetx1.expiryHeight);
 
   let probeMy = ccutils.makeCCCondMofN([cctokens.EVAL_TOKENSV2], [mypk], 1);
+  let probeMyRaddr = ccutils.makeCCCondMofN([cctokens.EVAL_TOKENSV2], [ccutils.pubkey2NormalAddressKmd(mypk)], 1);
   let probeGlobal = ccutils.makeCCCondMofN([EVAL_ASSETSV2], [assetsGlobalPk], 1);  // probe to spend coins from assets GlobalPubKey
   let probeMarker = ccutils.makeCCCondMofN(EVAL_ASSETSV2, [mypk, assetsGlobalPk], 1);  // probe to spend from 1of2 marker
-  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeMy}, {cond: probeGlobal, privateKey: assetsv2GlobalPrivkey}, {cond: probeMarker, privateKey: mypair.getPrivateKeyBuffer()}]);
+  ccutils.finalizeCCtx(mypair, txbuilder, [{cond: probeMy}, {cond: probeMyRaddr}, {cond: probeGlobal, privateKey: assetsv2GlobalPrivkey}, {cond: probeMarker, privateKey: mypair.getPrivateKeyBuffer()}]);
   return txbuilder.build(true);
 }
 
