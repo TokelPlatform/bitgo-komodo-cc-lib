@@ -7,12 +7,14 @@ const bscript = require("../src/script");
 const Debug = require('debug')
 const logdebug = Debug('cc')
 
+const CC_MIXED_MODE_PREFIX = 77;
 const CCSUBVERS = {
   CC_OLD_V1_SUBVER               : -1,
   CC_MIXED_MODE_SUBVER_0         : 0,
   CC_MIXED_MODE_SECHASH_SUBVER_1 : 1
 };
 exports.CCSUBVERS = CCSUBVERS;
+exports.CC_MIXED_MODE_PREFIX = CC_MIXED_MODE_PREFIX;
 
 //const ccutils = require('../../cc/ccutils');
 
@@ -174,14 +176,21 @@ exports.makeCCSpk = makeCCSpk;
  * @param {*} cond condition
  * @returns serialised condition
  */
-function ccConditionBinaryV2(cond) {
+function ccConditionBinaryV2(cond, noAnon) {
     if (exports.cryptoconditions === undefined)
         throw new Error("cryptoconditions lib not available");
-    let anon = exports.cryptoconditions.js_cc_threshold_to_anon(cond);
-    if (anon == null)
-        return Buffer.from([]);
+    let maybeAnon;
+    if (!noAnon)  {
+        maybeAnon = exports.cryptoconditions.js_cc_threshold_to_anon(cond);
+        if (maybeAnon == null)
+            return Buffer.from([]);
+    }
+    else {
+        maybeAnon = cond;
+    }
 
-    let ccbin = exports.cryptoconditions.js_cc_fulfillment_binary_mixed(anon);
+
+    let ccbin = exports.cryptoconditions.js_cc_fulfillment_binary_mixed(maybeAnon);
     if (ccbin != null)
         return Buffer.from(ccbin);
     return Buffer.from([]);

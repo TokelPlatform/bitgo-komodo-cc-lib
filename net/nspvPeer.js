@@ -56,9 +56,9 @@ Peer.prototype._registerListeners = function() {
         this._nspvReady();
       } else {
         if (err)
-          logerror(err?.message, peer.getUrl());
+          logerror(err?.message, peer.getHost());
         if (nspvInfo && (nspvInfo.version !== NSPV_VERSION))
-          logerror('unsupported remote nspv node version', nspvInfo?.version, peer.getUrl());
+          logerror('unsupported remote nspv node version', nspvInfo?.version, peer.getHost());
       }
     });
   })
@@ -70,7 +70,7 @@ Peer.prototype._registerListeners = function() {
        however if any changes occur we should change the nspv version too 
        anyway current nspv nodes may allocate more buffer size then the payload:
     if (nspvResp.decode.bytes !== buf.length) {
-      logerror('could not parse nspv response, decoded bytes mismatch', `decoded=${nspvResp.decode.bytes}`, `length=${buf.length}`, this.getUrl());
+      logerror('could not parse nspv response, decoded bytes mismatch', `decoded=${nspvResp.decode.bytes}`, `length=${buf.length}`, this.getHost());
       this.emit('error', new Error("could not parse nspv response, decoded vs buffer bytes mismatch"));
       return;
     } */
@@ -118,7 +118,7 @@ Peer.prototype.nspvGetInfo = function(reqHeight, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP) {
-      let error = new NspvError(`nspv remote ${this.getUrl()} error: ` + resp?.errDesc, NSPVMSGS.NSPV_INFO, 11);
+      let error = new NspvError(`nspv remote ${this.getHost()} error: ` + resp?.errDesc, NSPVMSGS.NSPV_INFO, 11);
       cb(error, null, this);
       this._error(error);  // disconnect peer if getinfo could not be done (it is like nspv verack)
       return;
@@ -594,7 +594,7 @@ Peer.prototype.nspvNtzsProof = function(_ntzTxid, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
-      cb(new NspvError(`nspv ntzs proof remote error: ${resp?.errDesc} ${this.getUrl()}`, NSPVMSGS.NSPV_NTZSPROOF));
+      cb(new NspvError(`nspv ntzs proof remote error: ${resp?.errDesc} ${this.getHost()}`, NSPVMSGS.NSPV_NTZSPROOF));
       return;
     }
     if (!resp || resp?.respCode !== NSPVMSGS.NSPV_NTZSPROOFRESP || !resp.common /* TODO: this is checked in the validateTxUsingNtzProofs func: || !resp.ntzTxid || resp.ntzTxBuf || resp.ntzTxHeight*/ ) { // check all props
@@ -652,7 +652,7 @@ Peer.prototype.nspvGetTransactions = function(checkMempool, txids, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (resp && resp?.respCode === NSPVMSGS.NSPV_ERRORRESP)  {
-      cb(new NspvError(`nspv get transactions remote error: ${resp?.errDesc} ${this.getUrl()}`, NSPVMSGS.NSPV_TRANSACTIONS));
+      cb(new NspvError(`nspv get transactions remote error: ${resp?.errDesc} ${this.getHost()}`, NSPVMSGS.NSPV_TRANSACTIONS));
       return;
     }
     if (!resp || resp?.respCode !== NSPVMSGS.NSPV_TRANSACTIONSRESP ) { // check returned props
