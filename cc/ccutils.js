@@ -119,6 +119,9 @@ function finalizeCCtx(keyPairIn, txbuilder, ccProbes)
       );    
 
       let signedCond = ccbasic.cryptoconditions.js_sign_secp256k1(inputCond, privateKey, signatureHash);
+      if (signedCond)
+        inputCond = signedCond;
+      signedCond = ccbasic.cryptoconditions.js_cc_sign_secp256k1hash(inputCond, privateKey, signatureHash);
       let ccScriptSig = ccbasic.makeCCScriptSig(signedCond);
 
       txbuilder.inputs[index].ccScriptSig = ccScriptSig;
@@ -273,7 +276,8 @@ function findCCProbeForSpk(ccProbes, spk)
 {
   let isMixed = false;
   let condbin = ccbasic.parseCCSpk(spk).cc;
-  if (condbin.length > 0 && condbin[0] == 'M'.charCodeAt(0)) {
+  let ccsubver = Number(condbin[0]) - ccbasic.CC_MIXED_MODE_PREFIX;
+  if (condbin.length > 0 && ccsubver >= ccbasic.CCSUBVERS.CC_MIXED_MODE_SUBVER_0 && ccsubver <= ccbasic.CCSUBVERS.CC_MIXED_MODE_SECHASH_SUBVER_1) {
     condbin = condbin.slice(1, condbin.length);
     isMixed = true;
   }
@@ -287,8 +291,9 @@ function findCCProbeForSpk(ccProbes, spk)
       return condbin.equals(condbinp);
     }
     else {
-      let condbinv2p = ccbasic.ccConditionBinaryV2(probe.cond);
-      //logdebug('prev condbin=', condbin.toString('hex'), 'probe condbinv2=', condbinv2p.toString('hex'));
+      let noAnon = (ccsubver >= ccbasic.CCSUBVERS.CC_MIXED_MODE_SECHASH_SUBVER_1);
+      let condbinv2p = ccbasic.ccConditionBinaryV2(probe.cond, noAnon);
+      //logdebug('mixed prev condbin=', condbin.toString('hex'), 'probe condbinv2=', condbinv2p.toString('hex'));
       return condbin.equals(condbinv2p);
     }
   });
