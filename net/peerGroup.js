@@ -24,6 +24,7 @@ const utils = require('./utils.js')
 const { URL } = require('url')
 //const { time } = require('console')
 const { AddrStates } = require('./addrstates')
+const ip = require('ip')
 
 require('setimmediate')
 
@@ -134,7 +135,7 @@ class PeerGroup extends EventEmitter {
 
     // peer once error callback (during connection)
     let onPeerConnError = (err) => {
-      //console.log('onPeerConnError error event received', peer.getUrl(), err?.message ? err?.message : err)
+      //console.log('onPeerConnError error event received', peer.getHost(), err?.message ? err?.message : err)
       err = err || Error('Connection error')
       logdebug(`peer connection error: ${err}`)
       peer.removeListener('disconnect', onPeerConnError)
@@ -153,7 +154,7 @@ class PeerGroup extends EventEmitter {
       if (this.closed) return peer.disconnect()
       // remove once listeners to replace with new ones
       peer.removeListener('error', onPeerConnError)
-      //console.log('onPeerReady on peer error event onPeerConnError cleared', peer.getUrl())
+      //console.log('onPeerReady on peer error event onPeerConnError cleared', peer.getHost())
       peer.removeListener('disconnect', onPeerConnError)
       this.addPeer(peer, addrstates)
 
@@ -166,7 +167,7 @@ class PeerGroup extends EventEmitter {
 
     // wait for socket connection errors:
     peer.once('error', onPeerConnError) // Note: if an unhandled error ever happens consider peer.on() instead of peer.once() as there could be several 'error' events (peer handshake then nspv version not supported) 
-    //console.log('_onConnection on peer error event set onPeerConnError', peer.getUrl())
+    //console.log('_onConnection on peer error event set onPeerConnError', peer.getHost())
     peer.once('disconnect', onPeerConnError)
     // socket connected:
     peer.once('ready', onPeerReady)
@@ -237,7 +238,8 @@ class PeerGroup extends EventEmitter {
         if (err) return onConnectionCb(err)
         //let addr = utils.getRandom(addresses)  // we cant get random as we need track addresses in use
         ips.forEach(ip => {
-          let resolvedUrl = new URL(seedUrl.protocol + '//' + ip  +':' + seedUrl.port);
+          //let resolvedUrl = new URL(seedUrl.protocol + '//' + ip  +':' + seedUrl.port);
+          let resolvedUrl = utils.myMakeUrl(ip, seedUrl.port, seedUrl.protocol);
           let addrState = this.resolvedAddrs.add(resolvedUrl.href);  // returns new or existing addr state
           if (AddrStates.canUse(addrState)) {  // check if resolved addr not in use
             this.resolvedAddrs.setInUse(resolvedUrl.href);  
@@ -268,14 +270,14 @@ class PeerGroup extends EventEmitter {
   }
 
   // connects to a standard protocol TCP peer
-  _connectTCP (host, port, cb) {
-    logdebug(`_connectTCP: ${host}:${port}`)
-    let socket = net.connect(port, host)
+  _connectTCP (hostname, port, cb) {
+    logdebug(`_connectTCP: ${utils.myMakeUrl(hostname, port)}`)
+    let socket = net.connect(port, hostname)
     let timeout
     if (this.connectTimeout) {
       timeout = setTimeout(() => {
         socket.destroy()
-        cb(Error(`Connection timed out ${host}:${port}`))
+        cb(Error(`Connection timed out ${utils.myMakeUrl(hostname, port)}`))
       }, this.connectTimeout)
     }
     socket.once('error', (err) => {
@@ -404,8 +406,9 @@ class PeerGroup extends EventEmitter {
     message.forEach((elem)=> {
       let serv = utils.getServices(elem?.services)
       if (serv.NODE_NSPV && serv.NODE_WEBSOCKETS)  {  // check service bits
-        let proto = serv.NODE_WEBSOCKETS_TLS ? "wss" : "ws";
-        this.webAddrs.add(`${proto}://${elem.address}:${elem.port}`);
+        let proto = serv.NODE_WEBSOCKETS_TLS ? "wss:" : "ws:";
+        //if (!ip.isV4Format(`${elem.address}`)) 
+          this.webAddrs.add(utils.myMakeUrl(elem.address, elem.port, proto));
       }
     })
   }
@@ -416,8 +419,11 @@ class PeerGroup extends EventEmitter {
       return;
 
     message.forEach((elem)=> {
-      if (utils.getServices(elem?.services).NODE_NSPV)
-        this.tcpAddrs.add(`${elem.address}:${elem.port}`)  // TODO: enable!!  (disable to connect always to only one node, for debug)
+      if (utils.getServices(elem?.services).NODE_NSPV) {
+        //if (!ip.isV4Format(`${elem.address}`)) 
+          this.tcpAddrs.add(utils.myMakeUrl(elem.address, elem.port).host)
+          //console.log('getaddr adding host', utils.myMakeUrl(elem.address, elem.port), 'isv6=', ip.isV6Format(elem.address), 'isv4=', ip.isV4Format(elem.address))
+      }
     })
     this.tcpAddrs.shuffle();
   }
@@ -458,7 +464,7 @@ class PeerGroup extends EventEmitter {
 
     // peer regular listener
     peer.on('error', (err) => {
-      //console.log('addPeer: on peer error event received', peer.getUrl(), err.message)
+      //console.log('addPeer: on peer error event received', peer.getHost(), err.message)
       logdebug(`peer.on error called ${err.message}`)
       this.emit('peerError', err)
       peer.disconnect(err)
@@ -467,7 +473,7 @@ class PeerGroup extends EventEmitter {
       if (addrstates)
         addrstates.setClear(peer.addr, err)
     })
-    //console.log('addPeer: on peer error event set', peer.getUrl())
+    //console.log('addPeer: on peer error event set', peer.getHost())
 
     this.emit('peer', peer)
   }

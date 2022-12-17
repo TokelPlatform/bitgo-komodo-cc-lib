@@ -13,7 +13,7 @@ function nspvConnect(params, opts) {
   return new Promise((resolve, reject) => {
     const peers = new NspvPeerGroup(params, opts);
     peers.on('peer', peer => {
-      logdebug('added new peer', peer.getUrl())
+      logdebug('added new peer', peer.getHost())
     });
 
     peers.on('connectError', (err, peer) => {
