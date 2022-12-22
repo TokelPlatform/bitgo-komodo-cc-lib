@@ -595,6 +595,7 @@ function getTransactionsMany(peers, pubkey, ...args)
       if (!decoded) {
         return;
       }
+      decoded.blockHeight = tx.blockHeight;
       decodedTxs.push(decoded);
       // Empty ids are for transactions which are VINS for mining transactions
       let txids = decoded.ins.filter(one => one.txid !== EMPTY_TXID ? one.txid : false)
