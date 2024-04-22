@@ -415,10 +415,10 @@ base-x@^4.0.0:
   resolved "https://registry.npmjs.org/base-x/-/base-x-4.0.0.tgz"
   integrity sha512-FuwxlW4H5kh37X/oW59pwTzzTKRzfrrQwhmyspRM7swOEZcHtDZSCt45U6oKgtuFE+WYPblePMVIPR4RZrh/hw==
 
-bech32@0.0.3:
-  version "0.0.3"
-  resolved "https://registry.npmjs.org/bech32/-/bech32-0.0.3.tgz"
-  integrity sha1-c2dHxKZTHF2JN9BABJjeMOk7L5w=
+bech32@2.0.0:
+  version "2.0.0"
+  resolved "https://registry.npmjs.org/bech32/-/bech32-2.0.0.tgz"
+  integrity sha512-LcknSilhIGatDAsY1ak2I8VtGaHNhgMSYVxFrGLXv+xLHytaKZKcaUJJUE7qmBr7h33o5YQwP55pMI0xmkpJwg==
 
 bigi@1.4.2, bigi@^1.1.0:
   version "1.4.2"
