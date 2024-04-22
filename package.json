@@ -81,7 +81,7 @@
     "minimaldata": "^1.0.2",
     "mocha": "10.4.0",
     "nyc": "15.1.0",
-    "proxyquire": "^1.4.0",
+    "proxyquire": "^2.0.0",
     "sinon": "^17.0.1",
     "standard": "^9.0.2"
   },
