@@ -66,7 +66,7 @@
     "secp256k1": "^3.5.2",
     "setimmediate": "^1.0.4",
     "sha.js": "2.4.11",
-    "through2": "^2.0.1",
+    "through2": "^4.0.2",
     "typeforce": "^1.11.3",
     "utf-8-validate": "^6.0.3",
     "varuint-bitcoin": "^1.0.4",
