@@ -77,7 +77,7 @@
   "devDependencies": {
     "bip65": "^1.0.1",
     "bs58": "^5.0.0",
-    "dhttp": "^2.4.2",
+    "dhttp": "^3.0.0",
     "minimaldata": "^1.0.2",
     "mocha": "10.4.0",
     "nyc": "15.1.0",
