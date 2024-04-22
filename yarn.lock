@@ -458,10 +458,10 @@ bitcoin-util@^2.0.0:
     bn.js "^4.6.4"
     buffer-reverse "^1.0.1"
 
-bitcoind-rpc@^0.8.1:
-  version "0.8.1"
-  resolved "https://registry.yarnpkg.com/bitcoind-rpc/-/bitcoind-rpc-0.8.1.tgz#11889972e46c346870d26cf680e3a7e3e52b1ff1"
-  integrity sha512-NfhykAT/x/P1SOiog8UzltvTiv6A6d2X5VWJ3UjGeAqFLXv+IYHy+E4fFCBmgQRyIb1EIcyIZK1SVpSOGRHsaw==
+bitcoind-rpc@^0.9.1:
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/bitcoind-rpc/-/bitcoind-rpc-0.9.1.tgz#05464c135d0fb6d8b51de76192064c0cf3593593"
+  integrity sha512-fWjepYe3I6W8pw8WiDUrHAMKZXyRqtm6HfcUaDeLAQLr1KoKcVzqR4xzdJFJgUMBShNmN4GRMg0rLFr6ZKGZ6A==
 
 bl@^1.0.1:
   version "1.2.3"
