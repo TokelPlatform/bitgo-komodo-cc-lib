@@ -71,7 +71,7 @@
     "utf-8-validate": "^6.0.3",
     "varuint-bitcoin": "^1.0.4",
     "webassembly": "0.11.0",
-    "websocket-stream": "^3.3.0",
+    "websocket-stream": "^5.0.0",
     "wif": "^4.0.0"
   },
   "devDependencies": {
