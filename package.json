@@ -45,7 +45,7 @@
     "bitcoin-ops": "^1.3.0",
     "bitcoin-protocol": "^4.1.3",
     "bitcoin-util": "^2.0.0",
-    "bitcoind-rpc": "^0.8.1",
+    "bitcoind-rpc": "^0.9.1",
     "blake2b": "^2.1.3",
     "bs58check": "2.1.2",
     "bufferutil": "^4.0.3",
