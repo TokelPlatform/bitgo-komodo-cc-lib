@@ -642,10 +642,18 @@ bs58@^5.0.0:
   dependencies:
     base-x "^4.0.0"
 
-bs58check@2.1.2, bs58check@<3.0.0:
+bs58check@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.npmjs.org/bs58check/-/bs58check-3.0.1.tgz"
+  integrity sha512-hjuuJvoWEybo7Hn/0xOrczQKKEKD63WguEjlhLExYs2wUBcebDC1jDNK17eEAD2lYfw82d5ASC1d7K3SWszjaQ==
+  dependencies:
+    "@noble/hashes" "^1.2.0"
+    bs58 "^5.0.0"
+
+bs58check@<3.0.0:
   version "2.1.2"
   resolved "https://registry.npmjs.org/bs58check/-/bs58check-2.1.2.tgz"
-  integrity sha1-U7AYKRIo2CpaoI59eW/a/aVK6/w=
+  integrity sha512-0TS1jicxdU09dwJMNZtVAfzPi6Q6QeN0pM1Fkzrjn+XYHvzMKPU3pHVpva+769iNVSfIYWf7LJ6WR+BuuMf8cA==
   dependencies:
     bs58 "^4.0.0"
     create-hash "^1.1.0"
