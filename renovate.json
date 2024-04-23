@@ -9,12 +9,14 @@
   "commitMessageExtra": "to {{newVersion}}",
   "commitMessageSuffix": "",
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
   "assignees": [
     "thecomputergenie"
   ],
   "automerge": true,
+  "automergeType": "pr",  
+  "updateLockFiles": true,
   "additionalBranchPrefix": "{{parentDir}}-",
   "packageRules": [
     {
