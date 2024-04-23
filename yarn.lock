@@ -2738,10 +2738,10 @@ module-not-found-error@^1.0.1:
   resolved "https://registry.npmjs.org/module-not-found-error/-/module-not-found-error-1.0.1.tgz"
   integrity sha1-z4tP9PKWQGdNbN0CsOO8UjwrvcA=
 
-mout@^0.11.0:
-  version "0.11.1"
-  resolved "https://registry.npmjs.org/mout/-/mout-0.11.1.tgz"
-  integrity sha512-pK9VNiLE3QgGBrC/3ICAscwOLU7oTNeK2l32uqNAioBYtB2tQAfSsGDNChUlk7CP23126mc5lUt6+na9FlN8JA==
+mout@^1.2.4:
+  version "1.2.4"
+  resolved "https://registry.npmjs.org/mout/-/mout-1.2.4.tgz"
+  integrity sha512-mZb9uOruMWgn/fw28DG4/yE3Kehfk1zKCLhuDU2O3vlKdnBBr4XaOCqVTflJ5aODavGUPqFHZgrFX3NJVuxGhQ==
 
 ms@2.0.0:
   version "2.0.0"
@@ -3643,7 +3643,7 @@ tar.gz@^1.0.5:
     bluebird "^2.9.34"
     commander "^2.8.1"
     fstream "^1.0.8"
-    mout "^0.11.0"
+    mout "^1.2.4"
     tar "^2.1.1"
 
 tar@^6.2.1:
