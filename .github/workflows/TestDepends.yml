@@ -1,0 +1,29 @@
+name: Build Test
+
+on:
+  push:
+    branches: [beta, dev/rerun]
+  pull_request:
+    branches: ['**'] # Yes, this is redundantly duplicating default behaviour; however, we may want to limit in future.
+
+jobs:
+  test_build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build Package
+      shell: bash
+      run: |
+          touch ~/.bash_profile
+          wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          source ~/.nvm/nvm.sh
+          nvm install 21
+          npm install
+          
