@@ -72,7 +72,7 @@
     "varuint-bitcoin": "^1.0.4",
     "webassembly": "^0.11.0",
     "websocket-stream": "^5.0.0",
-    "wif": "^4.0.0"
+    "wif": "^5.0.0"
   },
   "devDependencies": {
     "bip65": "^1.0.1",
