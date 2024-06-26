@@ -40,7 +40,7 @@
     "bech32": "2.0.0",
     "bigi": "1.4.2",
     "bip39": "^3.0.0",
-    "bip66": "^1.1.0",
+    "bip66": "^2.0.0",
     "bitcoin-merkle-proof": "^0.1.0",
     "bitcoin-ops": "^1.3.0",
     "bitcoin-protocol": "^4.1.3",
