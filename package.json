@@ -69,7 +69,7 @@
     "through2": "^4.0.0",
     "typeforce": "^1.11.3",
     "utf-8-validate": "^6.0.3",
-    "varuint-bitcoin": "^1.0.4",
+    "varuint-bitcoin": "^2.0.0",
     "webassembly": "^0.11.0",
     "websocket-stream": "^5.0.0",
     "wif": "^5.0.0"
