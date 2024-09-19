@@ -80,7 +80,7 @@
     "dhttp": "^3.0.0",
     "minimaldata": "^1.0.2",
     "mocha": "10.7.3",
-    "nyc": "17.0.0",
+    "nyc": "17.1.0",
     "proxyquire": "^2.0.0",
     "sinon": "^19.0.0",
     "standard": "^17.0.0"
