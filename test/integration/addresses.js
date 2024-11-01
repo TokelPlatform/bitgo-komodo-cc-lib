@@ -3,7 +3,7 @@
 var assert = require('assert')
 var bigi = require('bigi')
 var bitcoin = require('../../')
-var dhttp = require('dhttp/200')
+const got = require('got');
 
 // deterministic RNG for testing only
 function rng () { return Buffer.from('zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz') }
@@ -107,19 +107,15 @@ describe('bitcoinjs-lib (addresses)', function () {
     var keyPair = bitcoin.ECPair.makeRandom()
     var address = keyPair.getAddress()
 
-    dhttp({
-      method: 'GET',
-      url: 'https://blockchain.info/rawaddr/' + address
-    }, function (err, result) {
-      if (err) return done(err)
 
-      // random private keys [probably!] have no transactions
-      assert.strictEqual(result.n_tx, 0)
-      assert.strictEqual(result.total_received, 0)
-      assert.strictEqual(result.total_sent, 0)
-      done()
-    })
-  })
+	got.get('https://blockchain.info/rawaddr/' + address).then(response => {
+		const result = response.body;
+		// random private keys [probably!] have no transactions
+		assert.strictEqual(result.n_tx, 0);
+		assert.strictEqual(result.total_received, 0);
+		assert.strictEqual(result.total_sent, 0);
+		done();
+	}).catch(done);
 
   // other networks
   it('can generate a Testnet address', function () {

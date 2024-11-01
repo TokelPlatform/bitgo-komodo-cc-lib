@@ -1,69 +1,48 @@
 var bitcoin = require('../../')
-var dhttp = require('dhttp/200')
+const got = require('got');
 
 var APIPASS = process.env.APIPASS || 'satoshi'
 var APIURL = 'https://api.dcousens.cloud/1'
 
+
 function broadcast (txHex, callback) {
-  dhttp({
-    method: 'PUT',
-    url: APIURL + '/t/push',
-    body: txHex
-  }, callback)
+  got.put(APIURL + '/t/push', { body: txHex }).then(response => callback(null, response.body)).catch(callback);
 }
 
 function mine (count, callback) {
-  dhttp({
-    method: 'POST',
-    url: APIURL + '/r/generate?count=' + count + '&key=' + APIPASS
-  }, callback)
+  got.post(APIURL + '/r/generate', { searchParams: { count, key: APIPASS } }).then(response => callback(null, response.body)).catch(callback);
 }
 
 function height (callback) {
-  dhttp({
-    method: 'GET',
-    url: APIURL + '/b/best/height'
-  }, callback)
+  got.get(APIURL + '/b/best/height').then(response => callback(null, response.body)).catch(callback);
 }
 
 function faucet (address, value, callback) {
-  dhttp({
-    method: 'POST',
-    url: APIURL + '/r/faucet?address=' + address + '&value=' + value + '&key=' + APIPASS
-  }, function (err, txId) {
-    if (err) return callback(err)
-
-    unspents(address, function (err, results) {
-      if (err) return callback(err)
-
-      callback(null, results.filter(x => x.txId === txId).pop())
-    })
-  })
+  got.post(APIURL + '/r/faucet', { searchParams: { address, value, key: APIPASS } })
+    .then(response => {
+      const txId = response.body;
+      return unspents(address, (err, results) => {
+        if (err) return callback(err);
+        callback(null, results.filter(x => x.txId === txId).pop());
+      });
+    }).catch(callback);
 }
 
 function fetch (txId, callback) {
-  dhttp({
-    method: 'GET',
-    url: APIURL + '/t/' + txId
-  }, callback)
+  got.get(APIURL + '/t/' + txId).then(response => callback(null, response.body)).catch(callback);
 }
 
 function unspents (address, callback) {
-  dhttp({
-    method: 'GET',
-    url: APIURL + '/a/' + address + '/unspents'
-  }, callback)
+  got.get(APIURL + '/a/' + address + '/unspents').then(response => callback(null, response.body)).catch(callback);
 }
 
 function verify (txo, callback) {
-  var { txId } = txo
-
+  const { txId } = txo;
   fetch(txId, function (err, txHex) {
-    if (err) return callback(err)
-
+    if (err) return callback(err);
     // TODO: verify address and value
-    callback()
-  })
+    callback();
+  });
 }
 
 function randomAddress () {
