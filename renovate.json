@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "includeForks": true,
+  "forkProcessing": "enabled",
   "semanticCommits": "enabled",
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "Renovate Dashboard",
@@ -15,19 +15,29 @@
     "thecomputergenie"
   ],
   "automerge": true,
-  "automergeType": "pr",  
+  "automergeType": "pr",
   "updateLockFiles": true,
   "additionalBranchPrefix": "{{parentDir}}-",
   "packageRules": [
     {
-      "matchPackageNames": ["containerbase/node"],
+      "matchPackageNames": [
+        "containerbase/node"
+      ],
       "versioning": "node"
     },
     {
-      "matchDepTypes": ["dependencies"],
-      "labels": ["dependencies"],
-      "updateTypes": ["minor", "patch", "pin", "digest"]
+      "matchDepTypes": [
+        "dependencies"
+      ],
+      "labels": [
+        "dependencies"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ]
     }
   ]
 }
-  
